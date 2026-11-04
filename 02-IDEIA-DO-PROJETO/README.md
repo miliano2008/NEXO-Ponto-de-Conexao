@@ -1,3 +1,5 @@
+> **Sobre esta pasta:** este é o documento da **ideia original** do NEXO, mantido como referência, junto com o `prototipo_original.html` (protótipo estático da interface; abra direto no navegador). O que foi de fato implementado e as mudanças em relação ao plano inicial, como as bibliotecas usadas e a organização das pastas, estão em [`docs/`](../docs/README.md) e no [README principal](../README.md).
+
 # NEXO — Ponto de Conexão
 
 ## 1. Visão Geral

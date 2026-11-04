@@ -1,0 +1,6 @@
+# Atalhos do Windows precisam de CRLF; scripts do Linux/Mac, de LF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.sh  text eol=lf
+*.pdf binary
+*.xlsx binary

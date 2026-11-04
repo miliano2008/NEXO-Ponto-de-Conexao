@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXO — Acesso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/componentes.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/paginas.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/responsivo.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+<div class="login-shell">
+  <!-- painel da marca -->
+  <aside class="login-brand">
+    <div class="brand-mark">
+      <svg class="brand-dot" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <circle cx="5" cy="6" r="3" fill="#4D94DD"/><circle cx="21" cy="5" r="2.4" fill="#7FA4CE"/>
+        <circle cx="13" cy="14" r="4.2" fill="#fff"/><circle cx="4" cy="21" r="2.4" fill="#7FA4CE"/>
+        <circle cx="22" cy="20" r="3" fill="#4D94DD"/>
+        <path d="M5 6l8 8M21 5l-8 9M13 14l-9 7M13 14l9 6" stroke="#4D94DD" stroke-width="1.2" opacity=".75"/>
+      </svg>
+      <h1>NEXO</h1>
+    </div>
+    <p class="login-tag">Ponto de conexão</p>
+    <h2>Análise estrutural de redes de transações</h2>
+    <p class="login-lead">Grafos, matrizes e centralidades para identificar contas com relevância estrutural.</p>
+    <svg class="login-net" viewBox="0 0 360 220" aria-hidden="true">
+      <g stroke="#4D94DD" stroke-width="1.2" opacity=".55">
+        <line x1="60" y1="50" x2="170" y2="110"/><line x1="170" y1="110" x2="300" y2="60"/>
+        <line x1="170" y1="110" x2="110" y2="190"/><line x1="170" y1="110" x2="270" y2="180"/>
+        <line x1="300" y1="60" x2="270" y2="180"/><line x1="40" y1="140" x2="170" y2="110"/>
+      </g>
+      <circle cx="170" cy="110" r="18" fill="#C2263C"/><circle cx="60" cy="50" r="9" fill="#4D94DD"/>
+      <circle cx="300" cy="60" r="12" fill="#D99311"/><circle cx="110" cy="190" r="8" fill="#4D94DD"/>
+      <circle cx="270" cy="180" r="10" fill="#4D94DD"/><circle cx="40" cy="140" r="7" fill="#7FA4CE"/>
+    </svg>
+    <p class="login-foot">Protótipo acadêmico · dados fictícios</p>
+  </aside>
+
+  <!-- formulários -->
+  <main class="login-main">
+    <div class="login-card">
+
+      <!-- 1. Login: CPF/CNPJ + senha no MESMO formulário (permite o navegador salvar a senha) -->
+      <form class="etapa" id="etapa-login" method="post" action="/login" autocomplete="on" novalidate>
+        <h3>Acessar o sistema</h3>
+        <p class="sub">Entre com seu CPF ou CNPJ e senha.</p>
+        <div class="campo">
+          <label for="docInput">CPF ou CNPJ</label>
+          <input id="docInput" name="username" inputmode="numeric" autocomplete="username" placeholder="000.000.000-00" maxlength="18" required autofocus>
+          <span class="dica" id="docTipo">&nbsp;</span>
+        </div>
+        <div class="campo">
+          <label for="senhaInput">Senha</label>
+          <div class="senha-wrap"><input id="senhaInput" name="password" type="password" autocomplete="current-password" required>
+            <button type="button" class="olho" data-olho="senhaInput" aria-label="Mostrar senha">👁</button></div>
+        </div>
+        <button class="btn largo" type="submit">Entrar</button>
+        <div class="pendente" id="pendente" hidden>
+          <p id="pendenteMsg"></p>
+          <button type="button" class="btn ghost largo" id="btnReenviar">Reenviar e-mail de confirmação</button>
+        </div>
+        <button type="button" class="link" data-ir="esqueci">Esqueci minha senha</button>
+        <p class="rodape">Não tem conta? <a href="/cadastro" data-ir="cadastro">Criar cadastro</a></p>
+        <p class="nota-seguranca">🔒 Por segurança, não informamos se o CPF/CNPJ tem cadastro. Após 5 tentativas erradas, o acesso fica bloqueado por 15 minutos.</p>
+      </form>
+
+      <!-- 2. Cadastro -->
+      <form class="etapa" id="etapa-cadastro" method="post" action="/cadastro" autocomplete="on" novalidate hidden>
+        <button type="button" class="voltar" data-ir="login">← Voltar ao login</button>
+        <h3>Criar cadastro</h3>
+        <p class="sub">Depois do cadastro, enviaremos um link para confirmar seu e-mail.</p>
+        <div class="campo"><label for="cadDoc">CPF ou CNPJ</label>
+          <input id="cadDoc" name="username" inputmode="numeric" autocomplete="username" placeholder="000.000.000-00" maxlength="18" required>
+          <span class="dica" id="cadDocTipo">&nbsp;</span></div>
+        <div class="campo"><label for="cadNome" id="cadNomeLabel">Nome completo</label><input id="cadNome" name="name" autocomplete="name" maxlength="150" required></div>
+        <div class="campo"><label for="cadEmail">E-mail</label><input id="cadEmail" name="email" type="email" autocomplete="email" maxlength="190" required>
+          <span class="dica">Você vai receber o link de confirmação neste e-mail.</span></div>
+        <div class="campo"><label for="cadTel">Telefone (com DDD)</label><input id="cadTel" name="tel" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(11) 91234-5678" maxlength="15" required>
+          <span class="dica">Usado pelo administrador para confirmar sua identidade, por exemplo se precisar trocar o e-mail.</span></div>
+        <div class="campo"><label for="cadSenha">Senha</label>
+          <div class="senha-wrap"><input id="cadSenha" name="new-password" type="password" autocomplete="new-password" required>
+            <button type="button" class="olho" data-olho="cadSenha" aria-label="Mostrar senha">👁</button></div>
+          <ul class="regras" id="cadRegras"><li data-r="tam">8 ou mais caracteres</li><li data-r="letra">Letras</li><li data-r="num">Números</li></ul></div>
+        <div class="campo"><label for="cadConf">Confirmar senha</label><input id="cadConf" type="password" autocomplete="new-password" required></div>
+        <details class="convite"><summary>Tenho um código de convite</summary>
+          <div class="campo"><label for="cadConvite">Código de convite</label>
+            <input id="cadConvite" autocomplete="off" placeholder="NEXO-XXXX-XXXX" maxlength="14">
+            <span class="dica">O código define seu cargo (ex.: Analista). Sem código, você entra como Visualizador.</span></div>
+        </details>
+        <button class="btn largo" type="submit">Criar cadastro</button>
+      </form>
+
+      <!-- 2b. Cadastro concluído -->
+      <div class="etapa" id="etapa-cadastrado" hidden>
+        <h3>Confirme seu e-mail</h3>
+        <div class="sucesso" id="cadOk"></div>
+        <button type="button" class="btn largo" data-ir="login" style="margin-top:14px">Ir para o login</button>
+      </div>
+
+      <!-- 3. Esqueci minha senha -->
+      <form class="etapa" id="etapa-esqueci" novalidate hidden>
+        <button type="button" class="voltar" data-ir="login">← Voltar ao login</button>
+        <h3>Recuperar senha</h3>
+        <p class="sub">Enviaremos um link de redefinição para o e-mail do cadastro.</p>
+        <div class="campo"><label for="esqDoc">CPF ou CNPJ</label><input id="esqDoc" inputmode="numeric" maxlength="18" required></div>
+        <button class="btn largo" type="submit">Enviar link por e-mail</button>
+        <div class="sucesso" id="esqOk" hidden></div>
+      </form>
+
+      <!-- 4. Redefinir (link do e-mail) -->
+      <form class="etapa" id="etapa-redefinir" novalidate hidden>
+        <h3>Definir nova senha</h3>
+        <p class="sub" id="redefQuem">Validando link…</p>
+        <input type="text" name="username" id="redUsuario" autocomplete="username" hidden>
+        <div class="campo"><label for="redSenha">Nova senha</label>
+          <div class="senha-wrap"><input id="redSenha" type="password" autocomplete="new-password" required>
+            <button type="button" class="olho" data-olho="redSenha" aria-label="Mostrar senha">👁</button></div>
+          <ul class="regras" id="redRegras"><li data-r="tam">8 ou mais caracteres</li><li data-r="letra">Letras</li><li data-r="num">Números</li></ul></div>
+        <div class="campo"><label for="redConf">Confirmar nova senha</label><input id="redConf" type="password" autocomplete="new-password" required></div>
+        <button class="btn largo" type="submit" id="redBtn">Salvar nova senha</button>
+        <button type="button" class="link" data-ir="login">Ir para o login</button>
+      </form>
+
+      <!-- 5. Confirmar e-mail (link do e-mail) -->
+      <div class="etapa" id="etapa-confirmar" hidden>
+        <h3>Confirmação de e-mail</h3>
+        <p class="sub" id="confMsg">Confirmando seu e-mail…</p>
+        <button type="button" class="btn largo" data-ir="login" id="confBtn" hidden>Ir para o login</button>
+      </div>
+
+      <div class="msg-erro" id="erro" role="alert" hidden></div>
+    </div>
+  </main>
+</div>
+<script type="module" src="{{ url_for('static', filename='js/login.js') }}"></script>
+</body>
+</html>
