@@ -80,7 +80,7 @@ Rode primeiro o **`scripts\DIAGNOSTICO.bat`**: ele aponta a causa e a correção
 | Erro estranho no `.venv`, "No Python at…" | `.venv` copiado de outro PC (pen drive, OneDrive) | Os atalhos detectam e recriam. Ou apague a pasta `.venv` |
 | `'python' não é reconhecido` | Python ausente ou fora do PATH | `INSTALAR_WINDOWS.bat`, ou reinstale marcando **"Add python.exe to PATH"** |
 | `ensurepip is not available` (Linux) | Falta o pacote de venv | `sudo apt install python3-venv python3-pip` |
-| "usuário ou senha incorretos" no MySQL | Senha do Aiven errada ou com espaço | `scripts\CONFIGURAR.bat` (mostra a comparação caractere a caractere) |
+| "usuário ou senha incorretos" no MySQL | Senha do Aiven errada, colada pela metade ou trocada no Aiven (Reset password) | `scripts\CONFIGURAR.bat`, opção **1** (lê a senha copiada, sem colar no CMD); ele também mostra a comparação caractere a caractere |
 | "o banco 'nexo' não existe" | Base ainda não enviada | `scripts\MIGRAR_MYSQL.bat` |
 | "O banco está na versão N do esquema, mas este NEXO conhece só até a…" | Um colega já usou uma versão mais nova e o seu código está desatualizado | Atualize o código (`git pull`) |
 | "CPF/CNPJ ou senha inválidos" com usuário criado em outro PC | No modo local, cada PC tem o próprio `nexo.db` | Conecte ao Aiven (os usuários são compartilhados) ou use `CRIAR_ADMIN.bat` |

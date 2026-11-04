@@ -29,25 +29,80 @@ def mascarar(senha):
     return f"{len(senha)} caracteres, começa com '{senha[:4]}' e termina com '{senha[-2:]}'"
 
 
-def pedir_senha(atual, rotulo="Password", origem="Aiven", prefixo="AVNS_", sem_espacos=False):
-    """Pede a senha escondida; nunca aceita vazio quando ainda não há senha salva."""
+def ler_area_transferencia():
+    """Texto copiado (Ctrl+C) no navegador, sem precisar colar no CMD. None se não for possível ler."""
+    comandos = {"win32": ["powershell", "-NoProfile", "-Command", "Get-Clipboard -Raw"],
+                "darwin": ["pbpaste"]}
+    comando = comandos.get(sys.platform)
+    if comando:
+        try:
+            r = subprocess.run(comando, capture_output=True, text=True, timeout=10)
+            if r.returncode == 0:
+                return r.stdout
+        except (OSError, subprocess.SubprocessError):
+            pass
+    try:  # Linux (e reserva para os outros): tkinter vem junto com o Python
+        import tkinter
+        janela = tkinter.Tk()
+        janela.withdraw()
+        texto = janela.clipboard_get()
+        janela.destroy()
+        return texto
+    except Exception:  # noqa: BLE001 — sem tela ou área de transferência vazia
+        return None
+
+
+def limpar_senha(texto, rotulo="Password"):
+    """Remove o que costuma vir junto ao copiar: espaços, quebras de linha, aspas,
+    caracteres invisíveis (ex.: ^V quando o Ctrl+V não funciona) e o rótulo 'Password:'."""
+    senha = "".join(ch for ch in str(texto or "") if ch.isprintable() and not ch.isspace())
+    for nome in (rotulo, "Password", "Senha"):
+        if senha.lower().startswith(nome.lower() + ":"):
+            senha = senha[len(nome) + 1:]
+    return senha.strip("'\"`")
+
+
+def pedir_senha(atual, rotulo="Password", origem="Aiven", prefixo="AVNS_", sem_espacos=True):
+    """Pede a senha; nunca aceita vazio quando ainda não há senha salva.
+
+    Três formas, porque colar no CMD do Windows nem sempre funciona:
+      1. ler direto da área de transferência (copiou no site → Enter);
+      2. colar/digitar com a senha visível (Ctrl+V ou botão direito funcionam);
+      3. colar/digitar escondida.
+    As senhas do Aiven e as senhas de app do Google não têm espaços, então espaços,
+    quebras de linha e caracteres invisíveis são removidos.
+    """
     while True:
-        dica = "Enter mantém a atual" if atual else "obrigatória"
-        senha = getpass(f"{rotulo} (não aparece na tela; {dica}): ").strip()
-        if not senha and atual:
+        print(f"\n  Como você quer informar a {rotulo} do {origem}?")
+        print(f"    1. Já copiei no {origem} (Ctrl+C): ler da área de transferência  (recomendado)")
+        print("    2. Colar ou digitar com a senha VISÍVEL (Ctrl+V ou botão direito do mouse)")
+        print("    3. Colar ou digitar com a senha escondida")
+        if atual:
+            print("    Enter. Manter a senha já salva")
+        opcao = input(f"  Escolha{'' if atual else ' [1]'}: ").strip() or ("" if atual else "1")
+        if not opcao and atual:
             return atual
-        if not senha:
-            print("  Nenhuma senha foi recebida. No terminal do Windows, cole com o BOTÃO DIREITO do mouse.")
-            if perguntar("  Prefere digitar/colar com a senha VISÍVEL? (s/n)", "s").lower().startswith("s"):
-                senha = input(f"  {rotulo} (visível): ").strip()
-            if not senha:
+        if opcao == "1":
+            input(f"  Copie a {rotulo} no {origem} (ícone de copiar ou Ctrl+C) e aperte Enter aqui...")
+            bruto = ler_area_transferencia()
+            if bruto is None:
+                print("  Não consegui ler a área de transferência neste computador. Use a opção 2.")
                 continue
-        if sem_espacos:
-            senha = senha.replace(" ", "")  # o Google mostra a senha de app em 4 blocos com espaços
+        elif opcao == "2":
+            bruto = input(f"  {rotulo} (visível; cole com Ctrl+V ou botão direito): ")
+        elif opcao == "3":
+            bruto = getpass(f"  {rotulo} (não aparece na tela; cole com o botão direito): ")
+        else:
+            print("  Opção inválida. Digite 1, 2 ou 3.")
+            continue
+        senha = limpar_senha(bruto, rotulo) if sem_espacos else str(bruto or "").strip()
+        if not senha:
+            print("  Nenhuma senha foi recebida. Tente a opção 1 (área de transferência) ou a 2 (visível).")
+            continue
         print(f"  Senha recebida: {mascarar(senha)}.")
         if prefixo and not senha.startswith(prefixo):
             print(f"  Atenção: as senhas do {origem} costumam começar com '{prefixo}'. Confira se copiou a senha certa.")
-        if sem_espacos and len(senha) != 16:
+        if origem == "Google" and len(senha) != 16:
             print(f"  Atenção: a senha de app do Google tem 16 letras; esta tem {len(senha)}.")
         if perguntar(f"  Confere com a senha do {origem}? (s/n)", "s").lower().startswith("s"):
             return senha
@@ -73,7 +128,7 @@ def mostrar_falha_banco(v, erro):
     print(f"    Password: {mascarar(v['DB_PASSWORD']) if v.get('DB_PASSWORD') else 'VAZIA'}")
     if "senha incorretos" in str(erro):
         print("\n  Causas mais comuns:")
-        print("   1. A senha não foi colada (no Windows, cole com o botão direito do mouse).")
+        print("   1. A senha não foi colada direito. Rode de novo e escolha a opção 1 (ler da área de transferência).")
         print("   2. A senha foi copiada de outro serviço, ou foi trocada no Aiven ('Reset password').")
         print("   3. O User não é o do Aiven (normalmente 'avnadmin').")
         print("   4. Um caractere trocado: l (L minúsculo), I (i maiúsculo) e 1 (um) se confundem.")
