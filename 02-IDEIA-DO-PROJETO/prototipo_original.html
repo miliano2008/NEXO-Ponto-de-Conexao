@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXO — Ponto de Conexão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --navy:#0B1F3A;
+  --navy-2:#132C4E;
+  --blue:#1B5FA8;
+  --blue-soft:#E7F0FA;
+  --ink:#16202E;
+  --ink-2:#4A5A6E;
+  --ink-3:#7C8B9E;
+  --bg:#F4F6F9;
+  --surface:#FFFFFF;
+  --line:#E1E7EF;
+  --amber:#D99311;
+  --amber-soft:#FCF3E1;
+  --red:#C2263C;
+  --red-soft:#FBE9EC;
+  --green:#1E7A5A;
+  --radius:10px;
+  --shadow:0 1px 2px rgba(11,31,58,.06), 0 8px 24px rgba(11,31,58,.05);
+  --sidebar:260px;
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --navy:#071526; --navy-2:#0E2440; --blue:#4D94DD; --blue-soft:#12283F;
+    --ink:#E6ECF4; --ink-2:#AEBDCE; --ink-3:#7F90A5;
+    --bg:#0A1522; --surface:#101E30; --line:#1E3149;
+    --amber:#E3A62B; --amber-soft:#2A2312; --red:#E2596C; --red-soft:#2B1419; --green:#4FBF95;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  --navy:#071526; --navy-2:#0E2440; --blue:#4D94DD; --blue-soft:#12283F;
+  --ink:#E6ECF4; --ink-2:#AEBDCE; --ink-3:#7F90A5;
+  --bg:#0A1522; --surface:#101E30; --line:#1E3149;
+  --amber:#E3A62B; --amber-soft:#2A2312; --red:#E2596C; --red-soft:#2B1419; --green:#4FBF95;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Inter",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--blue); outline-offset:2px; border-radius:4px}
+@media (prefers-reduced-motion: reduce){*{transition:none !important; animation:none !important}}
+
+/* ============ SHELL ============ */
+.app{display:flex; min-height:100vh}
+.sidebar{
+  width:var(--sidebar); flex:0 0 var(--sidebar);
+  background:var(--navy); color:#D8E3F0;
+  display:flex; flex-direction:column;
+  position:fixed; inset:0 auto 0 0; z-index:40;
+}
+.brand{padding:22px 20px 18px; border-bottom:1px solid rgba(255,255,255,.08)}
+.brand-mark{display:flex; align-items:center; gap:10px}
+.brand-dot{width:26px;height:26px;flex:0 0 26px}
+.brand h1{margin:0; font-size:21px; letter-spacing:.14em; font-weight:700; color:#fff}
+.brand p{margin:2px 0 0 36px; font-size:10.5px; letter-spacing:.22em; color:#7FA4CE; text-transform:uppercase}
+.nav{padding:14px 12px; flex:1; overflow-y:auto}
+.nav-label{font-size:11px; color:#5F7FA6; padding:10px 10px 6px; letter-spacing:.06em}
+.nav button{
+  display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+  background:none; border:0; color:#C3D4E8; padding:9px 11px; border-radius:8px;
+  font-size:13.5px; cursor:pointer; transition:background .15s, color .15s;
+}
+.nav button:hover{background:rgba(255,255,255,.06); color:#fff}
+.nav button.active{background:var(--blue); color:#fff; font-weight:600}
+.nav button svg{flex:0 0 17px; opacity:.9}
+.side-foot{padding:14px 16px; border-top:1px solid rgba(255,255,255,.08); font-size:12.5px}
+.side-user{display:flex; align-items:center; gap:10px; margin-bottom:10px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px}
+.side-user strong{display:block;color:#fff;font-weight:600;font-size:13px}
+.side-user span{color:#7FA4CE; font-size:11.5px}
+.sys-status{display:flex;align-items:center;gap:7px;color:#9FC0E2;font-size:11.5px;margin-bottom:10px}
+.pulse{width:7px;height:7px;border-radius:50%;background:#43C08A;box-shadow:0 0 0 3px rgba(67,192,138,.18)}
+.logout{background:none;border:1px solid rgba(255,255,255,.16);color:#C3D4E8;border-radius:7px;padding:7px 10px;width:100%;cursor:pointer;font-size:12.5px}
+.logout:hover{background:rgba(255,255,255,.07)}
+
+.main{margin-left:var(--sidebar); flex:1; min-width:0; display:flex; flex-direction:column}
+.topbar{
+  position:sticky; top:0; z-index:30; background:var(--surface);
+  border-bottom:1px solid var(--line); padding:14px 26px;
+  display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+}
+.topbar h2{margin:0; font-size:19px; font-weight:600; letter-spacing:-.01em}
+.topbar .period{color:var(--ink-3); font-size:12.5px; margin-top:1px}
+.topbar .spacer{flex:1}
+select, input[type=text], input[type=search], input[type=number]{
+  font-family:inherit; font-size:13px; color:var(--ink); background:var(--surface);
+  border:1px solid var(--line); border-radius:8px; padding:8px 10px; min-width:0;
+}
+.icon-btn{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2)}
+.icon-btn:hover{border-color:var(--blue);color:var(--blue)}
+.badge-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--red);border-radius:50%}
+.profile-chip{display:flex;align-items:center;gap:9px;padding:4px 10px 4px 4px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.profile-chip span{font-size:12.5px;color:var(--ink-2)}
+
+.content{padding:24px 26px 12px; flex:1}
+.page{display:none; animation:fade .18s ease-out}
+.page.active{display:block}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+.foot{
+  border-top:1px solid var(--line); padding:16px 26px 26px; color:var(--ink-3);
+  font-size:11.5px; line-height:1.7; max-width:900px;
+}
+.proto-tag{display:inline-block;background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber);border-radius:5px;padding:1px 7px;font-size:10.5px;font-weight:600;letter-spacing:.04em;margin-right:8px}
+
+/* ============ BLOCOS ============ */
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow)}
+.card-head{padding:15px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.card-head h3{margin:0; font-size:14.5px; font-weight:600}
+.card-head p{margin:2px 0 0; font-size:12px; color:var(--ink-3)}
+.card-body{padding:18px}
+.grid{display:grid; gap:16px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g-2-1{grid-template-columns:1.7fr 1fr}
+.mt{margin-top:16px}
+
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue)}
+.kpi.warn:before{background:var(--amber)} .kpi.alert:before{background:var(--red)}
+.kpi h4{margin:0 0 6px; font-size:12px; font-weight:500; color:var(--ink-3)}
+.kpi .val{font-size:30px; font-weight:700; letter-spacing:-.02em; line-height:1.1}
+.kpi .sub{font-size:11.5px; color:var(--ink-3); margin-top:5px}
+
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{text-align:left; font-weight:600; color:var(--ink-2); font-size:11.5px; padding:10px 14px; border-bottom:1px solid var(--line); background:var(--bg); white-space:nowrap}
+td{padding:11px 14px; border-bottom:1px solid var(--line); color:var(--ink)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.clickable{cursor:pointer}
+tbody tr.clickable:hover{background:var(--blue-soft)}
+.num{text-align:right}
+.mono-id{font-weight:600; color:var(--blue); letter-spacing:.01em}
+.table-wrap{overflow-x:auto}
+
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:500;white-space:nowrap}
+.pill:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.normal{background:var(--blue-soft); color:var(--blue)}
+.pill.revisar{background:var(--blue-soft); color:var(--ink-2)}
+.pill.analise{background:var(--amber-soft); color:var(--amber)}
+.pill.alta{background:var(--red-soft); color:var(--red)}
+
+.btn{background:var(--blue);color:#fff;border:0;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--blue);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--blue);background:var(--blue-soft)}
+.btn.sm{padding:6px 11px;font-size:12px}
+
+.filters{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.filters label{font-size:11.5px;color:var(--ink-3);display:block;margin-bottom:4px}
+.field{display:flex;flex-direction:column}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+.legend i{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:-1px}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;font-size:13.5px;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.tabs button.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+
+.note{background:var(--blue-soft);border-left:3px solid var(--blue);border-radius:6px;padding:11px 14px;font-size:12.5px;color:var(--ink-2)}
+.note.warn{background:var(--amber-soft);border-left-color:var(--amber)}
+
+/* grafo */
+.graph-shell{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+#graph{display:block;width:100%;height:auto;touch-action:none;background:
+  radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0/22px 22px}
+.graph-tools{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px}
+.graph-tools button{width:32px;height:32px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);cursor:pointer;font-size:15px;line-height:1}
+.tooltip{position:fixed;pointer-events:none;z-index:60;background:var(--navy);color:#EAF1F9;border-radius:8px;padding:9px 12px;font-size:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;transition:opacity .12s}
+.tooltip b{display:block;font-size:13px;margin-bottom:4px;color:#fff}
+.tooltip div{display:flex;justify-content:space-between;gap:16px;color:#A9C4E0}
+.tooltip div span{color:#fff}
+.node circle{cursor:pointer}
+.node text{font-size:10px;font-weight:600;fill:var(--ink-2);pointer-events:none}
+
+/* modal / painel */
+.overlay{position:fixed;inset:0;background:rgba(11,31,58,.45);display:none;z-index:70;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:12px;max-width:640px;width:100%;max-height:85vh;overflow:auto;box-shadow:0 30px 60px rgba(0,0,0,.3)}
+.modal header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+.modal header h3{margin:0;font-size:16px}
+.modal .body{padding:20px}
+.close{background:none;border:0;font-size:20px;color:var(--ink-3);cursor:pointer;line-height:1}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:9px 14px;font-size:13px}
+.kv dt{color:var(--ink-3)} .kv dd{margin:0;font-weight:500}
+
+.drawer{position:fixed;top:0;right:0;bottom:0;width:380px;max-width:92vw;background:var(--surface);border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(11,31,58,.14);transform:translateX(102%);transition:transform .22s ease;z-index:65;overflow-y:auto}
+.drawer.open{transform:none}
+.drawer header{position:sticky;top:0;background:var(--surface);padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.drawer .body{padding:18px}
+
+/* diagramas */
+.flow{display:flex;flex-direction:column;align-items:center;gap:0}
+.flow-box{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:8px;padding:12px 16px;width:100%;max-width:560px}
+.flow-box strong{display:block;font-size:13.5px}
+.flow-box span{font-size:12px;color:var(--ink-3)}
+.flow-arrow{width:1px;height:16px;background:var(--line);position:relative}
+.flow-arrow:after{content:"";position:absolute;bottom:0;left:-3.5px;border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid var(--line)}
+.matrix{border-collapse:collapse;font-size:12px}
+.matrix th,.matrix td{border:1px solid var(--line);padding:6px 9px;text-align:center;min-width:34px}
+.matrix td.one{background:var(--blue-soft);color:var(--blue);font-weight:600}
+.matrix td.diagd{background:var(--amber-soft);color:var(--amber);font-weight:600}
+.matrix th{background:var(--bg)}
+
+.pattern{border:1px solid var(--line);border-radius:var(--radius);padding:16px;background:var(--surface);box-shadow:var(--shadow)}
+.pattern h4{margin:0 0 4px;font-size:14px}
+.pattern p{margin:0 0 12px;font-size:12.5px;color:var(--ink-2)}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-3)}
+.chip{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+
+.pager{display:flex;align-items:center;gap:6px;justify-content:flex-end;padding:12px 16px}
+.pager button{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:7px;min-width:32px;height:32px;cursor:pointer;font-size:12.5px}
+.pager button.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.pager button:disabled{opacity:.45;cursor:not-allowed}
+
+.switch{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line)}
+.switch:last-child{border-bottom:0}
+.switch p{margin:0;font-size:13px;font-weight:500}
+.switch span{font-size:12px;color:var(--ink-3)}
+.toggle{width:40px;height:22px;border-radius:999px;background:var(--line);border:0;position:relative;cursor:pointer;flex:0 0 40px}
+.toggle:after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .18s}
+.toggle.on{background:var(--blue)}
+.toggle.on:after{left:21px}
+input[type=range]{accent-color:var(--blue);width:100%}
+
+.empty{padding:38px;text-align:center;color:var(--ink-3);font-size:13px}
+
+@media (max-width:1180px){ .g4{grid-template-columns:repeat(2,1fr)} .g-2-1{grid-template-columns:1fr} }
+@media (max-width:900px){
+  :root{--sidebar:0px}
+  .sidebar{transform:translateX(-100%);transition:transform .2s;width:250px;flex-basis:250px}
+  .sidebar.open{transform:none}
+  .main{margin-left:0}
+  .menu-toggle{display:flex !important}
+  .g3,.g2{grid-template-columns:1fr}
+  .content{padding:18px 14px}
+  .topbar{padding:12px 14px}
+  .drawer{width:100%}
+}
+.menu-toggle{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg class="brand-dot" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <circle cx="5" cy="6" r="3" fill="#4D94DD"/><circle cx="21" cy="5" r="2.4" fill="#7FA4CE"/>
+          <circle cx="13" cy="14" r="4.2" fill="#fff"/><circle cx="4" cy="21" r="2.4" fill="#7FA4CE"/>
+          <circle cx="22" cy="20" r="3" fill="#4D94DD"/>
+          <path d="M5 6l8 8M21 5l-8 9M13 14l-9 7M13 14l9 6" stroke="#4D94DD" stroke-width="1.2" opacity=".75"/>
+        </svg>
+        <h1>NEXO</h1>
+      </div>
+      <p>Ponto de conexão</p>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="nav-label">Análise</div>
+      <button data-page="dashboard" class="active">📊 Dashboard</button>
+      <button data-page="transacoes">💳 Transações</button>
+      <button data-page="rede">🕸️ Rede de transações</button>
+      <button data-page="contas">🔎 Contas em análise</button>
+      <div class="nav-label">Documentação</div>
+      <button data-page="relatorios">📄 Relatórios</button>
+      <button data-page="arquitetura">🧩 Arquitetura</button>
+      <button data-page="config">⚙️ Configurações</button>
+    </nav>
+    <div class="side-foot">
+      <div class="side-user">
+        <div class="avatar">HM</div>
+        <div><strong>H. Miliano</strong><span>Analista de rede</span></div>
+      </div>
+      <div class="sys-status"><i class="pulse"></i> Sistema operando em modo protótipo</div>
+      <button class="logout" onclick="NEXO.ui.modal('Sair do sistema','<p style=\'margin:0 0 14px\'>Esta é uma tela de demonstração. Na versão final, este botão encerra a sessão do analista e registra o horário de saída na trilha de auditoria.</p><button class=\'btn ghost\' onclick=\'NEXO.ui.closeModal()\'>Entendi</button>')">Sair</button>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Abrir menu">☰</button>
+      <div>
+        <h2 id="pageTitle">Visão geral</h2>
+        <div class="period">Período analisado: <span id="periodLabel">últimos 30 dias</span> · base fictícia de demonstração</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="field">
+        <select id="periodSelect" aria-label="Filtro de período">
+          <option value="7">Últimos 7 dias</option>
+          <option value="30" selected>Últimos 30 dias</option>
+          <option value="90">Últimos 90 dias</option>
+        </select>
+      </div>
+      <button class="icon-btn" id="btnNotif" aria-label="Notificações">🔔<i class="badge-dot"></i></button>
+      <div class="profile-chip"><div class="avatar" style="width:26px;height:26px;font-size:10px">HM</div><span>Analista</span></div>
+    </header>
+
+    <div class="content">
+      <!-- ---------- DASHBOARD ---------- -->
+      <section class="page active" id="page-dashboard">
+        <div class="grid g4">
+          <div class="kpi"><h4>Transações analisadas</h4><div class="val">12.540</div><div class="sub">base histórica acumulada</div></div>
+          <div class="kpi"><h4>Contas analisadas</h4><div class="val">1.872</div><div class="sub">contas únicas na base</div></div>
+          <div class="kpi warn"><h4>Contas em análise</h4><div class="val">36</div><div class="sub">indicadores acima do limiar</div></div>
+          <div class="kpi"><h4>Comunidades identificadas</h4><div class="val">5</div><div class="sub">agrupamentos estruturais</div></div>
+        </div>
+
+        <div class="grid g-2-1 mt">
+          <div class="card">
+            <div class="card-head"><div><h3>Volume de transações</h3><p>Valor movimentado por dia no período selecionado</p></div></div>
+            <div class="card-body"><div id="chartVolume"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><h3>Distribuição das transações</h3><p>Classificação por indicador estrutural</p></div></div>
+            <div class="card-body"><div id="chartDist"></div></div>
+          </div>
+        </div>
+
+        <div class="card mt">
+          <div class="card-head">
+            <div><h3>Contas com maior relevância estrutural</h3><p>Ordenadas pelo Score NEXO ilustrativo</p></div>
+            <div class="spacer" style="flex:1"></div>
+            <button class="btn ghost sm" data-goto="contas">Ver ranking completo</button>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Conta</th><th class="num">Degree</th><th class="num">Betweenness</th><th class="num">Closeness</th><th class="num">Comunidade</th><th>Status</th></tr></thead>
+            <tbody id="dashTop"></tbody>
+          </table></div>
+        </div>
+
+        <div class="note mt">O NEXO indica <strong>relevância estrutural</strong> dentro da rede analisada. Um indicador elevado sinaliza que a conta necessita investigação — nunca que houve irregularidade confirmada.</div>
+      </section>
+
+      <!-- ---------- TRANSAÇÕES ---------- -->
+      <section class="page" id="page-transacoes">
+        <div class="card">
+          <div class="card-head" style="gap:10px">
+            <div class="field" style="flex:1;min-width:200px">
+              <label for="txSearch">Pesquisar</label>
+              <input type="search" id="txSearch" placeholder="ID, conta de origem ou destino">
+            </div>
+            <div class="field"><label for="txConta">Conta</label><select id="txConta"></select></div>
+            <div class="field"><label for="txStatus">Status</label><select id="txStatus">
+              <option value="">Todos</option><option>Normal</option><option>Em análise</option><option>Alta relevância</option></select></div>
+            <div class="field"><label for="txTipo">Tipo</label><select id="txTipo"></select></div>
+            <div class="field"><label for="txMin">Valor mínimo (R$)</label><input type="number" id="txMin" placeholder="0" style="width:130px"></div>
+            <div class="field"><label>&nbsp;</label><button class="btn ghost" id="txReset">Limpar filtros</button></div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>ID</th><th>Data / hora</th><th>Origem</th><th>Destino</th><th class="num">Valor</th><th>Tipo</th><th>Status</th></tr></thead>
+            <tbody id="txBody"></tbody>
+          </table></div>
+          <div class="pager" id="txPager"></div>
+        </div>
+        <p style="font-size:12px;color:var(--ink-3)">Clique em uma linha para abrir os detalhes da transação e as conexões relacionadas.</p>
+      </section>
+
+      <!-- ---------- REDE ---------- -->
+      <section class="page" id="page-rede">
+        <div class="tabs" id="redeTabs">
+          <button data-tab="grafo" class="active">Grafo</button>
+          <button data-tab="padroes">Padrões identificados</button>
+          <button data-tab="comunidades">Comunidades</button>
+          <button data-tab="matriz">Matriz de adjacência</button>
+        </div>
+
+        <div class="tabpane" id="tab-grafo">
+          <div class="graph-shell">
+            <svg id="graph" viewBox="0 0 1000 620" role="img" aria-label="Grafo de transações entre contas"></svg>
+            <div class="graph-tools">
+              <button id="zIn" title="Aproximar">+</button>
+              <button id="zOut" title="Afastar">−</button>
+              <button id="zReset" title="Reorganizar">⟳</button>
+            </div>
+          </div>
+          <div class="grid g2 mt">
+            <div class="card"><div class="card-body">
+              <div class="legend">
+                <span><i style="background:var(--blue)"></i>Normal</span>
+                <span><i style="background:var(--amber)"></i>Em análise</span>
+                <span><i style="background:var(--red)"></i>Alta relevância estrutural</span>
+              </div>
+              <p style="font-size:12.5px;color:var(--ink-2);margin:12px 0 0">
+                Cada círculo é uma conta e cada seta é o sentido de uma transferência. O tamanho do nó é proporcional ao <strong>degree</strong> (número de conexões). Passe o mouse para ver as métricas, clique para abrir o painel lateral e arraste para reorganizar.</p>
+            </div></div>
+            <div class="card"><div class="card-body" id="netStats"></div></div>
+          </div>
+        </div>
+
+        <div class="tabpane" id="tab-padroes" style="display:none">
+          <div class="grid g3" id="padroesGrid"></div>
+          <div class="note mt">Os padrões acima são estruturas que o sistema procura na rede. Encontrar um padrão indica que a conta merece verificação, não que houve irregularidade.</div>
+        </div>
+
+        <div class="tabpane" id="tab-comunidades" style="display:none">
+          <div class="note">Comunidades representam agrupamentos identificados pela estrutura da rede. <strong>Algoritmo previsto: Louvain</strong> — nesta versão o agrupamento é fictício e ilustrativo, ainda não executado.</div>
+          <div class="grid g3 mt" id="comunidadesGrid"></div>
+        </div>
+
+        <div class="tabpane" id="tab-matriz" style="display:none">
+          <div class="grid g2">
+            <div class="card"><div class="card-head"><div><h3>Matriz de adjacência (A)</h3><p>Exemplo didático com 5 contas</p></div></div>
+              <div class="card-body"><div id="matA"></div>
+                <p style="font-size:12.5px;color:var(--ink-2);margin:14px 0 0">A matriz representa numericamente as conexões existentes entre as contas: o valor 1 na posição (i, j) indica que a conta i transferiu para a conta j.</p>
+              </div></div>
+            <div class="card"><div class="card-head"><div><h3>Matriz de grau (D) e Laplaciana (L)</h3><p>L = D − A</p></div></div>
+              <div class="card-body"><div id="matDL"></div>
+                <p style="font-size:12.5px;color:var(--ink-2);margin:14px 0 0">D reúne na diagonal o grau de cada conta. A Laplaciana L = D − A é a base para o estudo de autovalores e autovetores, usado na análise de conectividade e na separação de comunidades.</p>
+              </div></div>
+          </div>
+          <div class="card mt"><div class="card-head"><div><h3>Matriz da rede de demonstração</h3><p>15 contas fictícias — célula marcada indica transferência no sentido linha → coluna</p></div></div>
+            <div class="card-body table-wrap"><div id="matFull"></div></div></div>
+          <div class="note warn mt">Nesta versão as matrizes são montadas a partir dos dados fictícios apenas para demonstração visual. O cálculo matricial definitivo será feito em Python com NumPy e NetworkX e documentado no memorial de cálculo.</div>
+        </div>
+      </section>
+
+      <!-- ---------- CONTAS EM ANÁLISE ---------- -->
+      <section class="page" id="page-contas">
+        <div class="card">
+          <div class="card-head">
+            <div><h3>Contas com maior relevância estrutural</h3><p>Ranking por Score NEXO ilustrativo</p></div>
+          </div>
+          <div class="card-body" style="padding-bottom:6px">
+            <div class="filters">
+              <div class="field" style="min-width:200px"><label>Score mínimo: <b id="scoreOut">0</b></label><input type="range" id="fScore" min="0" max="100" value="0"></div>
+              <div class="field" style="min-width:180px"><label>Degree mínimo: <b id="degOut">0</b></label><input type="range" id="fDeg" min="0" max="14" value="0"></div>
+              <div class="field"><label for="fCom">Comunidade</label><select id="fCom"></select></div>
+              <div class="field"><label for="fStat">Status</label><select id="fStat">
+                <option value="">Todos</option><option>Alta relevância</option><option>Em análise</option><option>Revisar</option><option>Normal</option></select></div>
+            </div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>#</th><th>Conta</th><th class="num">Score NEXO*</th><th class="num">Degree</th><th class="num">In / Out</th><th class="num">Betweenness</th><th class="num">Closeness</th><th class="num">Comunidade</th><th>Status</th></tr></thead>
+            <tbody id="contasBody"></tbody>
+          </table></div>
+        </div>
+        <p style="font-size:12px;color:var(--ink-3);margin-top:10px">* Score NEXO ilustrativo. A fórmula definitiva será definida, documentada e validada matematicamente pela equipe.</p>
+      </section>
+
+      <!-- ---------- DETALHE DA CONTA ---------- -->
+      <section class="page" id="page-conta">
+        <div id="contaDetalhe"></div>
+      </section>
+
+      <!-- ---------- RELATÓRIOS ---------- -->
+      <section class="page" id="page-relatorios">
+        <div class="grid g2" id="reportGrid"></div>
+        <div class="note mt">Os relatórios são gerados a partir dos resultados matemáticos do projeto. Nesta versão, o botão abre apenas a estrutura prevista de cada documento.</div>
+      </section>
+
+      <!-- ---------- ARQUITETURA ---------- -->
+      <section class="page" id="page-arquitetura">
+        <div class="grid g-2-1">
+          <div class="card"><div class="card-head"><div><h3>Arquitetura prevista</h3><p>Como o dado caminha do banco até a visualização</p></div></div>
+            <div class="card-body"><div class="flow" id="archFlow"></div></div></div>
+          <div>
+            <div class="card"><div class="card-head"><div><h3>Ferramentas de apoio</h3></div></div>
+              <div class="card-body" id="archTools"></div></div>
+            <div class="card mt"><div class="card-head"><div><h3>Fluxo do sistema</h3><p>Nove etapas do pipeline</p></div></div>
+              <div class="card-body"><ol id="archSteps" style="margin:0;padding-left:18px;font-size:13px;line-height:2"></ol></div></div>
+          </div>
+        </div>
+        <div class="note mt">Este protótipo cobre apenas a camada de interface (última etapa). As camadas de dados e cálculo serão implementadas nas próximas entregas.</div>
+      </section>
+
+      <!-- ---------- CONFIGURAÇÕES ---------- -->
+      <section class="page" id="page-config">
+        <div class="grid g2">
+          <div class="card"><div class="card-head"><div><h3>Limiares de classificação</h3><p>Ajuste os cortes do Score NEXO e veja a rede reclassificar</p></div></div>
+            <div class="card-body">
+              <label style="font-size:12.5px">Limiar de “em análise”: <b id="thrAOut">45</b></label>
+              <input type="range" id="thrA" min="20" max="80" value="45">
+              <label style="font-size:12.5px;display:block;margin-top:14px">Limiar de “alta relevância”: <b id="thrBOut">70</b></label>
+              <input type="range" id="thrB" min="40" max="100" value="70">
+              <p style="font-size:12px;color:var(--ink-3);margin:14px 0 0">Os limiares valem apenas para a demonstração e não são persistidos.</p>
+            </div></div>
+          <div class="card"><div class="card-head"><div><h3>Preferências da interface</h3></div></div>
+            <div class="card-body">
+              <div class="switch"><div><p>Tema escuro</p><span>Acompanha o sistema por padrão</span></div><button class="toggle" id="swTheme"></button></div>
+              <div class="switch"><div><p>Rótulos das contas no grafo</p><span>Exibe o código da conta sob cada nó</span></div><button class="toggle on" id="swLabels"></button></div>
+              <div class="switch"><div><p>Alertas de conta em análise</p><span>Notifica quando uma conta cruza o limiar</span></div><button class="toggle on" id="swAlerts"></button></div>
+              <div class="switch"><div><p>Modo demonstração</p><span>Bloqueado nesta versão do protótipo</span></div><button class="toggle on" id="swDemo" disabled style="opacity:.6"></button></div>
+            </div></div>
+        </div>
+        <div class="card mt"><div class="card-head"><div><h3>Sobre esta versão</h3></div></div>
+          <div class="card-body"><dl class="kv">
+            <dt>Versão</dt><dd>0.1 — pré-sistema navegável</dd>
+            <dt>Origem dos dados</dt><dd>Conjunto fictício embutido (15 contas, 36 transações)</dd>
+            <dt>Banco de dados</dt><dd>Não conectado nesta versão</dd>
+            <dt>Autenticação</dt><dd>Não implementada nesta versão</dd>
+            <dt>Próxima entrega</dt><dd>Carga MySQL e cálculo das métricas em Python</dd>
+          </dl></div></div>
+      </section>
+    </div>
+
+    <footer class="foot">
+      <span class="proto-tag">Protótipo</span>
+      Protótipo acadêmico — NEXO Ponto de Conexão. Dados fictícios para demonstração.
+      As métricas e indicadores apresentados nesta versão são ilustrativos e serão substituídos pelos resultados matematicamente validados do projeto.
+    </footer>
+  </div>
+</div>
+
+<div class="tooltip" id="tip"></div>
+<div class="overlay" id="overlay"><div class="modal"><header><h3 id="modalTitle"></h3><button class="close" onclick="NEXO.ui.closeModal()" aria-label="Fechar">×</button></header><div class="body" id="modalBody"></div></div></div>
+<aside class="drawer" id="drawer"><header><h3 id="drawerTitle">Conta</h3><button class="close" onclick="NEXO.ui.closeDrawer()" aria-label="Fechar">×</button></header><div class="body" id="drawerBody"></div></aside>
+
+<script>
+/* =========================================================
+   NEXO — pré-sistema navegável
+   Camadas: data → metrics → charts → views → router
+   Todos os dados são fictícios.
+   ========================================================= */
+const NEXO = (() => {
+"use strict";
+
+/* ---------------------------------------------------------
+   1. DADOS FICTÍCIOS
+   --------------------------------------------------------- */
+const data = (() => {
+  const contas = [
+    {id:"A001",titular:"Conta pessoa física",com:1},{id:"A002",titular:"Conta empresarial",com:2},
+    {id:"A003",titular:"Conta empresarial",com:2},{id:"A004",titular:"Conta pessoa física",com:1},
+    {id:"A005",titular:"Conta pessoa física",com:1},{id:"A006",titular:"Conta pessoa física",com:1},
+    {id:"A007",titular:"Conta digital",com:3},{id:"A008",titular:"Conta digital",com:3},
+    {id:"A009",titular:"Conta digital",com:3},{id:"A010",titular:"Conta pessoa física",com:4},
+    {id:"A011",titular:"Conta pessoa física",com:4},{id:"A012",titular:"Conta empresarial",com:2},
+    {id:"A013",titular:"Conta pessoa física",com:4},{id:"A014",titular:"Conta digital",com:5},
+    {id:"A015",titular:"Conta digital",com:5}
+  ];
+
+  // [id, origem, destino, valor, diasAtras, hora, tipo]
+  const raw = [
+    ["TX001","A001","A004",1500,0,"18:32","Transferência"],
+    ["TX002","A004","A005",1420,0,"18:40","PIX"],
+    ["TX003","A005","A006",1380,1,"09:12","PIX"],
+    ["TX004","A006","A001",900,1,"14:05","PIX"],
+    ["TX005","A002","A003",8300,0,"18:27","TED"],
+    ["TX006","A003","A012",7900,2,"11:48","TED"],
+    ["TX007","A012","A002",5200,3,"16:20","Transferência"],
+    ["TX008","A003","A005",2300,3,"10:02","PIX"],
+    ["TX009","A003","A007",4600,4,"19:35","Transferência"],
+    ["TX010","A003","A010",3100,5,"08:55","PIX"],
+    ["TX011","A001","A003",2750,6,"13:41","Transferência"],
+    ["TX012","A013","A003",1900,7,"21:07","PIX"],
+    ["TX013","A008","A007",6100,2,"22:14","Transferência"],
+    ["TX014","A009","A007",5800,2,"22:31","Transferência"],
+    ["TX015","A010","A007",4300,3,"23:02","PIX"],
+    ["TX016","A011","A007",3900,3,"23:19","PIX"],
+    ["TX017","A014","A007",2600,4,"07:44","PIX"],
+    ["TX018","A007","A012",12400,4,"09:10","TED"],
+    ["TX019","A012","A013",3300,8,"15:26","Transferência"],
+    ["TX020","A012","A014",2900,8,"15:31","Transferência"],
+    ["TX021","A012","A015",2700,8,"15:37","Transferência"],
+    ["TX022","A012","A002",4100,9,"12:03","TED"],
+    ["TX023","A012","A009",3050,10,"17:48","PIX"],
+    ["TX024","A008","A009",1200,11,"10:22","PIX"],
+    ["TX025","A009","A008",800,12,"11:09","PIX"],
+    ["TX026","A010","A011",2200,13,"18:55","Transferência"],
+    ["TX027","A011","A013",1750,14,"20:16","PIX"],
+    ["TX028","A013","A014",1600,15,"09:40","PIX"],
+    ["TX029","A014","A015",1450,17,"14:28","PIX"],
+    ["TX030","A015","A001",2050,19,"16:12","Transferência"],
+    ["TX031","A005","A008",3400,21,"08:30","Transferência"],
+    ["TX032","A006","A010",1250,23,"19:04","PIX"],
+    ["TX033","A002","A004",1800,25,"10:47","Depósito"],
+    ["TX034","A004","A011",990,27,"13:19","PIX"],
+    ["TX035","A015","A012",5600,28,"21:52","TED"],
+    ["TX036","A011","A001",700,29,"07:26","PIX"]
+  ];
+
+  const hoje = new Date(2026,8,16); // 16/09/2026
+  const statusDe = v => v >= 8000 ? "Alta relevância" : v >= 4000 ? "Em análise" : "Normal";
+
+  const transacoes = raw.map(([id,de,para,valor,dias,hora,tipo]) => {
+    const d = new Date(hoje); d.setDate(d.getDate()-dias);
+    return {id, de, para, valor, dias, hora, tipo, status: statusDe(valor),
+            data: d.toLocaleDateString("pt-BR")};
+  });
+
+  // série diária determinística para o gráfico de volume
+  let seed = 7;
+  const rnd = () => (seed = (seed*1103515245 + 12345) % 2147483648) / 2147483648;
+  const serie = [];
+  for (let i=89;i>=0;i--){
+    const d = new Date(hoje); d.setDate(d.getDate()-i);
+    const base = 180000 + Math.sin(i/4)*34000 + rnd()*52000;
+    const fimDeSemana = d.getDay()===0 || d.getDay()===6;
+    serie.push({dias:i, data:d, valor: Math.round(fimDeSemana ? base*0.55 : base)});
+  }
+
+  return {contas, transacoes, serie};
+})();
+
+/* ---------------------------------------------------------
+   2. MÉTRICAS DE GRAFO
+   Degree, in/out, betweenness (Brandes), closeness, autovetor.
+   --------------------------------------------------------- */
+const metrics = (() => {
+  const ids = data.contas.map(c => c.id);
+  const idx = Object.fromEntries(ids.map((id,i)=>[id,i]));
+  const n = ids.length;
+
+  const adj = Array.from({length:n},()=>Array(n).fill(0));
+  data.transacoes.forEach(t => { adj[idx[t.de]][idx[t.para]] = 1; });
+
+  const out = ids.map((_,i)=>adj[i].reduce((a,b)=>a+b,0));
+  const inn = ids.map((_,j)=>adj.reduce((a,row)=>a+row[j],0));
+
+  // Brandes (grafo dirigido, sem peso)
+  const betw = Array(n).fill(0);
+  for (let s=0;s<n;s++){
+    const pred=Array.from({length:n},()=>[]), sigma=Array(n).fill(0), dist=Array(n).fill(-1), pilha=[];
+    sigma[s]=1; dist[s]=0; const fila=[s];
+    while(fila.length){
+      const v=fila.shift(); pilha.push(v);
+      for(let w=0;w<n;w++){
+        if(!adj[v][w]) continue;
+        if(dist[w]<0){dist[w]=dist[v]+1; fila.push(w);}
+        if(dist[w]===dist[v]+1){sigma[w]+=sigma[v]; pred[w].push(v);}
+      }
+    }
+    const delta=Array(n).fill(0);
+    while(pilha.length){
+      const w=pilha.pop();
+      pred[w].forEach(v => { delta[v] += (sigma[v]/sigma[w])*(1+delta[w]); });
+      if(w!==s) betw[w]+=delta[w];
+    }
+  }
+  const normB = (n-1)*(n-2);
+  const betwN = betw.map(b => b/normB);
+
+  // closeness (considerando apenas nós alcançáveis)
+  const closeness = ids.map((_,s)=>{
+    const dist=Array(n).fill(-1); dist[s]=0; const fila=[s]; let soma=0, alcanca=0;
+    while(fila.length){
+      const v=fila.shift();
+      for(let w=0;w<n;w++) if(adj[v][w] && dist[w]<0){dist[w]=dist[v]+1; fila.push(w); soma+=dist[w]; alcanca++;}
+    }
+    if(!alcanca) return 0;
+    return (alcanca/(n-1)) * (alcanca/soma);
+  });
+
+  // centralidade de autovetor (método da potência na matriz simetrizada)
+  const sym = Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>adj[i][j]||adj[j][i]?1:0));
+  let vec = Array(n).fill(1/Math.sqrt(n));
+  for(let it=0; it<200; it++){
+    const nx = sym.map(row => row.reduce((a,v,j)=>a+v*vec[j],0));
+    const norma = Math.hypot(...nx) || 1;
+    vec = nx.map(v=>v/norma);
+  }
+  const eig = vec.map(v=>Math.abs(v));
+
+  const maxOf = a => Math.max(...a) || 1;
+  const mD = maxOf(ids.map((_,i)=>inn[i]+out[i])), mB = maxOf(betwN), mC = maxOf(closeness), mE = maxOf(eig);
+
+  const contas = data.contas.map((c,i)=>{
+    const degree = inn[i]+out[i];
+    const score = 100*(.40*(degree/mD) + .30*(betwN[i]/mB) + .20*(closeness[i]/mC) + .10*(eig[i]/mE));
+    const vol = data.transacoes.filter(t=>t.de===c.id||t.para===c.id).reduce((a,t)=>a+t.valor,0);
+    return {...c, degree, inDeg:inn[i], outDeg:out[i], betw:betwN[i], close:closeness[i],
+            eig:eig[i], score:Math.round(score*10)/10, volume:vol, status:"Normal"};
+  });
+
+  const limiares = {analise:45, alta:70};
+  function classificar(){
+    contas.forEach(c=>{
+      c.status = c.score >= limiares.alta ? "Alta relevância"
+               : c.score >= limiares.analise ? "Em análise"
+               : c.score >= limiares.analise*0.66 ? "Revisar" : "Normal";
+    });
+  }
+  classificar();
+
+  const get = id => contas.find(c=>c.id===id);
+  return {contas, get, adj, ids, idx, limiares, classificar};
+})();
+
+/* ---------------------------------------------------------
+   3. UTILIDADES E UI BÁSICA
+   --------------------------------------------------------- */
+const fmtBRL = v => v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const fmtNum = (v,d=2) => v.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const classeStatus = s => s==="Alta relevância" ? "alta" : s==="Em análise" ? "analise" : s==="Revisar" ? "revisar" : "normal";
+const pill = s => `<span class="pill ${classeStatus(s)}">${s}</span>`;
+const corStatus = s => s==="Alta relevância" ? "var(--red)" : s==="Em análise" ? "var(--amber)" : "var(--blue)";
+const el = id => document.getElementById(id);
+
+const ui = {
+  modal(titulo, html){ el("modalTitle").textContent = titulo; el("modalBody").innerHTML = html; el("overlay").classList.add("open"); },
+  closeModal(){ el("overlay").classList.remove("open"); },
+  drawer(titulo, html){ el("drawerTitle").textContent = titulo; el("drawerBody").innerHTML = html; el("drawer").classList.add("open"); },
+  closeDrawer(){ el("drawer").classList.remove("open"); }
+};
+el("overlay").addEventListener("click", e => { if(e.target.id==="overlay") ui.closeModal(); });
+document.addEventListener("keydown", e => { if(e.key==="Escape"){ ui.closeModal(); ui.closeDrawer(); } });
+
+/* estado global de período */
+const estado = {periodo:30};
+const noPeriodo = t => t.dias < estado.periodo;
+
+/* ---------------------------------------------------------
+   4. GRÁFICOS EM SVG (sem dependências externas)
+   --------------------------------------------------------- */
+const charts = {
+  area(alvo, pontos){
+    const W=760, H=250, P={t:14,r:14,b:26,l:54};
+    const max = Math.max(...pontos.map(p=>p.valor))*1.1, min=0;
+    const x = i => P.l + i*(W-P.l-P.r)/(pontos.length-1);
+    const y = v => H-P.b - (v-min)/(max-min)*(H-P.t-P.b);
+    const linha = pontos.map((p,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(p.valor).toFixed(1)}`).join("");
+    const area = `${linha}L${x(pontos.length-1)},${H-P.b}L${x(0)},${H-P.b}Z`;
+    const ticks = [0,.25,.5,.75,1].map(f=>{
+      const v = max*f, yy=y(v);
+      return `<line x1="${P.l}" x2="${W-P.r}" y1="${yy}" y2="${yy}" stroke="var(--line)"/>
+              <text x="${P.l-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="var(--ink-3)">${(v/1000).toFixed(0)}k</text>`;
+    }).join("");
+    const passo = Math.ceil(pontos.length/6);
+    const labels = pontos.map((p,i)=> i%passo===0 || i===pontos.length-1
+      ? `<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="10" fill="var(--ink-3)">${p.data.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})}</text>` : "").join("");
+    const marcas = pontos.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.valor)}" r="9" fill="transparent"><title>${p.data.toLocaleDateString("pt-BR")} · ${fmtBRL(p.valor)}</title></circle>`).join("");
+    alvo.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">
+      <defs><linearGradient id="gA" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--blue)" stop-opacity=".28"/><stop offset="100%" stop-color="var(--blue)" stop-opacity="0"/>
+      </linearGradient></defs>
+      ${ticks}<path d="${area}" fill="url(#gA)"/><path d="${linha}" fill="none" stroke="var(--blue)" stroke-width="2"/>${labels}${marcas}</svg>`;
+  },
+
+  rosca(alvo, fatias){
+    const total = fatias.reduce((a,f)=>a+f.valor,0), R=74, r=48, cx=95, cy=95;
+    let ang = -Math.PI/2, paths="";
+    fatias.forEach(f=>{
+      const a2 = ang + (f.valor/total)*Math.PI*2, grande = (a2-ang)>Math.PI?1:0;
+      const p = (raio,a)=>[cx+raio*Math.cos(a), cy+raio*Math.sin(a)];
+      const [x1,y1]=p(R,ang),[x2,y2]=p(R,a2),[x3,y3]=p(r,a2),[x4,y4]=p(r,ang);
+      paths += `<path d="M${x1},${y1}A${R},${R} 0 ${grande} 1 ${x2},${y2}L${x3},${y3}A${r},${r} 0 ${grande} 0 ${x4},${y4}Z" fill="${f.cor}"><title>${f.nome}: ${f.valor}</title></path>`;
+      ang = a2;
+    });
+    alvo.innerHTML = `<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+      <svg viewBox="0 0 190 190" style="width:170px;height:170px;flex:0 0 170px">${paths}
+        <text x="95" y="92" text-anchor="middle" font-size="24" font-weight="700" fill="var(--ink)">${total}</text>
+        <text x="95" y="108" text-anchor="middle" font-size="10" fill="var(--ink-3)">transações</text></svg>
+      <div style="font-size:12.5px;line-height:2.1">
+        ${fatias.map(f=>`<div><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${f.cor};margin-right:8px"></i>${f.nome} <b style="margin-left:6px">${f.valor}</b> <span style="color:var(--ink-3)">(${Math.round(f.valor/total*100)}%)</span></div>`).join("")}
+      </div></div>`;
+  },
+
+  barras(alvo, itens){
+    const W=620,H=200,P={t:12,r:10,b:30,l:52};
+    const max = Math.max(...itens.map(i=>i.valor),1)*1.15;
+    const lg = (W-P.l-P.r)/itens.length;
+    const barras = itens.map((it,i)=>{
+      const h = (it.valor/max)*(H-P.t-P.b), x=P.l+i*lg+lg*0.2, y=H-P.b-h;
+      return `<rect x="${x}" y="${y}" width="${lg*0.6}" height="${Math.max(h,1)}" rx="3" fill="var(--blue)" opacity=".85"><title>${it.rotulo}: ${fmtBRL(it.valor)}</title></rect>
+              <text x="${x+lg*0.3}" y="${H-10}" text-anchor="middle" font-size="10" fill="var(--ink-3)">${it.rotulo}</text>`;
+    }).join("");
+    const base = [0,.5,1].map(f=>{const yy=H-P.b-f*(H-P.t-P.b);
+      return `<line x1="${P.l}" x2="${W-P.r}" y1="${yy}" y2="${yy}" stroke="var(--line)"/><text x="${P.l-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="var(--ink-3)">${(max*f/1000).toFixed(0)}k</text>`;}).join("");
+    alvo.innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">${base}${barras}</svg>`;
+  }
+};
+
+/* ---------------------------------------------------------
+   5. DASHBOARD
+   --------------------------------------------------------- */
+const dashboard = {
+  render(){
+    charts.area(el("chartVolume"), data.serie.filter(p=>p.dias<estado.periodo));
+    const tx = data.transacoes.filter(noPeriodo);
+    charts.rosca(el("chartDist"), [
+      {nome:"Normal", valor:tx.filter(t=>t.status==="Normal").length, cor:"var(--blue)"},
+      {nome:"Em análise", valor:tx.filter(t=>t.status==="Em análise").length, cor:"var(--amber)"},
+      {nome:"Alta relevância estrutural", valor:tx.filter(t=>t.status==="Alta relevância").length, cor:"var(--red)"}
+    ]);
+    el("dashTop").innerHTML = [...metrics.contas].sort((a,b)=>b.score-a.score).slice(0,6).map(c=>`
+      <tr class="clickable" data-conta="${c.id}">
+        <td class="mono-id">${c.id}</td><td class="num">${c.degree}</td>
+        <td class="num">${fmtNum(c.betw)}</td><td class="num">${fmtNum(c.close)}</td>
+        <td class="num">${c.com}</td><td>${pill(c.status)}</td></tr>`).join("");
+  }
+};
+
+/* ---------------------------------------------------------
+   6. TRANSAÇÕES
+   --------------------------------------------------------- */
+const transacoes = (() => {
+  const porPagina = 8;
+  let pagina = 1;
+
+  function filtrar(){
+    const busca = el("txSearch").value.trim().toUpperCase();
+    const conta = el("txConta").value, status = el("txStatus").value;
+    const tipo = el("txTipo").value, min = parseFloat(el("txMin").value) || 0;
+    return data.transacoes.filter(t =>
+      noPeriodo(t) &&
+      (!busca || t.id.includes(busca) || t.de.includes(busca) || t.para.includes(busca)) &&
+      (!conta || t.de===conta || t.para===conta) &&
+      (!status || t.status===status) &&
+      (!tipo || t.tipo===tipo) &&
+      t.valor >= min
+    );
+  }
+
+  function render(){
+    const lista = filtrar();
+    const totalPag = Math.max(1, Math.ceil(lista.length/porPagina));
+    if(pagina>totalPag) pagina = totalPag;
+    const fatia = lista.slice((pagina-1)*porPagina, pagina*porPagina);
+
+    el("txBody").innerHTML = fatia.length ? fatia.map(t=>`
+      <tr class="clickable" data-tx="${t.id}">
+        <td class="mono-id">${t.id}</td><td>${t.data} ${t.hora}</td>
+        <td>${t.de}</td><td>${t.para}</td><td class="num">${fmtBRL(t.valor)}</td>
+        <td>${t.tipo}</td><td>${pill(t.status)}</td></tr>`).join("")
+      : `<tr><td colspan="7" class="empty">Nenhuma transação atende a esses filtros. Ajuste a busca ou limpe os filtros.</td></tr>`;
+
+    const btn = (rot,p,ativo,desab)=>`<button ${desab?"disabled":""} data-pg="${p}" class="${ativo?"active":""}">${rot}</button>`;
+    let pg = `<span style="font-size:12px;color:var(--ink-3);margin-right:auto">${lista.length} transações no período</span>`;
+    pg += btn("‹", pagina-1, false, pagina===1);
+    for(let i=1;i<=totalPag;i++) pg += btn(i, i, i===pagina, false);
+    pg += btn("›", pagina+1, false, pagina===totalPag);
+    el("txPager").innerHTML = pg;
+  }
+
+  function detalhe(id){
+    const t = data.transacoes.find(x=>x.id===id);
+    const relacionadas = data.transacoes.filter(x=>x.id!==id && (x.de===t.de||x.para===t.de||x.de===t.para||x.para===t.para));
+    ui.modal(`Transação ${t.id}`, `
+      <dl class="kv">
+        <dt>Identificador</dt><dd>${t.id}</dd>
+        <dt>Conta de origem</dt><dd><a href="#" data-conta="${t.de}" class="mono-id">${t.de}</a> · ${metrics.get(t.de).titular}</dd>
+        <dt>Conta de destino</dt><dd><a href="#" data-conta="${t.para}" class="mono-id">${t.para}</a> · ${metrics.get(t.para).titular}</dd>
+        <dt>Valor</dt><dd>${fmtBRL(t.valor)}</dd>
+        <dt>Data</dt><dd>${t.data}</dd>
+        <dt>Hora</dt><dd>${t.hora}</dd>
+        <dt>Tipo</dt><dd>${t.tipo}</dd>
+        <dt>Status</dt><dd>${pill(t.status)}</dd>
+      </dl>
+      <h4 style="margin:22px 0 8px;font-size:13.5px">Conexões relacionadas (${relacionadas.length})</h4>
+      <div class="table-wrap" style="border:1px solid var(--line);border-radius:8px;max-height:220px;overflow:auto">
+      <table><thead><tr><th>ID</th><th>Origem</th><th>Destino</th><th class="num">Valor</th></tr></thead><tbody>
+      ${relacionadas.slice(0,8).map(r=>`<tr><td class="mono-id">${r.id}</td><td>${r.de}</td><td>${r.para}</td><td class="num">${fmtBRL(r.valor)}</td></tr>`).join("")}
+      </tbody></table></div>`);
+  }
+
+  function init(){
+    el("txConta").innerHTML = `<option value="">Todas</option>` + data.contas.map(c=>`<option>${c.id}</option>`).join("");
+    const tipos = [...new Set(data.transacoes.map(t=>t.tipo))];
+    el("txTipo").innerHTML = `<option value="">Todos</option>` + tipos.map(t=>`<option>${t}</option>`).join("");
+    ["txSearch","txConta","txStatus","txTipo","txMin"].forEach(id =>
+      el(id).addEventListener("input", ()=>{ pagina=1; render(); }));
+    el("txReset").addEventListener("click", ()=>{
+      ["txSearch","txMin"].forEach(id=>el(id).value="");
+      ["txConta","txStatus","txTipo"].forEach(id=>el(id).value="");
+      pagina=1; render();
+    });
+    el("txPager").addEventListener("click", e=>{
+      const b = e.target.closest("button[data-pg]"); if(!b||b.disabled) return;
+      pagina = parseInt(b.dataset.pg,10); render();
+    });
+    el("txBody").addEventListener("click", e=>{
+      const tr = e.target.closest("tr[data-tx]"); if(tr) detalhe(tr.dataset.tx);
+    });
+    render();
+  }
+  return {init, render};
+})();
+
+/* ---------------------------------------------------------
+   7. REDE DE TRANSAÇÕES (layout de forças + SVG)
+   --------------------------------------------------------- */
+const rede = (() => {
+  const W=1000, H=620;
+  let nos = [], arestas = [], zoom = 1, mostrarRotulos = true;
+  let arrastando = null;
+
+  function preparar(){
+    nos = metrics.contas.map((c,i)=>{
+      const a = (i/metrics.contas.length)*Math.PI*2;
+      return {...c, x: W/2 + Math.cos(a)*230, y: H/2 + Math.sin(a)*200};
+    });
+    arestas = data.transacoes.filter(noPeriodo).map(t=>({
+      de: nos.find(n=>n.id===t.de), para: nos.find(n=>n.id===t.para), tx:t
+    })).filter(a=>a.de&&a.para);
+  }
+
+  // Fruchterman–Reingold simplificado
+  function layout(iteracoes=420){
+    const k = Math.sqrt((W*H)/nos.length)*0.62;
+    let temp = W/9;
+    for(let it=0; it<iteracoes; it++){
+      nos.forEach(v=>{v.dx=0; v.dy=0;});
+      for(let i=0;i<nos.length;i++) for(let j=i+1;j<nos.length;j++){
+        const a=nos[i], b=nos[j];
+        let dx=a.x-b.x, dy=a.y-b.y, d=Math.hypot(dx,dy)||0.01;
+        const f = (k*k)/d;
+        dx/=d; dy/=d;
+        a.dx+=dx*f; a.dy+=dy*f; b.dx-=dx*f; b.dy-=dy*f;
+      }
+      arestas.forEach(e=>{
+        let dx=e.de.x-e.para.x, dy=e.de.y-e.para.y, d=Math.hypot(dx,dy)||0.01;
+        const f=(d*d)/k; dx/=d; dy/=d;
+        e.de.dx-=dx*f; e.de.dy-=dy*f; e.para.dx+=dx*f; e.para.dy+=dy*f;
+      });
+      nos.forEach(v=>{
+        const d = Math.hypot(v.dx,v.dy)||0.01;
+        v.x += (v.dx/d)*Math.min(d,temp);
+        v.y += (v.dy/d)*Math.min(d,temp);
+        v.x = Math.max(70, Math.min(W-70, v.x));
+        v.y = Math.max(60, Math.min(H-60, v.y));
+      });
+      temp *= 0.975;
+    }
+  }
+
+  const raio = n => 11 + Math.min(n.degree,14)*1.8;
+
+  function desenhar(){
+    const svg = el("graph");
+    const maior = nos.reduce((a,b)=>a.score>b.score?a:b);
+    const defs = `<defs>
+      ${["var(--ink-3)","var(--amber)","var(--red)"].map((c,i)=>
+        `<marker id="seta${i}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+           <path d="M0,0 L10,5 L0,10 Z" fill="${c}"/></marker>`).join("")}
+    </defs>`;
+
+    const linhas = arestas.map(e=>{
+      const r2 = raio(e.para)+7, dx=e.para.x-e.de.x, dy=e.para.y-e.de.y, d=Math.hypot(dx,dy)||1;
+      const x2 = e.para.x - (dx/d)*r2, y2 = e.para.y - (dy/d)*r2;
+      const x1 = e.de.x + (dx/d)*(raio(e.de)+2), y1 = e.de.y + (dy/d)*(raio(e.de)+2);
+      const alerta = e.tx.status==="Alta relevância" ? 2 : e.tx.status==="Em análise" ? 1 : 0;
+      const cor = ["var(--line)","var(--amber)","var(--red)"][alerta];
+      return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+        stroke="${cor}" stroke-width="${1 + Math.min(e.tx.valor/6000,2)}" marker-end="url(#seta${alerta})" opacity=".85"/>`;
+    }).join("");
+
+    const circulos = nos.map(n=>{
+      const r = raio(n), destaque = n.id===maior.id;
+      return `<g class="node" data-id="${n.id}" transform="translate(${n.x.toFixed(1)},${n.y.toFixed(1)})">
+        ${destaque?`<circle r="${r+8}" fill="none" stroke="${corStatus(n.status)}" stroke-width="1.5" opacity=".45"/>`:""}
+        <circle r="${r}" fill="${corStatus(n.status)}" stroke="var(--surface)" stroke-width="2.5"/>
+        <text y="4" text-anchor="middle" fill="#fff" font-size="9.5">${n.degree}</text>
+        ${mostrarRotulos?`<text y="${r+14}" text-anchor="middle">${n.id}</text>`:""}
+      </g>`;
+    }).join("");
+
+    const cx=W/2, cy=H/2, s=zoom;
+    svg.setAttribute("viewBox", `${cx-(W/2)/s} ${cy-(H/2)/s} ${W/s} ${H/s}`);
+    svg.innerHTML = defs + `<g>${linhas}</g><g>${circulos}</g>`;
+  }
+
+  function painel(id){
+    const c = metrics.get(id);
+    const envia = data.transacoes.filter(t=>t.de===id), recebe = data.transacoes.filter(t=>t.para===id);
+    ui.drawer(`Conta ${c.id}`, `
+      <div style="margin-bottom:14px">${pill(c.status)}</div>
+      <div class="grid g2" style="gap:10px">
+        ${[["Degree",c.degree],["Comunidade",c.com],["Betweenness",fmtNum(c.betw)],["Closeness",fmtNum(c.close)]]
+          .map(([k,v])=>`<div class="kpi" style="padding:12px 14px;box-shadow:none"><h4>${k}</h4><div class="val" style="font-size:22px">${v}</div></div>`).join("")}
+      </div>
+      <p style="font-size:12.5px;color:var(--ink-2);margin:16px 0 4px"><strong>${c.inDeg}</strong> contas enviaram valores e <strong>${c.outDeg}</strong> contas receberam valores desta conta.</p>
+      <p style="font-size:12.5px;color:var(--ink-2)">Volume movimentado no período: <strong>${fmtBRL(c.volume)}</strong>.</p>
+      <p style="font-size:12.5px;color:var(--ink-2)">Recebe de: ${recebe.map(t=>t.de).join(", ")||"—"}<br>Envia para: ${envia.map(t=>t.para).join(", ")||"—"}</p>
+      <button class="btn" style="width:100%;margin-top:12px" data-conta="${c.id}">Abrir detalhes da conta</button>`);
+  }
+
+  function estatisticas(){
+    const tx = data.transacoes.filter(noPeriodo);
+    const densidade = tx.length/(metrics.ids.length*(metrics.ids.length-1));
+    const top = [...metrics.contas].sort((a,b)=>b.betw-a.betw)[0];
+    el("netStats").innerHTML = `
+      <h3 style="margin:0 0 12px;font-size:14.5px">Resumo da rede</h3>
+      <dl class="kv" style="grid-template-columns:170px 1fr;font-size:12.5px">
+        <dt>Nós (contas)</dt><dd>${metrics.ids.length}</dd>
+        <dt>Arestas (transações)</dt><dd>${tx.length}</dd>
+        <dt>Densidade do grafo</dt><dd>${fmtNum(densidade,3)}</dd>
+        <dt>Maior intermediação</dt><dd>${top.id} · betweenness ${fmtNum(top.betw)}</dd>
+        <dt>Comunidades</dt><dd>5 (agrupamento fictício)</dd>
+      </dl>`;
+  }
+
+  function interacoes(){
+    const svg = el("graph"), tip = el("tip");
+    svg.addEventListener("mousemove", e=>{
+      const g = e.target.closest(".node");
+      if(!g){ tip.style.opacity=0; return; }
+      const c = metrics.get(g.dataset.id);
+      tip.innerHTML = `<b>Conta ${c.id}</b>
+        <div>Degree<span>${c.degree}</span></div>
+        <div>Betweenness<span>${fmtNum(c.betw)}</span></div>
+        <div>Closeness<span>${fmtNum(c.close)}</span></div>
+        <div>Comunidade<span>${c.com}</span></div>
+        <div>Status<span>${c.status}</span></div>`;
+      tip.style.left = (e.clientX+14)+"px"; tip.style.top = (e.clientY+14)+"px"; tip.style.opacity=1;
+    });
+    svg.addEventListener("mouseleave", ()=> tip.style.opacity=0);
+    svg.addEventListener("click", e=>{
+      const g = e.target.closest(".node"); if(g && !arrastando) painel(g.dataset.id);
+    });
+
+    // arrastar nós
+    const pos = e => {
+      const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+      return {x: vb.x + (e.clientX-r.left)/r.width*vb.width, y: vb.y + (e.clientY-r.top)/r.height*vb.height};
+    };
+    svg.addEventListener("pointerdown", e=>{
+      const g = e.target.closest(".node"); if(!g) return;
+      arrastando = {no: nos.find(n=>n.id===g.dataset.id), movido:false};
+      svg.setPointerCapture(e.pointerId);
+    });
+    svg.addEventListener("pointermove", e=>{
+      if(!arrastando) return;
+      const p = pos(e); arrastando.no.x = p.x; arrastando.no.y = p.y; arrastando.movido = true;
+      desenhar();
+    });
+    svg.addEventListener("pointerup", e=>{
+      if(arrastando && !arrastando.movido) painel(arrastando.no.id);
+      const foi = arrastando; arrastando = null;
+      if(foi) setTimeout(()=>{},0);
+    });
+
+    el("zIn").onclick = ()=>{ zoom = Math.min(zoom*1.2, 2.6); desenhar(); };
+    el("zOut").onclick = ()=>{ zoom = Math.max(zoom/1.2, 0.6); desenhar(); };
+    el("zReset").onclick = ()=>{ zoom = 1; preparar(); layout(); desenhar(); };
+  }
+
+  /* ---- padrões, comunidades e matrizes ---- */
+  function mini(tipo){
+    const s = (pts, ligs) => `<svg viewBox="0 0 170 74" style="width:100%;max-width:200px;height:auto">
+      ${ligs.map(([a,b,cor])=>`<line x1="${pts[a][0]}" y1="${pts[a][1]}" x2="${pts[b][0]}" y2="${pts[b][1]}" stroke="${cor||"var(--ink-3)"}" stroke-width="1.4" marker-end="url(#seta0)"/>`).join("")}
+      ${pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${p[2]||7}" fill="${p[3]||"var(--blue)"}"/>`).join("")}</svg>`;
+    const M = {
+      fanin: s([[20,12],[20,37],[20,62],[130,37,11,"var(--amber)"]], [[0,3],[1,3],[2,3]]),
+      fanout: s([[30,37,11,"var(--amber)"],[140,12],[140,37],[140,62]], [[0,1],[0,2],[0,3]]),
+      cadeia: s([[16,37],[62,37],[108,37],[152,37]], [[0,1],[1,2],[2,3]]),
+      hub: s([[85,37,13,"var(--red)"],[18,12],[18,62],[152,12],[152,62],[85,6,6],[85,68,6]], [[1,0],[2,0],[0,3],[0,4],[5,0],[0,6]]),
+      ponte: s([[18,20],[18,54],[85,37,11,"var(--amber)"],[152,20],[152,54]], [[0,2],[1,2],[2,3],[2,4]])
+    };
+    return M[tipo];
+  }
+
+  function padroes(){
+    const itens = [
+      ["Fan-in","Muitas contas enviando para uma única conta em curto intervalo.","fanin",["A008, A009, A010, A011 → A007"]],
+      ["Fan-out","Uma conta distribuindo valores para várias contas.","fanout",["A012 → A013, A014, A015, A002, A009"]],
+      ["Cadeia de repasse","O valor passa por contas em sequência: conta → conta → conta.","cadeia",["A001 → A004 → A005 → A006"]],
+      ["Hub","Conta com grande número de conexões de entrada e saída.","hub",["A003 concentra conexões de 3 comunidades"]],
+      ["Ponte","Conta com alta intermediação entre partes distintas da rede.","ponte",["A012 liga as comunidades 2, 4 e 5"]]
+    ];
+    el("padroesGrid").innerHTML = itens.map(([nome,desc,tipo,ex])=>`
+      <div class="pattern"><h4>${nome}</h4><p>${desc}</p>
+      <svg width="0" height="0"><defs><marker id="seta0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="var(--ink-3)"/></marker></defs></svg>
+      ${mini(tipo)}<div class="chip-row" style="margin-top:12px"><span class="chip">Exemplo na base: ${ex}</span></div></div>`).join("");
+  }
+
+  function comunidades(){
+    const grupos = [1,2,3,4,5].map(n=>{
+      const membros = metrics.contas.filter(c=>c.com===n);
+      const ids = membros.map(m=>m.id);
+      const tx = data.transacoes.filter(t=>ids.includes(t.de)||ids.includes(t.para));
+      const maisConectada = membros.reduce((a,b)=>a.degree>b.degree?a:b);
+      return {n, membros, tx, volume: tx.reduce((a,t)=>a+t.valor,0), maisConectada};
+    });
+    el("comunidadesGrid").innerHTML = grupos.map(g=>`
+      <div class="card"><div class="card-head"><div><h3>Comunidade ${g.n}</h3><p>${g.membros.map(m=>m.id).join(" · ")}</p></div></div>
+        <div class="card-body"><dl class="kv" style="grid-template-columns:150px 1fr;font-size:12.5px">
+          <dt>Contas</dt><dd>${g.membros.length}</dd>
+          <dt>Transações</dt><dd>${g.tx.length}</dd>
+          <dt>Volume movimentado</dt><dd>${fmtBRL(g.volume)}</dd>
+          <dt>Conta mais conectada</dt><dd><a href="#" data-conta="${g.maisConectada.id}" class="mono-id">${g.maisConectada.id}</a> (degree ${g.maisConectada.degree})</dd>
+        </dl></div></div>`).join("");
+  }
+
+  function matrizes(){
+    const rot = ["A1","A2","A3","A4","A5"];
+    const A = [[0,1,1,0,0],[0,0,0,1,0],[0,0,0,1,0],[0,0,0,0,1],[0,0,0,0,0]];
+    const grau = A.map((r,i)=>r.reduce((a,b)=>a+b,0) + A.reduce((a,row)=>a+row[i],0));
+    const tabela = (m, rotulos, tipo) => `<table class="matrix"><thead><tr><th></th>${rotulos.map(r=>`<th>${r}</th>`).join("")}</tr></thead><tbody>
+      ${m.map((linha,i)=>`<tr><th>${rotulos[i]}</th>${linha.map((v,j)=>{
+        const cls = tipo==="A" ? (v?"one":"") : (i===j && v ? "diagd" : v?"one":"");
+        return `<td class="${cls}">${v}</td>`;}).join("")}</tr>`).join("")}</tbody></table>`;
+
+    el("matA").innerHTML = tabela(A, rot, "A");
+    const D = rot.map((_,i)=>rot.map((_,j)=> i===j ? grau[i] : 0));
+    const L = D.map((linha,i)=>linha.map((v,j)=> v - A[i][j]));
+    el("matDL").innerHTML = `<div style="display:flex;gap:18px;flex-wrap:wrap">
+      <div><p style="font-size:12px;color:var(--ink-3);margin:0 0 6px">D — matriz de grau</p>${tabela(D,rot,"D")}</div>
+      <div><p style="font-size:12px;color:var(--ink-3);margin:0 0 6px">L — Laplaciana</p>${tabela(L,rot,"L")}</div></div>`;
+
+    const ids = metrics.ids;
+    el("matFull").innerHTML = `<table class="matrix"><thead><tr><th></th>${ids.map(i=>`<th>${i.slice(1)}</th>`).join("")}</tr></thead><tbody>
+      ${metrics.adj.map((linha,i)=>`<tr><th>${ids[i]}</th>${linha.map(v=>`<td class="${v?"one":""}">${v}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  }
+
+  function init(){
+    preparar(); layout(); desenhar(); interacoes(); estatisticas(); padroes(); comunidades(); matrizes();
+    el("redeTabs").addEventListener("click", e=>{
+      const b = e.target.closest("button[data-tab]"); if(!b) return;
+      [...el("redeTabs").children].forEach(x=>x.classList.toggle("active", x===b));
+      ["grafo","padroes","comunidades","matriz"].forEach(t =>
+        el("tab-"+t).style.display = t===b.dataset.tab ? "" : "none");
+    });
+  }
+  function atualizar(){ preparar(); layout(260); desenhar(); estatisticas(); comunidades(); }
+  function rotulos(v){ mostrarRotulos = v; desenhar(); }
+  return {init, atualizar, redesenhar: desenhar, rotulos};
+})();
+
+/* ---------------------------------------------------------
+   8. CONTAS EM ANÁLISE
+   --------------------------------------------------------- */
+const contas = (() => {
+  function render(){
+    const minScore = +el("fScore").value, minDeg = +el("fDeg").value;
+    const com = el("fCom").value, st = el("fStat").value;
+    el("scoreOut").textContent = minScore; el("degOut").textContent = minDeg;
+
+    const lista = [...metrics.contas]
+      .filter(c => c.score>=minScore && c.degree>=minDeg && (!com||String(c.com)===com) && (!st||c.status===st))
+      .sort((a,b)=>b.score-a.score);
+
+    el("contasBody").innerHTML = lista.length ? lista.map((c,i)=>`
+      <tr class="clickable" data-conta="${c.id}">
+        <td style="color:var(--ink-3)">${i+1}</td>
+        <td class="mono-id">${c.id}</td>
+        <td class="num"><strong>${fmtNum(c.score,1)}</strong></td>
+        <td class="num">${c.degree}</td>
+        <td class="num">${c.inDeg} / ${c.outDeg}</td>
+        <td class="num">${fmtNum(c.betw)}</td>
+        <td class="num">${fmtNum(c.close)}</td>
+        <td class="num">${c.com}</td>
+        <td>${pill(c.status)}</td></tr>`).join("")
+      : `<tr><td colspan="9" class="empty">Nenhuma conta atende a esses critérios. Reduza o score ou o degree mínimo.</td></tr>`;
+  }
+  function init(){
+    el("fCom").innerHTML = `<option value="">Todas</option>` + [1,2,3,4,5].map(n=>`<option value="${n}">Comunidade ${n}</option>`).join("");
+    ["fScore","fDeg","fCom","fStat"].forEach(id=>el(id).addEventListener("input", render));
+    render();
+  }
+  return {init, render};
+})();
+
+/* ---------------------------------------------------------
+   9. DETALHE DA CONTA
+   --------------------------------------------------------- */
+const detalheConta = (() => {
+  function render(id){
+    const c = metrics.get(id);
+    const enviadas = data.transacoes.filter(t=>t.de===id);
+    const recebidas = data.transacoes.filter(t=>t.para===id);
+
+    const resumo = c.status==="Alta relevância"
+      ? "A conta apresenta elevada conectividade e posição relevante na estrutura da rede analisada. Os indicadores sugerem que ela necessita investigação complementar."
+      : c.status==="Em análise"
+      ? "A conta apresenta indicadores acima da média da rede, com posição intermediária entre diferentes grupos de contas."
+      : "A conta apresenta comportamento estrutural compatível com a média da rede analisada no período.";
+
+    el("contaDetalhe").innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div>
+          <div style="font-size:12px;color:var(--ink-3)">Conta</div>
+          <h2 style="margin:2px 0 6px;font-size:26px;letter-spacing:-.02em">${c.id}</h2>
+          <div>${pill(c.status)} <span style="font-size:12.5px;color:var(--ink-3);margin-left:8px">${c.titular} · comunidade ${c.com}</span></div>
+        </div>
+        <div style="flex:1"></div>
+        <button class="btn ghost" data-goto="contas">Voltar ao ranking</button>
+        <button class="btn" data-goto="rede">Ver na rede</button>
+      </div>
+
+      <div class="grid g4">
+        <div class="kpi"><h4>Degree</h4><div class="val">${c.degree}</div><div class="sub">${c.inDeg} entradas · ${c.outDeg} saídas</div></div>
+        <div class="kpi"><h4>Betweenness</h4><div class="val">${fmtNum(c.betw)}</div><div class="sub">intermediação normalizada</div></div>
+        <div class="kpi"><h4>Closeness</h4><div class="val">${fmtNum(c.close)}</div><div class="sub">proximidade na rede</div></div>
+        <div class="kpi ${c.status==="Alta relevância"?"alert":c.status==="Em análise"?"warn":""}"><h4>Score NEXO*</h4><div class="val">${fmtNum(c.score,1)}</div><div class="sub">indicador ilustrativo</div></div>
+      </div>
+
+      <div class="card mt"><div class="card-head"><div><h3>Resumo estrutural</h3></div></div>
+        <div class="card-body"><p style="margin:0;font-size:13.5px;line-height:1.7">${resumo}</p>
+        <p style="margin:12px 0 0;font-size:12px;color:var(--ink-3)">Centralidade de autovetor: ${fmtNum(c.eig,3)} · volume movimentado no período: ${fmtBRL(c.volume)}</p></div></div>
+
+      <div class="grid g2 mt">
+        <div class="card"><div class="card-head"><div><h3>Contas que enviaram valores</h3><p>${recebidas.length} transferências recebidas</p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Conta</th><th>Data</th><th class="num">Valor</th></tr></thead><tbody>
+          ${recebidas.length?recebidas.map(t=>`<tr class="clickable" data-conta="${t.de}"><td class="mono-id">${t.de}</td><td>${t.data}</td><td class="num">${fmtBRL(t.valor)}</td></tr>`).join(""):`<tr><td colspan="3" class="empty">Nenhuma entrada no período.</td></tr>`}
+          </tbody></table></div></div>
+        <div class="card"><div class="card-head"><div><h3>Contas que receberam valores</h3><p>${enviadas.length} transferências enviadas</p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Conta</th><th>Data</th><th class="num">Valor</th></tr></thead><tbody>
+          ${enviadas.length?enviadas.map(t=>`<tr class="clickable" data-conta="${t.para}"><td class="mono-id">${t.para}</td><td>${t.data}</td><td class="num">${fmtBRL(t.valor)}</td></tr>`).join(""):`<tr><td colspan="3" class="empty">Nenhuma saída no período.</td></tr>`}
+          </tbody></table></div></div>
+      </div>
+
+      <div class="card mt"><div class="card-head"><div><h3>Volume de transações ao longo do tempo</h3><p>Soma movimentada pela conta por semana</p></div></div>
+        <div class="card-body"><div id="contaHist"></div></div></div>
+
+      <p style="font-size:12px;color:var(--ink-3);margin-top:12px">* Score NEXO ilustrativo. A fórmula definitiva será definida, documentada e validada matematicamente pela equipe.</p>`;
+
+    const semanas = [0,1,2,3,4,5,6,7,8,9,10,11,12].map(s=>{
+      const tx = data.transacoes.filter(t=>(t.de===id||t.para===id) && t.dias>=s*7 && t.dias<(s+1)*7);
+      return {rotulo:`S-${s}`, valor: tx.reduce((a,t)=>a+t.valor,0)};
+    }).slice(0, Math.ceil(estado.periodo/7)).reverse();
+    charts.barras(el("contaHist"), semanas);
+  }
+  return {render};
+})();
+
+/* ---------------------------------------------------------
+   10. RELATÓRIOS E ARQUITETURA
+   --------------------------------------------------------- */
+const relatorios = (() => {
+  const itens = [
+    ["Relatório de Rede","Panorama do grafo: número de nós, arestas, densidade, comunidades e principais estruturas identificadas.","Estrutura definida",
+     "Conteúdo previsto: resumo do grafo, matriz de adjacência resumida, distribuição de graus, visualização da rede e leitura das comunidades."],
+    ["Análise de Contas","Ficha individual das contas com maior relevância estrutural, com todas as centralidades calculadas.","Estrutura definida",
+     "Conteúdo previsto: métricas por conta, conexões de entrada e saída, série temporal e parecer estrutural sem juízo de mérito."],
+    ["Memorial de Cálculo","Passo a passo matemático de cada métrica aplicada, com fórmulas e exemplo numérico completo.","Em elaboração",
+     "Conteúdo previsto: definição formal de degree, betweenness, closeness e autovetor; construção de A, D e L; cálculo de autovalores e autovetores."],
+    ["Validação Matemática","Conferência dos resultados do sistema contra cálculo manual e contra a biblioteca NetworkX.","Em elaboração",
+     "Conteúdo previsto: tabela comparativa entre cálculo manual, NumPy e NetworkX, com margem de erro aceita e justificativa das divergências."],
+    ["Relatório Executivo A3","Síntese em uma página A3 para apresentação final: problema, método, resultados e limitações.","Planejado",
+     "Conteúdo previsto: contexto, modelagem em grafos, principais achados, visualização da rede e recomendações de investigação."]
+  ];
+  function init(){
+    el("reportGrid").innerHTML = itens.map(([nome,desc,st,conteudo],i)=>`
+      <div class="card"><div class="card-body">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+          <h3 style="margin:0 0 6px;font-size:15px">${nome}</h3>
+          <span class="pill ${st==="Estrutura definida"?"normal":st==="Em elaboração"?"analise":"revisar"}">${st}</span>
+        </div>
+        <p style="margin:0 0 14px;font-size:12.5px;color:var(--ink-2)">${desc}</p>
+        <button class="btn ghost sm" data-rel="${i}">Visualizar</button>
+      </div></div>`).join("");
+    el("reportGrid").addEventListener("click", e=>{
+      const b = e.target.closest("button[data-rel]"); if(!b) return;
+      const [nome,desc,st,conteudo] = itens[+b.dataset.rel];
+      ui.modal(nome, `<p style="margin-top:0;font-size:13px">${desc}</p>
+        <div class="note">${conteudo}</div>
+        <p style="font-size:12.5px;color:var(--ink-3);margin-bottom:0">Status: ${st}. A geração automática do arquivo será implementada na etapa de integração com Python e Power BI.</p>`);
+    });
+  }
+  return {init};
+})();
+
+const arquitetura = (() => {
+  const camadas = [
+    ["MySQL","Armazena as transações brutas: origem, destino, valor, data e tipo."],
+    ["Python + Pandas","Limpa, padroniza e trata os dados antes da modelagem."],
+    ["NumPy + NetworkX","Constrói o grafo, a matriz de adjacência e calcula as centralidades."],
+    ["Análise matemática","Matriz de grau, Laplaciana, autovalores, autovetores e detecção de comunidades."],
+    ["Resultados","Tabelas de métricas por conta, padrões identificados e score consolidado."],
+    ["Power BI","Painéis executivos para acompanhamento e apresentação dos resultados."]
+  ];
+  const ferramentas = [
+    ["Figma","Protótipo e definição da interface antes da implementação."],
+    ["GitHub","Versionamento do código, histórico de contribuições e organização das entregas."],
+    ["Interface web","Esta camada — o que a equipe está vendo agora — consome os resultados prontos."]
+  ];
+  const passos = ["Dados de transações","Armazenamento em MySQL","Tratamento com Pandas","Construção do grafo",
+    "Cálculo das métricas","Análise matemática","Identificação de padrões","Resultados consolidados","Visualização e relatórios"];
+  function init(){
+    el("archFlow").innerHTML = camadas.map(([n,d],i)=>
+      `<div class="flow-box"><strong>${n}</strong><span>${d}</span></div>${i<camadas.length-1?'<div class="flow-arrow"></div>':""}`).join("");
+    el("archTools").innerHTML = ferramentas.map(([n,d])=>
+      `<div class="switch" style="align-items:flex-start"><div><p>${n}</p><span>${d}</span></div></div>`).join("");
+    el("archSteps").innerHTML = passos.map(p=>`<li>${p}</li>`).join("");
+  }
+  return {init};
+})();
+
+/* ---------------------------------------------------------
+   11. CONFIGURAÇÕES
+   --------------------------------------------------------- */
+const config = (() => {
+  function init(){
+    const aplicar = () => {
+      metrics.limiares.analise = +el("thrA").value;
+      metrics.limiares.alta = Math.max(+el("thrB").value, +el("thrA").value+5);
+      el("thrAOut").textContent = metrics.limiares.analise;
+      el("thrBOut").textContent = metrics.limiares.alta;
+      metrics.classificar();
+      dashboard.render(); contas.render(); rede.redesenhar();
+    };
+    el("thrA").addEventListener("input", aplicar);
+    el("thrB").addEventListener("input", aplicar);
+
+    el("swTheme").addEventListener("click", e=>{
+      const on = e.currentTarget.classList.toggle("on");
+      document.documentElement.setAttribute("data-theme", on?"dark":"light");
+      rede.redesenhar();
+    });
+    el("swLabels").addEventListener("click", e=>{
+      rede.rotulos(e.currentTarget.classList.toggle("on"));
+    });
+    el("swAlerts").addEventListener("click", e=> e.currentTarget.classList.toggle("on"));
+  }
+  return {init};
+})();
+
+/* ---------------------------------------------------------
+   12. ROTEADOR E EVENTOS GLOBAIS
+   --------------------------------------------------------- */
+const titulos = {
+  dashboard:"Visão geral", transacoes:"Transações", rede:"Rede de transações",
+  contas:"Contas em análise", conta:"Detalhes da conta", relatorios:"Relatórios",
+  arquitetura:"Arquitetura do sistema", config:"Configurações"
+};
+
+function irPara(pagina, param){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  el("page-"+pagina).classList.add("active");
+  el("pageTitle").textContent = titulos[pagina];
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active", b.dataset.page===pagina));
+  if(pagina==="conta") detalheConta.render(param);
+  if(pagina==="rede") rede.redesenhar();
+  el("sidebar").classList.remove("open");
+  window.scrollTo({top:0, behavior:"instant"});
+}
+
+function init(){
+  transacoes.init(); rede.init(); contas.init(); relatorios.init(); arquitetura.init(); config.init();
+  dashboard.render();
+
+  el("nav").addEventListener("click", e=>{
+    const b = e.target.closest("button[data-page]"); if(b) irPara(b.dataset.page);
+  });
+
+  // qualquer elemento com data-conta abre o detalhe; data-goto navega
+  document.addEventListener("click", e=>{
+    const conta = e.target.closest("[data-conta]");
+    if(conta){ e.preventDefault(); ui.closeModal(); ui.closeDrawer(); irPara("conta", conta.dataset.conta); return; }
+    const goto = e.target.closest("[data-goto]");
+    if(goto){ e.preventDefault(); irPara(goto.dataset.goto); }
+  });
+
+  el("periodSelect").addEventListener("change", e=>{
+    estado.periodo = +e.target.value;
+    el("periodLabel").textContent = `últimos ${estado.periodo} dias`;
+    dashboard.render(); transacoes.render(); rede.atualizar(); contas.render();
+  });
+
+  el("btnNotif").addEventListener("click", ()=>{
+    const alerta = [...metrics.contas].sort((a,b)=>b.score-a.score).slice(0,3);
+    ui.modal("Notificações", `<p style="margin-top:0;font-size:13px">Alertas gerados pelos limiares atuais:</p>
+      ${alerta.map(c=>`<div class="note" style="margin-bottom:10px">Conta <a href="#" data-conta="${c.id}" class="mono-id">${c.id}</a> cruzou o limiar de relevância estrutural (score ${fmtNum(c.score,1)}). Necessita investigação.</div>`).join("")}
+      <p style="font-size:12px;color:var(--ink-3);margin-bottom:0">Notificações simuladas para demonstração.</p>`);
+  });
+
+  el("menuToggle").addEventListener("click", ()=> el("sidebar").classList.toggle("open"));
+}
+
+document.addEventListener("DOMContentLoaded", init);
+return {ui, irPara, metrics, data};
+})();
+</script>
+</body>
+</html>

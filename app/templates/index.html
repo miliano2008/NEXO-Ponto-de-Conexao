@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXO — Ponto de Conexão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/componentes.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/paginas.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/responsivo.css') }}">
+</head>
+<body>
+<div class="loading" id="loading"></div>
+<div class="app">
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg class="brand-dot" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <circle cx="5" cy="6" r="3" fill="#4D94DD"/><circle cx="21" cy="5" r="2.4" fill="#7FA4CE"/>
+          <circle cx="13" cy="14" r="4.2" fill="#fff"/><circle cx="4" cy="21" r="2.4" fill="#7FA4CE"/>
+          <circle cx="22" cy="20" r="3" fill="#4D94DD"/>
+          <path d="M5 6l8 8M21 5l-8 9M13 14l-9 7M13 14l9 6" stroke="#4D94DD" stroke-width="1.2" opacity=".75"/>
+        </svg>
+        <h1>NEXO</h1>
+      </div>
+      <p>Ponto de conexão</p>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="nav-label">Análise</div>
+      <button data-page="dashboard" class="active">📊 Dashboard</button>
+      <button data-page="transacoes">💳 Transações</button>
+      <button data-page="rede">🕸️ Rede de transações</button>
+      <button data-page="contas">🔎 Contas em análise</button>
+      <div class="nav-label">Simulação</div>
+      <button data-page="simulador">🧪 Simulador</button>
+      <div class="nav-label">Documentação</div>
+      <button data-page="relatorios">📄 Relatórios</button>
+      <button data-page="arquitetura">🧩 Arquitetura</button>
+      <button data-page="config">⚙️ Configurações</button>
+      <div class="nav-label" id="navAdmin">Administração</div>
+      <button data-page="usuarios">👥 Usuários e cargos</button>
+      <button data-page="auditoria">🛡️ Auditoria de acessos</button>
+    </nav>
+    <div class="side-foot">
+      <div class="side-user">
+        <div class="avatar" id="userAvatar">··</div>
+        <div><strong id="userNome">Carregando…</strong><span id="userCargo"></span></div>
+      </div>
+      <div class="sys-status"><i class="pulse"></i> <span id="sysStatus">Conectando ao backend…</span></div>
+      <button class="logout" id="btnSair">Sair</button>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Abrir menu">☰</button>
+      <div>
+        <h2 id="pageTitle">Visão geral</h2>
+        <div class="period">Período analisado: <span id="periodLabel">base completa</span> · <span id="baseLabel">base fictícia do projeto</span></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="field">
+        <select id="periodSelect" aria-label="Filtro de período">
+          <option value="7">Últimos 7 dias</option>
+          <option value="15">Últimos 15 dias</option>
+          <option value="30">Últimos 30 dias</option>
+          <option value="0" selected>Base completa</option>
+        </select>
+      </div>
+      <button class="icon-btn" id="btnNotif" aria-label="Notificações">🔔<i class="badge-dot"></i></button>
+      <div class="profile-chip"><div class="avatar" id="chipAvatar" style="width:26px;height:26px;font-size:10px">··</div><span id="chipCargo"></span></div>
+    </header>
+
+    <div class="content">
+      <!-- ---------- DASHBOARD ---------- -->
+      <section class="page active" id="page-dashboard">
+        <div class="grid g4" id="dashKpis"></div>
+
+        <div class="grid g-2-1 mt">
+          <div class="card">
+            <div class="card-head"><div><h3>Volume de transações</h3><p>Valor movimentado por dia no período selecionado</p></div></div>
+            <div class="card-body"><div id="chartVolume"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><h3>Distribuição das transações</h3><p>Classificação herdada das contas envolvidas</p></div></div>
+            <div class="card-body"><div id="chartDist"></div></div>
+          </div>
+        </div>
+
+        <div class="card mt">
+          <div class="card-head">
+            <div><h3>Contas com maior relevância estrutural</h3><p>Ordenadas pelo Score NEXO provisório (calculado em Python)</p></div>
+            <div class="spacer" style="flex:1"></div>
+            <button class="btn ghost sm" data-goto="contas">Ver ranking completo</button>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Conta</th><th class="num">Score</th><th class="num">Degree</th><th class="num">Betweenness</th><th class="num">Closeness</th><th class="num">Comunidade</th><th>Status</th></tr></thead>
+            <tbody id="dashTop"></tbody>
+          </table></div>
+        </div>
+
+        <div class="note mt">O NEXO indica <strong>relevância estrutural</strong> dentro da rede analisada. Um indicador elevado sinaliza que a conta necessita investigação — nunca que houve irregularidade confirmada.</div>
+      </section>
+
+      <!-- ---------- TRANSAÇÕES ---------- -->
+      <section class="page" id="page-transacoes">
+        <div class="card">
+          <div class="card-head" style="gap:10px">
+            <div class="field" style="flex:1;min-width:200px">
+              <label for="txSearch">Pesquisar</label>
+              <input type="search" id="txSearch" placeholder="ID, conta de origem ou destino">
+            </div>
+            <div class="field"><label for="txConta">Conta</label><select id="txConta"></select></div>
+            <div class="field"><label for="txStatus">Status</label><select id="txStatus">
+              <option value="">Todos</option><option>Normal</option><option>Em análise</option><option>Alta relevância</option></select></div>
+            <div class="field"><label for="txTipo">Tipo</label><select id="txTipo"></select></div>
+            <div class="field"><label for="txMin">Valor mínimo (R$)</label><input type="number" id="txMin" placeholder="0" style="width:130px"></div>
+            <div class="field"><label>&nbsp;</label><button class="btn ghost" id="txReset">Limpar filtros</button></div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>ID</th><th>Data / hora</th><th>Origem</th><th>Destino</th><th class="num">Valor</th><th>Tipo</th><th>Status</th></tr></thead>
+            <tbody id="txBody"></tbody>
+          </table></div>
+          <div class="pager" id="txPager"></div>
+        </div>
+        <p style="font-size:12px;color:var(--ink-3)">Clique em uma linha para abrir os detalhes da transação e as conexões relacionadas.</p>
+      </section>
+
+      <!-- ---------- REDE ---------- -->
+      <section class="page" id="page-rede">
+        <div class="tabs" id="redeTabs">
+          <button data-tab="grafo" class="active">Grafo</button>
+          <button data-tab="padroes">Padrões identificados</button>
+          <button data-tab="comunidades">Comunidades</button>
+          <button data-tab="matriz">Matrizes e espectral</button>
+        </div>
+
+        <div class="tabpane" id="tab-grafo">
+          <div class="filters" style="margin-bottom:10px">
+            <div class="field"><label for="corPor">Colorir nós por</label><select id="corPor"><option value="status">Status</option><option value="com">Comunidade (Louvain)</option></select></div>
+            <div class="field"><label for="focoCom">Destacar comunidade</label><select id="focoCom"></select></div>
+          </div>
+          <div class="graph-shell">
+            <svg id="graph" viewBox="0 0 1000 620" role="img" aria-label="Grafo de transações entre contas"></svg>
+            <div class="graph-tools">
+              <button id="zIn" title="Aproximar">+</button>
+              <button id="zOut" title="Afastar">−</button>
+              <button id="zReset" title="Reorganizar">⟳</button>
+            </div>
+          </div>
+          <div class="grid g2 mt">
+            <div class="card"><div class="card-body">
+              <div class="legend" id="legenda"></div>
+              <p style="font-size:12.5px;color:var(--ink-2);margin:12px 0 0">
+                Cada círculo é uma conta e cada seta é uma conexão dirigida (uma ou mais transferências no mesmo sentido). O tamanho do nó é proporcional ao <strong>degree</strong>. Passe o mouse para ver as métricas, clique para abrir o painel lateral e arraste para reorganizar.</p>
+            </div></div>
+            <div class="card"><div class="card-body" id="netStats"></div></div>
+          </div>
+        </div>
+
+        <div class="tabpane" id="tab-padroes" style="display:none">
+          <div class="grid g3" id="padroesGrid"></div>
+          <div class="note mt">Os padrões são encontrados por regras simples no backend Python. Encontrar um padrão indica que a conta merece verificação, não que houve irregularidade.</div>
+        </div>
+
+        <div class="tabpane" id="tab-comunidades" style="display:none">
+          <div class="note" id="comNota"></div>
+          <div class="grid g3 mt" id="comunidadesGrid"></div>
+        </div>
+
+        <div class="tabpane" id="tab-matriz" style="display:none">
+          <div class="card">
+            <div class="card-head">
+              <div><h3 id="matTitulo">Matriz</h3><p id="matDesc"></p></div>
+              <div style="flex:1"></div>
+              <div class="field"><label for="matSel">Matriz</label><select id="matSel">
+                <option value="A">A — adjacência (dirigida)</option>
+                <option value="W">W — pesos (R$)</option>
+                <option value="D">D — grau de saída</option>
+                <option value="L">L = D − A (dirigida)</option>
+                <option value="A_simetrica">A simétrica</option>
+                <option value="L_simetrica">L simétrica</option>
+              </select></div>
+            </div>
+            <div class="card-body table-wrap"><div id="matFull"></div></div>
+          </div>
+          <div class="grid g2 mt">
+            <div class="card"><div class="card-head"><div><h3>Autovalores da Laplaciana simétrica</h3><p>L v = λ v (ordenados)</p></div></div>
+              <div class="card-body"><div id="chartEig"></div></div></div>
+            <div class="card"><div class="card-head"><div><h3>Leitura espectral</h3></div></div>
+              <div class="card-body" id="espectralInfo"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- CONTAS EM ANÁLISE ---------- -->
+      <section class="page" id="page-contas">
+        <div class="card">
+          <div class="card-head">
+            <div><h3>Contas com maior relevância estrutural</h3><p>Ranking por Score NEXO provisório</p></div>
+          </div>
+          <div class="card-body" style="padding-bottom:6px">
+            <div class="filters">
+              <div class="field" style="min-width:200px"><label>Score mínimo: <b id="scoreOut">0</b></label><input type="range" id="fScore" min="0" max="100" value="0"></div>
+              <div class="field" style="min-width:180px"><label>Degree mínimo: <b id="degOut">0</b></label><input type="range" id="fDeg" min="0" max="14" value="0"></div>
+              <div class="field"><label for="fCom">Comunidade</label><select id="fCom"></select></div>
+              <div class="field"><label for="fStat">Status</label><select id="fStat">
+                <option value="">Todos</option><option>Alta relevância</option><option>Em análise</option><option>Revisar</option><option>Normal</option></select></div>
+            </div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>#</th><th>Conta</th><th class="num">Score NEXO*</th><th class="num">Degree</th><th class="num">In / Out</th><th class="num">Betweenness</th><th class="num">Closeness</th><th class="num">Flow</th><th class="num">Imbalance</th><th class="num">Comunidade</th><th>Status</th></tr></thead>
+            <tbody id="contasBody"></tbody>
+          </table></div>
+        </div>
+        <p style="font-size:12px;color:var(--ink-3);margin-top:10px">* Score NEXO provisório = 100 × Σ peso × minmax(métrica). Pesos de teste do guia matemático; a fórmula definitiva será validada pela equipe.</p>
+      </section>
+
+      <!-- ---------- DETALHE DA CONTA ---------- -->
+      <section class="page" id="page-conta">
+        <div id="contaDetalhe"></div>
+      </section>
+
+      <!-- ---------- SIMULADOR ---------- -->
+      <section class="page" id="page-simulador">
+        <div class="grid g-2-1">
+          <div class="card">
+            <div class="card-head"><div><h3>Nova transação simulada</h3><p>O backend Python recalcula grafo, matrizes, Louvain, espectral e score</p></div></div>
+            <div class="card-body">
+              <form id="simForm" class="form-grid" autocomplete="off">
+                <div class="field"><label for="simDe">Conta de origem</label><select id="simDe" required></select></div>
+                <div class="field"><label for="simPara">Conta de destino</label><select id="simPara" required></select></div>
+                <div class="field"><label for="simValor">Valor (R$)</label><input type="number" id="simValor" min="0.01" step="0.01" required placeholder="ex.: 15000"></div>
+                <div class="field"><label for="simData">Data</label><input type="date" id="simData" required></div>
+                <div class="field"><label for="simHora">Hora</label><input type="time" id="simHora" required value="12:00"></div>
+                <div class="field"><label for="simTipo">Tipo</label><select id="simTipo"></select></div>
+                <div class="field" style="grid-column:1/-1;flex-direction:row;gap:10px;flex-wrap:wrap">
+                  <button class="btn" type="submit" id="simEnviar">Simular transação</button>
+                  <button class="btn ghost" type="button" id="simAleatoria">Preencher aleatória</button>
+                  <button class="btn ghost" type="button" id="simRestaurar">Restaurar base original</button>
+                </div>
+              </form>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><h3>Estado da simulação</h3></div></div>
+            <div class="card-body" id="simEstado"></div>
+          </div>
+        </div>
+
+        <div class="card mt">
+          <div class="card-head"><div><h3>Impacto da última transação</h3><p>Contas cujo score, status ou comunidade mudou</p></div>
+            <div style="flex:1"></div><button class="btn ghost sm" id="simVerRede" style="display:none">Ver na rede</button></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Conta</th><th class="num">Score antes</th><th class="num">Score depois</th><th class="num">Δ</th><th class="num">Ranking</th><th class="num">Comunidade</th><th>Status antes</th><th>Status depois</th></tr></thead>
+            <tbody id="simImpacto"><tr><td colspan="8" class="empty">Nenhuma transação simulada ainda.</td></tr></tbody>
+          </table></div>
+        </div>
+
+        <div class="card mt">
+          <div class="card-head"><div><h3>Transações simuladas</h3><p>Mantidas em memória no servidor; os CSVs originais não são alterados</p></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>ID</th><th>Data / hora</th><th>Origem</th><th>Destino</th><th class="num">Valor</th><th>Tipo</th><th></th></tr></thead>
+            <tbody id="simLista"></tbody>
+          </table></div>
+        </div>
+        <div class="note warn mt">Como o score usa normalização min-max entre as contas, uma transação grande pode <strong>reduzir</strong> o score de outras contas: o máximo da rede muda e todas são reescaladas.</div>
+      </section>
+
+      <!-- ---------- RELATÓRIOS ---------- -->
+      <section class="page" id="page-relatorios">
+        <div class="grid g2" id="reportGrid"></div>
+        <div class="note mt">Os relatórios usam os resultados atuais do backend (inclui transações simuladas e o período selecionado). O JSON completo pode ser baixado para integração com Power BI.</div>
+      </section>
+
+      <!-- ---------- ARQUITETURA ---------- -->
+      <section class="page" id="page-arquitetura">
+        <div class="grid g-2-1">
+          <div class="card"><div class="card-head"><div><h3>Arquitetura em execução</h3><p>Como o dado caminha da base até a visualização</p></div></div>
+            <div class="card-body"><div class="flow" id="archFlow"></div></div></div>
+          <div>
+            <div class="card"><div class="card-head"><div><h3>Ferramentas de apoio</h3></div></div>
+              <div class="card-body" id="archTools"></div></div>
+            <div class="card mt"><div class="card-head"><div><h3>Fluxo do sistema</h3><p>Etapas do pipeline (nucleo/analise.py)</p></div></div>
+              <div class="card-body"><ol id="archSteps" style="margin:0;padding-left:18px;font-size:13px;line-height:2"></ol></div></div>
+          </div>
+        </div>
+        <div class="note mt">Com o banco configurado no <code>.env</code> (DB_HOST), contas, transações e usuários vêm do MySQL (Aiven). Sem ele, o sistema usa os CSVs e o SQLite local. A matemática é a mesma nos dois casos.</div>
+      </section>
+
+      <!-- ---------- USUÁRIOS (administrador) ---------- -->
+      <section class="page" id="page-usuarios">
+        <div class="note warn" id="usrEmailAviso" hidden style="margin-bottom:16px"><b>E-mail não configurado.</b> Novos cadastros não recebem o link de confirmação e o “Esqueci minha senha” não funciona. Configure o SMTP com o <code>scripts\CONFIGURAR.bat</code>; enquanto isso, confirme os e-mails manualmente aqui.</div>
+        <div class="card">
+          <div class="card-head"><div><h3>Usuários cadastrados</h3><p>Altere cargo, contato ou acesso. A mudança vale no próximo clique do usuário.</p></div>
+            <div style="flex:1"></div>
+            <div class="field"><label for="usrBusca">Pesquisar</label><input type="search" id="usrBusca" placeholder="Nome, CPF/CNPJ, e-mail ou telefone"></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Nome</th><th>CPF / CNPJ</th><th>Contato</th><th>Cargo</th><th>Situação</th><th>Último acesso</th><th></th></tr></thead>
+            <tbody id="usrBody"></tbody>
+          </table></div>
+        </div>
+        <div class="card mt">
+          <div class="card-head"><div><h3>Códigos de convite</h3><p>Quem informar o código no cadastro já entra com o cargo escolhido. O código só aparece uma vez.</p></div></div>
+          <div class="card-body" style="padding-bottom:6px">
+            <div class="filters">
+              <div class="field"><label for="convCargo">Cargo</label><select id="convCargo"></select></div>
+              <div class="field"><label for="convDias">Validade (dias)</label><input type="number" id="convDias" min="1" max="30" value="7" style="width:110px"></div>
+              <div class="field"><label for="convUsos">Máximo de usos</label><input type="number" id="convUsos" min="1" max="50" value="5" style="width:120px"></div>
+              <div class="field"><label>&nbsp;</label><button class="btn" id="convGerar">Gerar código</button></div>
+            </div>
+            <div class="note mt" id="convNovo" hidden></div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Código</th><th>Cargo</th><th class="num">Usos</th><th>Expira em</th><th>Criado por</th><th>Situação</th><th></th></tr></thead>
+            <tbody id="convBody"></tbody>
+          </table></div>
+        </div>
+        <div class="card mt"><div class="card-head"><div><h3>Permissões por cargo</h3><p>Aplicadas no servidor (API) e na interface</p></div></div>
+          <div class="table-wrap" id="matrizPerm"></div></div>
+      </section>
+
+      <!-- ---------- AUDITORIA ---------- -->
+      <section class="page" id="page-auditoria">
+        <div class="card">
+          <div class="card-head"><div><h3>Trilha de auditoria</h3><p>Últimos 200 eventos de acesso registrados no banco</p></div>
+            <div style="flex:1"></div><button class="btn ghost sm" id="audAtualizar">Atualizar</button></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Data / hora</th><th>Evento</th><th>CPF / CNPJ</th><th>Detalhe</th><th>IP</th></tr></thead>
+            <tbody id="audBody"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      <!-- ---------- CONFIGURAÇÕES ---------- -->
+      <section class="page" id="page-config">
+        <div class="grid g2">
+          <div class="card"><div class="card-head"><div><h3>Limiares de classificação</h3><p>Ajuste os cortes do Score NEXO e veja a rede reclassificar</p></div></div>
+            <div class="card-body">
+              <label style="font-size:12.5px">Limiar de “em análise”: <b id="thrAOut">45</b></label>
+              <input type="range" id="thrA" min="20" max="80" value="45">
+              <label style="font-size:12.5px;display:block;margin-top:14px">Limiar de “alta relevância”: <b id="thrBOut">70</b></label>
+              <input type="range" id="thrB" min="40" max="100" value="70">
+              <p style="font-size:12px;color:var(--ink-3);margin:14px 0 0">A reclassificação é aplicada na interface sobre os scores do backend e não é persistida.</p>
+              <h4 style="margin:18px 0 8px;font-size:13px">Pesos do score (backend)</h4>
+              <dl class="kv" id="pesosInfo" style="font-size:12.5px"></dl>
+            </div></div>
+          <div class="card"><div class="card-head"><div><h3>Preferências da interface</h3></div></div>
+            <div class="card-body">
+              <div class="switch"><div><p>Tema escuro</p><span>Acompanha o sistema por padrão</span></div><button class="toggle" id="swTheme"></button></div>
+              <div class="switch"><div><p>Rótulos das contas no grafo</p><span>Exibe o código da conta sob cada nó</span></div><button class="toggle on" id="swLabels"></button></div>
+              <div class="switch"><div><p>Alertas de conta em análise</p><span>Mostra aviso quando uma simulação muda o status de uma conta</span></div><button class="toggle on" id="swAlerts"></button></div>
+            </div></div>
+        </div>
+        <div class="card mt"><div class="card-head"><div><h3>Sobre esta versão</h3></div></div>
+          <div class="card-body"><dl class="kv" id="sobre"></dl></div></div>
+      </section>
+    </div>
+
+    <footer class="foot">
+      <span class="proto-tag">Simulador</span>
+      Protótipo acadêmico — NEXO Ponto de Conexão. Dados fictícios.
+      Métricas calculadas em Python (NetworkX + NumPy). Score, pesos e limiares são provisórios e não indicam fraude.
+    </footer>
+  </div>
+</div>
+
+<div class="tooltip" id="tip"></div>
+<div class="toast" id="toast"></div>
+<div class="overlay" id="overlay"><div class="modal"><header><h3 id="modalTitle"></h3><button class="close" data-close="modal" aria-label="Fechar">×</button></header><div class="body" id="modalBody"></div></div></div>
+<aside class="drawer" id="drawer"><header><h3 id="drawerTitle">Conta</h3><button class="close" data-close="drawer" aria-label="Fechar">×</button></header><div class="body" id="drawerBody"></div></aside>
+
+<!-- ponto de entrada em módulos (ES modules): cada tela é carregada sob demanda -->
+<script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

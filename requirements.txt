@@ -1,6 +1,8 @@
-numpy
-pandas
-networkx
-matplotlib
-mysql-connector-python
-python-dotenv
+# Bibliotecas do NEXO (instaladas automaticamente pelo iniciar.bat / iniciar.sh)
+# Faixas de versão: aceitam correções, mas não mudanças que quebrem compatibilidade.
+networkx>=3.2,<4        # grafos, centralidades e Louvain
+numpy>=1.26,<3          # matrizes, autovalores e autovetores
+flask>=3.0,<4           # servidor web e API (traz o Werkzeug: hash de senhas)
+openpyxl>=3.1,<4        # leitura da planilha NEXO_Base_Transacoes.xlsx
+PyMySQL>=1.1,<2         # conexão com o MySQL (Aiven) — 100% Python, sem compilador
+cryptography>=42        # exigida pelo PyMySQL para SSL e autenticação do MySQL 8

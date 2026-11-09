@@ -1,10 +1,22 @@
+# ===== SEGREDOS — nunca vão para o GitHub =====
+.env
+config.ini
+config.ini.bak
+banco/config.ini
+banco/dados/ca.pem
+*.pem
+banco/dados/.chave_secreta
+
+# ===== Dados locais de cada computador =====
+banco/dados/nexo.db
+banco/dados/nexo.db-*
+banco/dados/backups/
+saida/
+
 # Ambiente virtual
 .venv/
 venv/
 env/
-
-# Variáveis de ambiente
-.env
 
 # Python
 __pycache__/
@@ -23,3 +35,4 @@ htmlcov/
 # Sistema operacional
 .DS_Store
 Thumbs.db
+desktop.ini

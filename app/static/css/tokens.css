@@ -1,0 +1,43 @@
+/* NEXO — Cores, sombras e medidas (tema claro e escuro). Todas as telas usam estas variáveis. */
+
+/* atributo hidden sempre vence o display das classes */
+[hidden]{display:none !important}
+
+/* ============ TOKENS ============ */
+:root{
+  --navy:#0B1F3A;
+  --navy-2:#132C4E;
+  --blue:#1B5FA8;
+  --blue-soft:#E7F0FA;
+  --ink:#16202E;
+  --ink-2:#4A5A6E;
+  --ink-3:#7C8B9E;
+  --bg:#F4F6F9;
+  --surface:#FFFFFF;
+  --line:#E1E7EF;
+  --amber:#D99311;
+  --amber-soft:#FCF3E1;
+  --red:#C2263C;
+  --red-soft:#FBE9EC;
+  --green:#1E7A5A;
+  --radius:10px;
+  --shadow:0 1px 2px rgba(11,31,58,.06), 0 8px 24px rgba(11,31,58,.05);
+  --sidebar:260px;
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --navy:#071526; --navy-2:#0E2440; --blue:#4D94DD; --blue-soft:#12283F;
+    --ink:#E6ECF4; --ink-2:#AEBDCE; --ink-3:#7F90A5;
+    --bg:#0A1522; --surface:#101E30; --line:#1E3149;
+    --amber:#E3A62B; --amber-soft:#2A2312; --red:#E2596C; --red-soft:#2B1419; --green:#4FBF95;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  --navy:#071526; --navy-2:#0E2440; --blue:#4D94DD; --blue-soft:#12283F;
+  --ink:#E6ECF4; --ink-2:#AEBDCE; --ink-3:#7F90A5;
+  --bg:#0A1522; --surface:#101E30; --line:#1E3149;
+  --amber:#E3A62B; --amber-soft:#2A2312; --red:#E2596C; --red-soft:#2B1419; --green:#4FBF95;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+}

@@ -1,0 +1,4 @@
+# Só para quem desenvolve/testa (não é necessário para usar o NEXO)
+-r requirements.txt
+playwright>=1.40,<2     # teste de ponta a ponta no navegador (testes/e2e)
+# depois de instalar: python -m playwright install chromium
