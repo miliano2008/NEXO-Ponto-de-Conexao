@@ -40,9 +40,15 @@ def configuracao():
     }
 
 
-def _explicar(erro):
+def _explicar(erro, c=None):
     """Traduz os erros mais comuns do SMTP (principalmente do Gmail)."""
     texto = str(erro)
+    if isinstance(erro, smtplib.SMTPServerDisconnected) or "unexpectedly closed" in texto:
+        usado = f" (agora: {c['host']}, porta {c['porta']}, {c['seguranca']})" if c else ""
+        return (f"o servidor fechou a conexão antes do login{usado}. Não é a senha. Causas comuns: "
+                "(1) porta e segurança que não combinam: use 587 + starttls ou 465 + ssl; "
+                "(2) a rede (ex.: faculdade) ou o antivírus bloqueia o e-mail: teste no hotspot do celular; "
+                "(3) servidor digitado errado.")
     if isinstance(erro, smtplib.SMTPAuthenticationError) or "535" in texto:
         return ("o servidor recusou usuário/senha. No Gmail, use a SENHA DE APP de 16 letras "
                 "(myaccount.google.com/apppasswords), não a senha normal, com a verificação em duas etapas ativa.")
@@ -75,7 +81,7 @@ def testar_login():
         with _conectar(c):
             pass
     except (smtplib.SMTPException, OSError) as erro:
-        raise ErroEmail(f"Falha no e-mail: {_explicar(erro)}") from erro
+        raise ErroEmail(f"Falha no e-mail: {_explicar(erro, c)}") from erro
     return c
 
 
@@ -90,7 +96,7 @@ def enviar(destino, assunto, texto, html=None):
         with _conectar(c) as servidor:
             servidor.send_message(msg)
     except (smtplib.SMTPException, OSError) as erro:
-        raise ErroEmail(f"Falha ao enviar e-mail: {_explicar(erro)}") from erro
+        raise ErroEmail(f"Falha ao enviar e-mail: {_explicar(erro, c)}") from erro
 
 
 def configurado():
