@@ -1,7 +1,8 @@
 """Cria (ou promove) um administrador do NEXO.
 
 Executar: scripts\CRIAR_ADMIN.bat  ou  python -m app.criar_admin
-Se o CPF/CNPJ já estiver cadastrado, o usuário é promovido a Administrador.
+Se o CPF/CNPJ já estiver cadastrado, o usuário é promovido a Administrador e,
+se você quiser (esqueceu a senha), ganha uma senha nova.
 """
 
 from getpass import getpass
@@ -19,6 +20,11 @@ try:
         if not usuario["email_confirmado"]:
             usuario = auth.confirmar_email_manual(existente["id"], por="criar_admin.py")
         print(f"\n{usuario['nome']} ({usuario['documento']}) agora é Administrador.")
+        if input("\nDefinir uma NOVA senha para este usuário? (s/n) [n]: ").strip().lower().startswith("s"):
+            senha = getpass("Nova senha (mín. 8, letras e números): ")
+            confirmacao = getpass("Confirme a nova senha: ")
+            auth.definir_senha_manual(existente["id"], senha, confirmacao, por="criar_admin.py")
+            print("Senha alterada e conta desbloqueada. Já pode entrar com ela.")
     else:
         nome = input("Nome completo / razão social: ")
         email = input("E-mail (usado na recuperação de senha): ")
