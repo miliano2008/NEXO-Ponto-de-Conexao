@@ -8,7 +8,8 @@ Usamos **módulos nativos do navegador** (`import`/`export`): não há npm, comp
 ```text
 js/
 ├── app.js            ponto de entrada: liga menus, botões globais e inicia (usuário → dados → tela)
-├── login.js          telas de login, cadastro, esqueci e redefinir
+├── login.js          telas de login (e-mail ou CPF/CNPJ), cadastro, cadastro pelo Google, esqueci e redefinir
+├── inicio.js         página institucional: acesso rápido no banner, menu do celular e FAQ
 ├── nucleo/
 │   ├── utilidades.js  el, esc (escapa HTML), fmtBRL, fmtNum, fmtData, pill, cores…
 │   ├── estado.js      estado compartilhado + eventos ouvir/emitir
@@ -17,6 +18,7 @@ js/
 │   ├── dados.js       carregar() da análise, classificar() pelos limiares, obterMatrizes() sob demanda
 │   ├── graficos.js    gráficos em SVG próprio (barras, linhas, rosca), sem biblioteca
 │   ├── ui.js          modal, painel lateral (drawer) e avisos (toast)
+│   ├── minha-senha.js janela "Minha senha" (trocar a senha, desconectar outros computadores); baixada só ao clicar
 │   └── roteador.js    navegação por #endereço e carregamento sob demanda das telas
 └── paginas/           uma tela por arquivo
     dashboard · transacoes · rede · contas · conta · simulador · relatorios
@@ -58,6 +60,14 @@ As telas **não chamam umas às outras**: avisam por eventos.
 | `paginas.css` | detalhes de cada tela |
 | `responsivo.css` | celular e tablet (sempre por último, para prevalecer) |
 | `login.css` | só na página de login |
+| `inicio.css` | só na página institucional (`/`); usa os mesmos `tokens.css`, inclusive o tema escuro do sistema operacional |
+
+## Páginas HTML
+| Arquivo | Endereço | Conteúdo |
+|---|---|---|
+| `inicio.html` | `/` | Página institucional pública: cabeçalho fixo com "Entrar", banner com cartão de acesso, como funciona, recursos, limites éticos, público, segurança, perguntas frequentes e rodapé |
+| `login.html` | `/login`, `/cadastro`, `/redefinir`, `/confirmar` | Acesso. O botão do Google só aparece se estiver configurado |
+| `index.html` | `/app` | O sistema |
 
 ## Como criar uma tela nova
 1. Crie `js/paginas/minha.js` exportando `iniciar()` e/ou `atualizar()`.

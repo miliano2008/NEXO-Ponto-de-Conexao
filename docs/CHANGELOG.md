@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.5 — Fase 1: identidade, login e página institucional (branch `fase-1`)
+- **Página institucional** em `/`, pública, com acesso rápido no banner, como funciona, recursos, segurança, FAQ e rodapé. O sistema passou para **`/app`**.
+- **Login por e-mail ou CPF/CNPJ** no mesmo campo. Mensagem única: "E-mail, CPF/CNPJ ou senha inválidos." "Esqueci minha senha" também aceita o e-mail.
+- **Entrar com Google** (opcional, configurado no `CONFIGURAR`): vincula a cadastros confirmados ou cria o cadastro com CPF/CNPJ e telefone. Pode ser restrito a um domínio. Sem biblioteca nova.
+- **Minha senha**: o usuário troca a própria senha dentro do sistema e pode desconectar os outros computadores.
+- **Trocar a senha encerra as outras sessões**, seja pela tela, pelo link do e-mail ou pelo `CRIAR_ADMIN`.
+- **Banco:** migração 4 (`versao_sessao` e `identidades_externas`).
+- **Testes:** novo `test_fase1.py`; teste no navegador ampliado. São 6 conjuntos ao todo.
+
 ## 0.4 — Fase 0: reorganização e base técnica (branch `fase-0`)
 **Para quem usa, nada muda na tela.** Por dentro:
 

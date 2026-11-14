@@ -3,7 +3,7 @@
 ## Segredos: o que NUNCA vai para o GitHub nem para o zip do grupo
 | Arquivo | Por quê |
 |---|---|
-| `.env` (e `config.ini` / `config.ini.bak` antigos) | Senhas do Aiven e do e-mail |
+| `.env` (e `config.ini` / `config.ini.bak` antigos) | Senhas do Aiven e do e-mail, e a chave secreta do Google (`GOOGLE_CLIENT_SECRET`) |
 | `banco/dados/ca.pem` | Certificado do Aiven do grupo |
 | `banco/dados/.chave_secreta` | Assina os cookies de sessão. Quem tiver a chave pode forjar um login |
 | `banco/dados/nexo.db` | Usuários locais (e-mails, hashes de senha) |
@@ -16,13 +16,16 @@ O `.gitignore` já bloqueia todos eles. Compartilhe o `.env` e o `ca.pem` **só 
 ## Login e senhas
 - Senhas guardadas só como **hash scrypt** (Werkzeug), nunca em texto puro.
 - Senha com no mínimo 8 caracteres, com letras e números.
-- **Mensagem única** para qualquer falha: "CPF/CNPJ ou senha inválidos." A resposta para um CPF inexistente leva o mesmo tempo que a de um real.
+- **Login por e-mail ou CPF/CNPJ**, no mesmo campo.
+- **Mensagem única** para qualquer falha: "E-mail, CPF/CNPJ ou senha inválidos." A resposta para um e-mail ou CPF inexistente leva o mesmo tempo que a de um real.
 - 5 senhas erradas bloqueiam a conta por 15 minutos.
 - Limites por computador (IP): 30 tentativas de login a cada 10 min, 10 cadastros por hora, 10 pedidos de recuperação a cada 15 min.
 - **Confirmação de e-mail obrigatória** (link válido por 24 h) antes do primeiro acesso.
 - **Recuperação de senha:** link válido por 30 min e de uso único, com no máximo 1 e-mail por minuto. O banco guarda só o hash SHA-256 do link.
 - **Convites:** o código aparece uma única vez (só o hash é guardado), tem validade e limite de usos, e pode ser revogado.
 - **Sessão:** cookie HttpOnly e SameSite=Lax, válido por 8 h. Mudanças de cargo e desativação valem no pedido seguinte.
+- **Trocar a senha encerra as outras sessões:** cada usuário tem uma *versão da sessão*, gravada no cookie no login. Trocar a senha (em "Minha senha", pelo link do e-mail ou pelo `CRIAR_ADMIN`) aumenta essa versão, e os outros computadores são desconectados no pedido seguinte. Em "Minha senha" também há o botão "Desconectar outros computadores".
+- **Entrar com Google (opcional):** fluxo *authorization code* com PKCE, `state` e `nonce`. O servidor troca o código direto com o Google, usando a chave secreta, que nunca vai ao navegador. Só aceita e-mail verificado pelo Google e, se configurado, apenas os domínios permitidos. A conta Google só é vinculada automaticamente a um cadastro com e-mail **já confirmado**: isso impede que alguém cadastre o e-mail de outra pessoa e tome a conta quando ela entrar pelo Google.
 - **Anti-CSRF:** pedidos que alteram dados exigem o cabeçalho `X-Requested-With: NEXO`.
 - O sistema não permite ficar sem um administrador ativo.
 - Auditoria de todos os acessos, falhas, recusas por permissão e mudanças de cargo.

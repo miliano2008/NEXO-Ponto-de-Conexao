@@ -246,10 +246,46 @@ CREATE TABLE IF NOT EXISTS analises (
 CREATE INDEX IF NOT EXISTS ix_analise_base ON analises (base_assinatura)""")
 
 
+# ---------------------------------------------------------------- 4. sessões e login externo
+
+def m4_sessoes_e_identidades(c, mysql):
+    """Fase 1: versão da sessão (trocar a senha encerra as outras sessões) e contas
+    externas vinculadas (Google hoje; Microsoft no futuro, na mesma tabela)."""
+    _adicionar_coluna(c, mysql, "usuarios", "versao_sessao", "INT NOT NULL DEFAULT 0", "INTEGER NOT NULL DEFAULT 0")
+    if mysql:
+        c.executar_script("""
+CREATE TABLE IF NOT EXISTS identidades_externas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    provedor VARCHAR(20) NOT NULL,
+    sujeito VARCHAR(255) NOT NULL,
+    email VARCHAR(190) NOT NULL,
+    criado_em DATETIME NOT NULL,
+    ultimo_uso DATETIME NULL,
+    UNIQUE KEY uq_identidade (provedor, sujeito),
+    INDEX ix_identidade_usuario (usuario_id),
+    CONSTRAINT fk_identidade_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+    else:
+        c.executar_script("""
+CREATE TABLE IF NOT EXISTS identidades_externas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    provedor TEXT NOT NULL,
+    sujeito TEXT NOT NULL,
+    email TEXT NOT NULL,
+    criado_em TEXT NOT NULL,
+    ultimo_uso TEXT,
+    UNIQUE (provedor, sujeito)
+);
+CREATE INDEX IF NOT EXISTS ix_identidade_usuario ON identidades_externas (usuario_id)""")
+
+
 MIGRACOES = [
     (1, "Acesso: usuários, links por e-mail, convites e auditoria", m1_acesso),
     (2, "Simulações por usuário", m2_simulacoes),
     (3, "Análises guardadas e rastreáveis", m3_analises),
+    (4, "Versão da sessão e contas externas (Google)", m4_sessoes_e_identidades),
 ]
 VERSAO_ATUAL = MIGRACOES[-1][0]
 

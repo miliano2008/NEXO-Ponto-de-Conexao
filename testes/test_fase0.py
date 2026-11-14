@@ -82,7 +82,7 @@ INSERT INTO usuarios (documento, tipo_documento, nome, email, senha_hash, cargo,
 """)
 antigo.commit()
 antigo.close()
-assert migracoes.aplicar(registrar=None) == [1, 2, 3]
+assert migracoes.aplicar(registrar=None) == [1, 2, 3, 4]
 assert migracoes.aplicar(registrar=None) == []                       # idempotente
 with db.conectar() as c:
     u = c.execute("SELECT * FROM usuarios WHERE documento = '52998224725'").fetchone()

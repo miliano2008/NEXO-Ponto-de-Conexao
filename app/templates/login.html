@@ -18,7 +18,7 @@
 <div class="login-shell">
   <!-- painel da marca -->
   <aside class="login-brand">
-    <div class="brand-mark">
+    <a class="brand-mark" href="/" title="Página inicial do NEXO">
       <svg class="brand-dot" viewBox="0 0 26 26" fill="none" aria-hidden="true">
         <circle cx="5" cy="6" r="3" fill="#4D94DD"/><circle cx="21" cy="5" r="2.4" fill="#7FA4CE"/>
         <circle cx="13" cy="14" r="4.2" fill="#fff"/><circle cx="4" cy="21" r="2.4" fill="#7FA4CE"/>
@@ -26,7 +26,7 @@
         <path d="M5 6l8 8M21 5l-8 9M13 14l-9 7M13 14l9 6" stroke="#4D94DD" stroke-width="1.2" opacity=".75"/>
       </svg>
       <h1>NEXO</h1>
-    </div>
+    </a>
     <p class="login-tag">Ponto de conexão</p>
     <h2>Análise estrutural de redes de transações</h2>
     <p class="login-lead">Grafos, matrizes e centralidades para identificar contas com relevância estrutural.</p>
@@ -40,20 +40,27 @@
       <circle cx="300" cy="60" r="12" fill="#D99311"/><circle cx="110" cy="190" r="8" fill="#4D94DD"/>
       <circle cx="270" cy="180" r="10" fill="#4D94DD"/><circle cx="40" cy="140" r="7" fill="#7FA4CE"/>
     </svg>
-    <p class="login-foot">Protótipo acadêmico · dados fictícios</p>
+    <p class="login-foot"><a href="/">← Conheça o NEXO</a> · Protótipo acadêmico · dados fictícios</p>
   </aside>
 
   <!-- formulários -->
   <main class="login-main">
     <div class="login-card">
 
-      <!-- 1. Login: CPF/CNPJ + senha no MESMO formulário (permite o navegador salvar a senha) -->
+      <!-- 1. Login: (e-mail ou CPF/CNPJ) + senha no MESMO formulário (permite o navegador salvar a senha) -->
       <form class="etapa" id="etapa-login" method="post" action="/login" autocomplete="on" novalidate>
         <h3>Acessar o sistema</h3>
-        <p class="sub">Entre com seu CPF ou CNPJ e senha.</p>
+        <p class="sub">Entre com seu e-mail (ou CPF/CNPJ) e senha.</p>
+        {% if google %}
+        <a class="btn-google" href="/auth/google" id="btnGoogle">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.2-8.5 2.2-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+          Entrar com Google
+        </a>
+        <div class="divisor"><span>ou</span></div>
+        {% endif %}
         <div class="campo">
-          <label for="docInput">CPF ou CNPJ</label>
-          <input id="docInput" name="username" inputmode="numeric" autocomplete="username" placeholder="000.000.000-00" maxlength="18" required autofocus>
+          <label for="docInput">E-mail ou CPF/CNPJ</label>
+          <input id="docInput" name="username" autocomplete="username" placeholder="seu@email.com" maxlength="190" required autofocus autocapitalize="off" spellcheck="false">
           <span class="dica" id="docTipo">&nbsp;</span>
         </div>
         <div class="campo">
@@ -68,7 +75,7 @@
         </div>
         <button type="button" class="link" data-ir="esqueci">Esqueci minha senha</button>
         <p class="rodape">Não tem conta? <a href="/cadastro" data-ir="cadastro">Criar cadastro</a></p>
-        <p class="nota-seguranca">🔒 Por segurança, não informamos se o CPF/CNPJ tem cadastro. Após 5 tentativas erradas, o acesso fica bloqueado por 15 minutos.</p>
+        <p class="nota-seguranca">🔒 Por segurança, não informamos se o e-mail ou o CPF/CNPJ tem cadastro. Após 5 tentativas erradas, o acesso fica bloqueado por 15 minutos.</p>
       </form>
 
       <!-- 2. Cadastro -->
@@ -76,6 +83,8 @@
         <button type="button" class="voltar" data-ir="login">← Voltar ao login</button>
         <h3>Criar cadastro</h3>
         <p class="sub">Depois do cadastro, enviaremos um link para confirmar seu e-mail.</p>
+        {% if google %}<a class="btn-google" href="/auth/google"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.2-8.5 2.2-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Cadastrar com Google</a>
+        <div class="divisor"><span>ou preencha</span></div>{% endif %}
         <div class="campo"><label for="cadDoc">CPF ou CNPJ</label>
           <input id="cadDoc" name="username" inputmode="numeric" autocomplete="username" placeholder="000.000.000-00" maxlength="18" required>
           <span class="dica" id="cadDocTipo">&nbsp;</span></div>
@@ -104,12 +113,31 @@
         <button type="button" class="btn largo" data-ir="login" style="margin-top:14px">Ir para o login</button>
       </div>
 
+      <!-- 2c. Completar o cadastro de quem entrou pelo Google -->
+      <form class="etapa" id="etapa-google" novalidate hidden>
+        <h3>Completar cadastro</h3>
+        <p class="sub">Sua conta Google foi verificada. Falta pouco para entrar no NEXO.</p>
+        <div class="google-conta" id="gEmail">…</div>
+        <div class="campo"><label for="gDoc">CPF ou CNPJ</label>
+          <input id="gDoc" inputmode="numeric" placeholder="000.000.000-00" maxlength="18" required>
+          <span class="dica" id="gDocTipo">&nbsp;</span></div>
+        <div class="campo"><label for="gNome" id="gNomeLabel">Nome completo</label><input id="gNome" autocomplete="name" maxlength="150" required></div>
+        <div class="campo"><label for="gTel">Telefone (com DDD)</label><input id="gTel" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(11) 91234-5678" maxlength="15" required></div>
+        <details class="convite"><summary>Tenho um código de convite</summary>
+          <div class="campo"><label for="gConvite">Código de convite</label>
+            <input id="gConvite" autocomplete="off" placeholder="NEXO-XXXX-XXXX" maxlength="14">
+            <span class="dica">O código define seu cargo. Sem código, você entra como Visualizador.</span></div>
+        </details>
+        <button class="btn largo" type="submit">Concluir e entrar</button>
+        <p class="nota-seguranca">Você vai entrar sempre pelo botão do Google. Para ter também uma senha do NEXO, use depois “Esqueci minha senha”.</p>
+      </form>
+
       <!-- 3. Esqueci minha senha -->
       <form class="etapa" id="etapa-esqueci" novalidate hidden>
         <button type="button" class="voltar" data-ir="login">← Voltar ao login</button>
         <h3>Recuperar senha</h3>
         <p class="sub">Enviaremos um link de redefinição para o e-mail do cadastro.</p>
-        <div class="campo"><label for="esqDoc">CPF ou CNPJ</label><input id="esqDoc" inputmode="numeric" maxlength="18" required></div>
+        <div class="campo"><label for="esqDoc">E-mail ou CPF/CNPJ</label><input id="esqDoc" maxlength="190" required autocapitalize="off" spellcheck="false"></div>
         <button class="btn largo" type="submit">Enviar link por e-mail</button>
         <div class="sucesso" id="esqOk" hidden></div>
       </form>

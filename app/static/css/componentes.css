@@ -111,3 +111,13 @@ input[type=range]{accent-color:var(--blue);width:100%}
 /* permissões: elementos escondidos conforme o cargo */
 body.sem-simular [data-simular], body.sem-exportar a[href^="/api/exportar"]{display:none !important}
 .cargo-select{padding:5px 8px;font-size:12.5px}
+
+/* ---- "Minha senha" (modal) ---- */
+.form-senha label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-bottom:12px}
+.form-senha input{font-family:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+.form-senha input:focus{outline:2px solid var(--blue);border-color:var(--blue)}
+.regras-mini{list-style:none;padding:0;margin:-6px 0 12px;display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-3)}
+.regras-mini li:before{content:"○ "}
+.regras-mini li.ok{color:var(--green)}
+.regras-mini li.ok:before{content:"✓ "}
+.msg-erro-mini{background:var(--red-soft);color:var(--red);border-radius:8px;padding:9px 11px;font-size:13px;margin-bottom:12px}

@@ -1,7 +1,7 @@
 /* ============ TELA DE ACESSO ============ */
 .login-shell{display:flex;min-height:100vh}
 .login-brand{flex:0 0 42%;background:var(--navy);color:#D8E3F0;padding:48px 52px;display:flex;flex-direction:column}
-.login-brand .brand-mark{display:flex;align-items:center;gap:12px}
+.login-brand .brand-mark{display:flex;align-items:center;gap:12px;text-decoration:none}
 .login-brand .brand-dot{width:34px;height:34px}
 .login-brand h1{margin:0;font-size:28px;letter-spacing:.14em;color:#fff}
 .login-tag{margin:4px 0 0 46px;font-size:11px;letter-spacing:.22em;color:#7FA4CE;text-transform:uppercase}
@@ -50,3 +50,11 @@
 .rodape a{color:var(--blue);font-weight:600}
 details.convite{margin:0 0 14px;font-size:13px}
 details.convite summary{cursor:pointer;color:var(--blue);font-weight:500;margin-bottom:10px}
+
+.login-foot a{color:#9FC0E2}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font-weight:500;font-size:14px;text-decoration:none;margin-bottom:6px}
+.btn-google:hover{border-color:var(--blue);background:var(--blue-soft)}
+.btn-google svg{width:18px;height:18px}
+.divisor{display:flex;align-items:center;gap:10px;color:var(--ink-3);font-size:12px;margin:12px 0 14px}
+.divisor:before,.divisor:after{content:"";flex:1;border-top:1px solid var(--line)}
+.google-conta{background:var(--bg);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:16px}

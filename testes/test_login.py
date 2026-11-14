@@ -69,7 +69,8 @@ def cliente():
 
 # ---- página protegida, CSRF e rota antiga que revelava cadastros
 c = cliente()
-assert c.get("/").status_code == 302 and "/login" in c.get("/").headers["Location"]
+assert c.get("/app").status_code == 302 and "/login" in c.get("/app").headers["Location"]
+assert c.get("/").status_code == 200                                          # página institucional é pública
 assert c.get("/api/resultados").status_code == 401
 assert c.post("/auth/entrar", json={"documento": CPF_ADMIN, "senha": "Senha123"}).status_code == 400
 assert c.post("/auth/verificar", headers=H, json={"documento": CPF_ADMIN}).status_code in (404, 405)
@@ -96,7 +97,7 @@ dados = r.get_json()
 assert dados["enviado"] is True and dados["cargo_nome"] == "Visualizador"   # "cargo" do pedido é ignorado
 assert dados["email"] == "co*****@empresa.test"
 assert enviados[-1][0] == "contato@empresa.test" and "Confirme" in enviados[-1][1]
-assert c.get("/").status_code == 302                                         # não entrou sozinho
+assert c.get("/app").status_code == 302                                      # não entrou sozinho
 dup = c.post("/auth/cadastrar", headers=H, json={**base, "telefone": "11912345678", "email": "outro@x.com"})
 assert dup.status_code == 400 and "Esqueci minha senha" in dup.get_json()["erro"]
 

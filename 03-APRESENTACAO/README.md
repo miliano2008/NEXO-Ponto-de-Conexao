@@ -8,7 +8,7 @@ Os slides e relatórios da apresentação final entram aqui. A partir da Fase 5,
 
 **Roteiro sugerido para a demonstração:**
 
-1. Login e cargos (Administrador e Visualizador).
+1. Página institucional (`/`) e login pelo cartão do banner, com e-mail. Mostrar os cargos (Administrador e Visualizador).
 2. Dashboard: 160 transações, 40 contas, 9 comunidades.
 3. Rede: grafo, matrizes e autovalores.
 4. Conta C025: composição do score.

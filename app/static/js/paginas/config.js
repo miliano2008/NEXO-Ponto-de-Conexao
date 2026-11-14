@@ -7,12 +7,12 @@ function render(){
   const d = estado.dados;
   el("pesosInfo").innerHTML = Object.entries(d.simulacao.pesos).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("");
   el("sobre").innerHTML = `
-    <dt>Versão</dt><dd>0.4 — Fase 0: estrutura modular, migrações e cache</dd>
+    <dt>Versão</dt><dd>0.5 — Fase 1: página institucional, login por e-mail e Google</dd>
     <dt>Origem dos dados</dt><dd>${d.simulacao.mysql ? "Tabelas contas/transacoes no MySQL" : "CSVs exportados do Excel"} (${d.dashboard.total_contas} contas, ${d.simulacao.total_base_original} transações)</dd>
     <dt>Cálculo</dt><dd>nucleo/analise.py — NetworkX + NumPy</dd>
     <dt>Servidor</dt><dd>Flask (app/servidor.py)</dd>
     <dt>Banco de dados</dt><dd>${esc(d.simulacao.fonte_dados)}${d.simulacao.mysql?" · conexão SSL":" (modo local)"}</dd>
-    <dt>Autenticação</dt><dd>CPF/CNPJ + senha (${d.simulacao.mysql ? "tabela usuarios no MySQL" : "SQLite: banco/dados/nexo.db"}), recuperação por e-mail</dd>
+    <dt>Autenticação</dt><dd>E-mail ou CPF/CNPJ + senha (${d.simulacao.mysql ? "tabela usuarios no MySQL" : "SQLite: banco/dados/nexo.db"}), recuperação por e-mail</dd>
     <dt>Usuário atual</dt><dd>${esc(estado.usuario.nome)} · ${esc(estado.usuario.cargo_nome)}</dd>`;
 }
 export function iniciar(){

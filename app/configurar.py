@@ -229,6 +229,23 @@ def main():
                                          origem="Google" if gmail else "e-mail", prefixo="", sem_espacos=gmail)
         v["SMTP_FROM"] = f"NEXO <{v['SMTP_USER']}>"
 
+    # ------------------------------------------------------------ Entrar com Google (opcional)
+    ja_tem = "s" if v.get("GOOGLE_CLIENT_ID") else "n"
+    if perguntar("\nConfigurar o botão 'Entrar com Google'? (s/n)", ja_tem).lower().startswith("s"):
+        retorno = f"{v['APP_URL_BASE'].rstrip('/')}/auth/google/retorno"
+        print("No Google Cloud Console (console.cloud.google.com):")
+        print("  APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web")
+        print(f"  Em 'URIs de redirecionamento autorizados', cadastre exatamente: {retorno}")
+        print("  Passo a passo completo: docs/instalacao-e-uso.md (seção Entrar com Google)")
+        v["GOOGLE_CLIENT_ID"] = perguntar("ID do cliente (termina com .apps.googleusercontent.com)",
+                                          v.get("GOOGLE_CLIENT_ID", ""))
+        v["GOOGLE_CLIENT_SECRET"] = pedir_senha(v.get("GOOGLE_CLIENT_SECRET", ""), rotulo="Chave secreta do cliente",
+                                                origem="Google Cloud", prefixo="GOCSPX-")
+        v["GOOGLE_DOMINIOS"] = perguntar("Aceitar só e-mails de certos domínios? (ex.: empresa.com.br; Enter = qualquer conta)",
+                                         v.get("GOOGLE_DOMINIOS", ""))
+        if not v["GOOGLE_CLIENT_ID"].endswith(".apps.googleusercontent.com"):
+            print("  Atenção: o ID do cliente do Google costuma terminar com '.apps.googleusercontent.com'.")
+
     arquivo = configuracao.salvar_env(v)
     print(f"\nConfigurações salvas em {arquivo}")
     for antigo in configuracao.CONFIG_INI:

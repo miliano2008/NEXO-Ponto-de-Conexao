@@ -1,5 +1,5 @@
-/* NEXO — acesso: login (CPF/CNPJ + senha), cadastro com confirmação de e-mail,
-   recuperação de senha e redefinição/confirmação pelos links enviados por e-mail. */
+/* NEXO — acesso: login (e-mail ou CPF/CNPJ + senha), entrar com Google, cadastro com
+   confirmação de e-mail, recuperação de senha e redefinição/confirmação pelos links do e-mail. */
 import {digitos, el, esc} from "./nucleo/utilidades.js";
 
 (() => {
@@ -13,6 +13,10 @@ function mascararDoc(valor){
     return d.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
   return d.replace(/(\d{2})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2")
           .replace(/(\d{3})(\d)/, "$1/$2").replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+}
+// campo "e-mail ou CPF/CNPJ": só aplica a máscara quando a pessoa digita apenas números
+function mascararLogin(valor){
+  return /[A-Za-z@]/.test(valor) ? valor.trim() : mascararDoc(valor);
 }
 function mascararTel(valor){
   const d = digitos(valor).slice(0, 11);
@@ -31,7 +35,7 @@ function ir(etapa, atualizarUrl = true){
   document.querySelectorAll(".etapa").forEach(f => f.hidden = f.id !== "etapa-" + etapa);
   erro("");
   if(atualizarUrl && ROTAS[etapa] && location.pathname !== ROTAS[etapa]) history.pushState(null, "", ROTAS[etapa]);
-  const foco = {login:"docInput", cadastro:"cadDoc", esqueci:"esqDoc", redefinir:"redSenha"}[etapa];
+  const foco = {login:"docInput", cadastro:"cadDoc", esqueci:"esqDoc", redefinir:"redSenha", google:"gDoc"}[etapa];
   setTimeout(() => el(foco)?.focus(), 30);
 }
 
@@ -62,24 +66,31 @@ function regrasSenha(input, lista){
 }
 
 /* ---------- campos ---------- */
-[["docInput","docTipo"], ["cadDoc","cadDocTipo"], ["esqDoc", null]].forEach(([id, dica]) =>
+[["docInput","docTipo"], ["esqDoc", null]].forEach(([id, dica]) =>
   el(id).addEventListener("input", e => {
-    e.target.value = mascararDoc(e.target.value);
+    e.target.value = mascararLogin(e.target.value);
     if(dica){
-      const n = digitos(e.target.value).length;
-      el(dica).textContent = n === 0 ? " " : n <= 11 ? `CPF · ${n}/11 dígitos` : `CNPJ · ${n}/14 dígitos`;
-      if(id === "cadDoc") el("cadNomeLabel").textContent = n > 11 ? "Razão social" : "Nome completo";
+      const v = e.target.value, n = digitos(v).length;
+      el(dica).textContent = !v ? " " : /[A-Za-z@]/.test(v) ? "E-mail" : n <= 11 ? `CPF · ${n}/11 dígitos` : `CNPJ · ${n}/14 dígitos`;
     }
   }));
-el("cadTel").addEventListener("input", e => { e.target.value = mascararTel(e.target.value); });
-el("cadConvite").addEventListener("input", e => { e.target.value = mascararConvite(e.target.value); });
+[["cadDoc","cadDocTipo","cadNomeLabel"], ["gDoc","gDocTipo","gNomeLabel"]].forEach(([id, dica, rotulo]) =>
+  el(id).addEventListener("input", e => {
+    e.target.value = mascararDoc(e.target.value);
+    const n = digitos(e.target.value).length;
+    el(dica).textContent = n === 0 ? " " : n <= 11 ? `CPF · ${n}/11 dígitos` : `CNPJ · ${n}/14 dígitos`;
+    el(rotulo).textContent = n > 11 ? "Razão social" : "Nome completo";
+  }));
+["cadTel", "gTel"].forEach(id => el(id).addEventListener("input", e => { e.target.value = mascararTel(e.target.value); }));
+["cadConvite", "gConvite"].forEach(id => el(id).addEventListener("input", e => { e.target.value = mascararConvite(e.target.value); }));
+const ehDocumento = v => !/[A-Za-z@]/.test(v);
 
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-ir]");
   if(b){
     e.preventDefault();
     if(b.dataset.ir === "esqueci") el("esqDoc").value = el("docInput").value;
-    if(b.dataset.ir === "cadastro" && !el("cadDoc").value) el("cadDoc").value = el("docInput").value;
+    if(b.dataset.ir === "cadastro" && !el("cadDoc").value && ehDocumento(el("docInput").value)) el("cadDoc").value = el("docInput").value;
     if(["/redefinir", "/confirmar"].includes(location.pathname)){ location.href = ROTAS[b.dataset.ir] || "/login"; return; }
     ir(b.dataset.ir);
   }
@@ -99,10 +110,11 @@ async function salvarNoNavegador(){
 
 enviando(el("etapa-login"), async () => {
   el("pendente").hidden = true;
-  if(digitos(el("docInput").value).length < 11 || !el("senhaInput").value)
-    throw new Error("Informe o CPF/CNPJ e a senha.");
+  const login = el("docInput").value.trim();
+  if(!login || !el("senhaInput").value) throw new Error("Informe o e-mail (ou CPF/CNPJ) e a senha.");
+  if(ehDocumento(login) && digitos(login).length < 11) throw new Error("CPF/CNPJ incompleto. Ou informe o e-mail.");
   try{
-    await post("/auth/entrar", {documento: el("docInput").value, senha: el("senhaInput").value});
+    await post("/auth/entrar", {login, senha: el("senhaInput").value});
   } catch(err){
     if(err.codigo === "email_nao_confirmado"){
       el("pendenteMsg").textContent = err.message;
@@ -112,13 +124,13 @@ enviando(el("etapa-login"), async () => {
     throw err;
   }
   await salvarNoNavegador();
-  location.href = "/";
+  location.href = "/app";
 });
 
 el("btnReenviar").addEventListener("click", async e => {
   e.target.disabled = true; erro("");
   try{
-    const r = await post("/auth/reenviar-confirmacao", {documento: el("docInput").value, senha: el("senhaInput").value});
+    const r = await post("/auth/reenviar-confirmacao", {login: el("docInput").value, senha: el("senhaInput").value});
     el("pendenteMsg").textContent = `Enviamos um novo link para ${r.email}. Verifique também a caixa de spam.`;
   } catch(err){ erro(err.message); }
   finally{ e.target.disabled = false; }
@@ -131,7 +143,7 @@ enviando(el("etapa-cadastro"), async () => {
     documento: el("cadDoc").value, nome: el("cadNome").value, email: el("cadEmail").value,
     telefone: el("cadTel").value, senha: el("cadSenha").value, confirmacao: el("cadConf").value,
     convite: el("cadConvite").value});
-  el("docInput").value = el("cadDoc").value;
+  el("docInput").value = el("cadEmail").value;
   el("cadOk").innerHTML = r.enviado
     ? `✉ Cadastro criado como <b>${esc(r.cargo_nome)}</b>. Enviamos um link para <b>${esc(r.email)}</b>.<br>
        Abra o e-mail e clique em <b>Confirmar meu e-mail</b> para liberar o acesso. O link vale por ${r.validade_horas} horas. Verifique também a caixa de spam.`
@@ -140,17 +152,26 @@ enviando(el("etapa-cadastro"), async () => {
   ir("cadastrado", false);
 });
 
+/* ---------- 2c. completar o cadastro de quem entrou pelo Google ---------- */
+enviando(el("etapa-google"), async () => {
+  await post("/auth/google/concluir", {documento: el("gDoc").value, nome: el("gNome").value,
+                                       telefone: el("gTel").value, convite: el("gConvite").value});
+  location.href = "/app";
+});
+
 /* ---------- 3. esqueci minha senha ---------- */
 enviando(el("etapa-esqueci"), async () => {
   el("esqOk").hidden = true;
-  if(digitos(el("esqDoc").value).length < 11) throw new Error("Informe um CPF ou CNPJ completo.");
-  const r = await post("/auth/esqueci", {documento: el("esqDoc").value});
+  const login = el("esqDoc").value.trim();
+  if(!login || (ehDocumento(login) && digitos(login).length < 11)) throw new Error("Informe o e-mail ou um CPF/CNPJ completo.");
+  const r = await post("/auth/esqueci", {login});
   el("esqOk").textContent = "✉ " + r.mensagem;
   el("esqOk").hidden = false;
 });
 
 /* ---------- 4/5. links recebidos por e-mail ---------- */
-const token = new URLSearchParams(location.search).get("token") || "";
+const parametros = new URLSearchParams(location.search);
+const token = parametros.get("token") || "";
 regrasSenha(el("redSenha"), el("redRegras"));
 enviando(el("etapa-redefinir"), async () => {
   await post("/auth/redefinir", {token, senha: el("redSenha").value, confirmacao: el("redConf").value});
@@ -177,7 +198,16 @@ if(location.pathname === "/redefinir"){
     .then(r => { el("confMsg").innerHTML = `✓ E-mail confirmado, <b>${esc(r.nome)}</b>! Você já pode entrar no NEXO.`; })
     .catch(err => { el("confMsg").textContent = err.message; })
     .finally(() => { el("confBtn").hidden = false; });
+} else if(location.pathname === "/cadastro" && parametros.get("google")){
+  ir("google", false);
+  fetch("/auth/google/pendente").then(r => r.json().then(c => ({ok: r.ok, c}))).then(({ok, c}) => {
+    if(!ok){ ir("login"); erro(c.erro); return; }
+    el("gEmail").innerHTML = `Conta Google: <b>${esc(c.email)}</b>`;
+    el("gNome").value = c.nome || "";
+  });
 } else {
-  ir(location.pathname === "/cadastro" ? "cadastro" : "login", false);
+  ir(parametros.get("etapa") === "esqueci" ? "esqueci" : location.pathname === "/cadastro" ? "cadastro" : "login", false);
+  // erro devolvido pelo login com Google (ex.: domínio não permitido)
+  if(parametros.get("erro")) erro(parametros.get("erro"));
 }
 })();

@@ -1,6 +1,6 @@
 """Roda todos os testes do NEXO: scripts\\TESTAR.bat  ou  python -m testes.executar
 
-- test_nucleo, test_login e test_fase0: sempre (CSV + SQLite temporários).
+- test_nucleo, test_login, test_fase0 e test_fase1: sempre (CSV + SQLite temporários).
 - test_mysql: só se o MySQL estiver configurado; usa um banco TEMPORÁRIO (nexo_teste)
   e o apaga no final — o banco do grupo não é alterado.
 - e2e/test_navegador: só se o Playwright estiver instalado (requirements-dev.txt).
@@ -13,7 +13,7 @@ import time
 
 from nucleo.configuracao import RAIZ
 
-TESTES = ["testes.test_nucleo", "testes.test_login", "testes.test_fase0"]
+TESTES = ["testes.test_nucleo", "testes.test_login", "testes.test_fase0", "testes.test_fase1"]
 
 
 def mysql_configurado():

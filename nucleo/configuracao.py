@@ -25,6 +25,9 @@ _EQUIVALENTES_INI = {
     "SMTP_HOST": ("smtp", "host"), "SMTP_PORT": ("smtp", "porta"), "SMTP_SECURITY": ("smtp", "seguranca"),
     "SMTP_USER": ("smtp", "usuario"), "SMTP_PASSWORD": ("smtp", "senha"), "SMTP_FROM": ("smtp", "remetente"),
 }
+# chaves novas (Fase 1), que só existem no .env ou como variável de ambiente
+_SO_ENV = ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_DOMINIOS")
+CHAVES = (*_EQUIVALENTES_INI, *_SO_ENV)
 
 
 def _ler_env(arquivo):
@@ -66,7 +69,7 @@ def valores():
     Os arquivos só são relidos quando mudam (data de modificação), então a
     leitura não pesa em cada pedido do servidor.
     """
-    chave = (_assinatura_arquivos(), tuple(os.environ.get(k, "") for k in _EQUIVALENTES_INI))
+    chave = (_assinatura_arquivos(), tuple(os.environ.get(k, "") for k in CHAVES))
     if _cache["chave"] != chave:
         _cache.update(chave=chave, valores=_combinar())
     return dict(_cache["valores"])
@@ -79,7 +82,7 @@ def _combinar():
         if cfg.has_option(secao, nome):
             combinado[chave] = cfg.get(secao, nome).strip()
     combinado.update({k: v for k, v in _ler_env(ARQUIVO_ENV).items() if v != ""})
-    combinado.update({k: os.environ[k] for k in _EQUIVALENTES_INI if os.environ.get(k)})
+    combinado.update({k: os.environ[k] for k in CHAVES if os.environ.get(k)})
     return combinado
 
 
@@ -120,6 +123,8 @@ def salvar_env(novos):
          ["DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSL_CA"]),
         ("# E-mail (confirmação de cadastro e recuperação de senha)",
          ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURITY", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM"]),
+        ("# Entrar com Google (opcional). Sem GOOGLE_CLIENT_ID, o botão não aparece.",
+         list(_SO_ENV)),
     ]
     linhas = ["# Gerado por app/configurar.py. NÃO envie este arquivo para o GitHub (contém senhas).", ""]
     conhecidas = set()

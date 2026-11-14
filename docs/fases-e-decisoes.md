@@ -5,8 +5,8 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 ## Roteiro
 | Fase | Tema | Situação |
 |---|---|---|
-| **0** | Reorganização e base técnica: pastas, `.env`, migrações, backup, simulação por usuário, cache, desempenho, frontend em módulos, testes | **Concluída. Aguarda validação** |
-| 1 | Identidade, login e página institucional: login por e-mail (aceitando CPF/CNPJ na transição), Google opcional, landing page com FAQ, sessão encerrada ao trocar a senha | Planejada |
+| **0** | Reorganização e base técnica: pastas, `.env`, migrações, backup, simulação por usuário, cache, desempenho, frontend em módulos, testes | **Concluída e validada** (na `main`) |
+| **1** | Identidade, login e página institucional: login por e-mail (aceitando CPF/CNPJ na transição), Google opcional, landing page com FAQ, sessão encerrada ao trocar a senha | **Concluída. Aguarda validação** (branch `fase-1`) |
 | 2 | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | Planejada |
 | 3 | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | Planejada |
 | 4 | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | Planejada |
@@ -46,6 +46,20 @@ O que já ficou pronto para facilitar esses itens:
 - configuração por variáveis de ambiente (`.env`), exigida pelas hospedagens;
 - simulações guardadas no banco, porque hospedagens reiniciam a máquina;
 - migrações numeradas com backup, que tornam segura a troca de chaves do multiempresa.
+
+## Fase 1: o que foi entregue
+| Item planejado | Entrega |
+|---|---|
+| Página institucional | `/` pública (`inicio.html`): cabeçalho fixo com "Entrar" e "Criar cadastro", banner com cartão de acesso (entra sem trocar de página), números da base, como funciona (4 passos), 6 recursos, faixa "relevância estrutural não é acusação", público, segurança, 7 perguntas frequentes e rodapé institucional. Ilustrações em SVG próprio; identidade NEXO (azul-marinho, símbolo de rede, Inter), sem copiar o site de referência |
+| Sistema em `/app` | O sistema saiu de `/` e foi para `/app`; links antigos com `#tela` continuam funcionando em `/app#tela` |
+| Login por e-mail (D1) | O mesmo campo aceita e-mail ou CPF/CNPJ (máscara só quando são números), na tela de login, no banner, em "Esqueci minha senha" e no reenvio da confirmação. Mensagem única: "E-mail, CPF/CNPJ ou senha inválidos." |
+| Entrar com Google (D2) | Botão opcional, ativado pelo `.env`. Fluxo OpenID Connect com PKCE, sem biblioteca nova. Vínculo seguro com cadastros confirmados, cadastro novo com CPF/CNPJ e telefone, e restrição opcional de domínio. Tabela `identidades_externas`, pronta também para a Microsoft no futuro |
+| Segurança da sessão | Trocar a senha (pela tela, pelo link ou pelo `CRIAR_ADMIN`) desconecta os outros computadores. Nova janela **Minha senha** no sistema, com "Desconectar outros computadores" |
+| Banco | Migração 4: `usuarios.versao_sessao` e tabela `identidades_externas` |
+| Ferramentas | `CONFIGURAR` com seção opcional do Google; `DIAGNOSTICO` mostra se o Google está configurado |
+| Testes | Novo `test_fase1.py` (Google simulado, sem internet); teste no navegador cobre a página inicial, o login por e-mail e "Minha senha" |
+
+**Itens da Fase 1 que dependem de vocês:** criar o projeto no Google Cloud e cadastrar os e-mails de teste (passo a passo em [instalacao-e-uso.md](instalacao-e-uso.md#3b-entrar-com-google-opcional)).
 
 ## Fase 0: o que foi entregue
 | Item planejado | Entrega |

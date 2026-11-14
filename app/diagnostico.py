@@ -2,7 +2,7 @@
 
 Executar: scripts\\DIAGNOSTICO.bat  ou  python -m app.diagnostico
 Confere Python, bibliotecas, arquivos, configuração (.env), banco (Aiven ou local),
-versão do esquema, base de dados, usuários, e-mail e porta.
+versão do esquema, base de dados, usuários, e-mail, Google e porta.
 Com --rapido mostra só avisos e erros.
 """
 
@@ -188,9 +188,22 @@ def main():
             aviso("E-mail não configurado: cadastros novos não recebem confirmação e 'Esqueci minha senha' não funciona.",
                   "Dois cliques em scripts\\CONFIGURAR.bat → responda 's' em 'Configurar o e-mail'.")
         else:
-            erro(str(e), "Dois cliques em scripts\\CONFIGURAR.bat e cole a senha de app de novo (botão direito do mouse).")
+            erro(str(e), "Dois cliques em scripts\\CONFIGURAR.bat e informe a senha de app de novo (opção 1).")
 
-    # 11. Porta
+    # 11. Entrar com Google (opcional)
+    from app import google
+    cfg_google = google.config()
+    if google.configurado():
+        dominios = ", ".join(cfg_google["dominios"]) or "qualquer conta Google"
+        ok(f"Entrar com Google: configurado ({dominios}). Retorno cadastrado no Google deve ser "
+           f"{configuracao.obter('APP_URL_BASE', 'http://127.0.0.1:5000').rstrip('/')}/auth/google/retorno")
+    elif cfg_google["client_id"] or cfg_google["client_secret"]:
+        aviso("Entrar com Google incompleto: falta o ID do cliente ou a chave secreta.",
+              "Dois cliques em scripts\\CONFIGURAR.bat → responda 's' em 'Entrar com Google'.")
+    elif not RAPIDO:
+        print("  [--]   Entrar com Google: não configurado (opcional; o login por e-mail/CPF funciona normalmente)")
+
+    # 12. Porta
     with socket.socket() as s:
         livre = s.connect_ex(("127.0.0.1", 5000)) != 0
     if livre:
