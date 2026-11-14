@@ -75,7 +75,7 @@ with sync_playwright() as p:
     assert [x.inner_text() for x in pg.locator("#dashKpis .val").all()] == ["160", "40", "12", "9"]
 
     # todas as telas carregam (cada uma é um módulo baixado sob demanda)
-    esperado = {"transacoes": "#txBody tr", "rede": "#graph .node", "contas": "#contasBody tr",
+    esperado = {"risco": "#riscoBody tr", "transacoes": "#txBody tr", "rede": "#graph .node", "contas": "#contasBody tr",
                 "simulador": "#simDe option", "relatorios": "#reportGrid .card", "arquitetura": "#archFlow .flow-box",
                 "config": "#sobre dt", "usuarios": "#usrBody tr", "auditoria": "#audBody tr", "dashboard": "#dashTop tr"}
     for pagina, seletor in esperado.items():
@@ -106,7 +106,8 @@ with sync_playwright() as p:
 
     # simulador: grava, aparece no dashboard e na rede, e restaura
     pg.click("#nav button[data-page=simulador]")
-    pg.select_option("#simDe", "C001"); pg.select_option("#simPara", "C030"); pg.fill("#simValor", "45000")
+    pg.select_option("#simDe", "C001"); pg.select_option("#simPara", "C030"); pg.fill("#simValor", "4500000")
+    assert pg.input_value("#simValor") == "45.000,00"                        # máscara de R$: só números
     pg.click("#simEnviar"); pg.wait_for_selector("#simLista button[data-remover]")
     assert pg.locator("#simImpacto tr").count() > 2
     pg.click("#nav button[data-page=dashboard]"); pg.wait_for_timeout(500)
@@ -115,10 +116,47 @@ with sync_playwright() as p:
     pg.click("#nav button[data-page=dashboard]"); pg.wait_for_timeout(500)
     assert pg.locator("#dashKpis .val").first.inner_text() == "160"
 
-    # período, limiares e tema
-    pg.select_option("#periodSelect", "7"); pg.wait_for_timeout(1200)
+    # período pelo calendário (recalcula) e filtros de visualização (não recalculam)
+    pg.click("#btnFiltros"); pg.wait_for_selector("#formFiltros")
+    pg.click("button[data-atalho='7']"); pg.click("#fAplicar"); pg.wait_for_timeout(1500)
     assert int(pg.locator("#dashKpis .val").first.inner_text()) < 160
-    pg.select_option("#periodSelect", "0"); pg.wait_for_timeout(1200)
+    assert "últimos 7 dias" in pg.inner_text("#periodLabel") and pg.inner_text("#filtrosQtd") == "1"
+    pg.click("#btnFiltros"); pg.click("button[data-ini='2026-08-01']"); pg.click("#fAplicar"); pg.wait_for_timeout(1500)
+    assert pg.locator("#dashKpis .val").first.inner_text() == "80"                    # agosto: 80 transações
+    assert "01/08/2026 a 31/08/2026" in pg.inner_text("#periodLabel")
+    pg.click("#btnFiltros"); pg.fill("#fIni", "2026-09-10"); pg.fill("#fFim", "2026-09-01"); pg.click("#fAplicar")
+    pg.wait_for_selector("#fErro:not([hidden])")
+    assert "data inicial é depois" in pg.inner_text("#fErro")                        # erro sem perder o recorte
+    pg.click("#fLimpar"); pg.wait_for_timeout(1500)
+    assert pg.locator("#dashKpis .val").first.inner_text() == "160" and pg.locator("#filtrosQtd").is_hidden()
+    pg.click("#btnFiltros"); pg.select_option("#fComunidade", "1"); pg.click("#fAplicar"); pg.wait_for_timeout(500)
+    assert pg.locator("#dashKpis .val").nth(1).inner_text() == "5"                    # comunidade 1: 5 contas
+    assert "filtros de visualização ativos" in pg.inner_text("#filtrosAviso")
+    pg.click("#limparVisual"); pg.wait_for_timeout(300)
+    assert pg.locator("#dashKpis .val").nth(1).inner_text() == "40"
+
+    # painel de risco: regras, evidências e filtro por regra
+    pg.click("#nav button[data-page=risco]"); pg.wait_for_selector("#riscoBody tr[data-abrir]")
+    assert pg.locator("#riscoPorRegra .barra-regra").count() == 10
+    pg.click("#riscoBody tr[data-abrir=C001]"); pg.wait_for_selector(".linha-evidencia")
+    assert "Recebe de 5 contas distintas" in pg.inner_text(".linha-evidencia")        # fan-in do gabarito
+    pg.click(".barra-regra[data-regra=ciclo]"); pg.wait_for_timeout(200)
+    ids = {x.get_attribute("data-abrir") for x in pg.locator("#riscoBody tr[data-abrir]").all()}
+    assert {"C016", "C017", "C018", "C019", "C026", "C027", "C028", "C029", "C030"} <= ids, ids
+
+    # contas: ordenar por qualquer coluna e investigação registrada na conta
+    pg.click("#nav button[data-page=contas]"); pg.click("#contasHead th[data-ordem=risco]"); pg.wait_for_timeout(200)
+    assert pg.locator("#contasBody tr").first.get_attribute("data-conta") == "C016"
+    pg.click("#contasHead th[data-ordem=risco]"); pg.wait_for_timeout(200)              # inverte
+    assert pg.locator("#contasBody tr").first.get_attribute("data-conta") != "C016"
+    pg.goto(f"{BASE}/app#conta/C016"); pg.wait_for_selector("#formInvest")
+    pg.select_option("#invSituacao", "encaminhada"); pg.click("#invSalvar")
+    assert "comentário" in (pg.wait_for_selector("#toast.on").inner_text())            # comentário obrigatório
+    pg.fill("#invComentario", "Encaminhada ao compliance para verificar os repasses."); pg.click("#invSalvar")
+    pg.wait_for_selector(".historico-inv li")
+    assert "Não iniciada → Encaminhada" in pg.inner_text(".historico-inv")
+
+    # limiares e tema
     pg.click("#nav button[data-page=config]")
     pg.locator("#thrA").fill("20"); pg.wait_for_timeout(300)
     pg.click("#swTheme"); pg.wait_for_timeout(200)
@@ -142,5 +180,5 @@ with sync_playwright() as p:
 
 http.shutdown()
 assert not erros, "\n".join(erros)
-print("TESTES OK: navegador — página inicial, login (e-mail e CPF), 11 telas (módulos sob demanda), rede, matrizes, validação, simulador, "
-      "período, limiares, tema, minha senha e navegação.")
+print("TESTES OK: navegador — página inicial, login (e-mail e CPF), 12 telas (módulos sob demanda), rede, matrizes, validação, simulador, "
+      "calendário e filtros, painel de risco, ordenação, investigação, limiares, tema, minha senha e navegação.")

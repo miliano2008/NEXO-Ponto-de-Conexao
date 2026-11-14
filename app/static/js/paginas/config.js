@@ -7,7 +7,7 @@ function render(){
   const d = estado.dados;
   el("pesosInfo").innerHTML = Object.entries(d.simulacao.pesos).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("");
   el("sobre").innerHTML = `
-    <dt>Versão</dt><dd>0.5 — Fase 1: página institucional, login por e-mail e Google</dd>
+    <dt>Versão</dt><dd>0.6 — Fase 2: painel de risco, filtros e investigação</dd>
     <dt>Origem dos dados</dt><dd>${d.simulacao.mysql ? "Tabelas contas/transacoes no MySQL" : "CSVs exportados do Excel"} (${d.dashboard.total_contas} contas, ${d.simulacao.total_base_original} transações)</dd>
     <dt>Cálculo</dt><dd>nucleo/analise.py — NetworkX + NumPy</dd>
     <dt>Servidor</dt><dd>Flask (app/servidor.py)</dd>

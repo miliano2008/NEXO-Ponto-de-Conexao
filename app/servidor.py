@@ -20,7 +20,7 @@ from urllib.parse import quote as url_quote
 from flask import (Flask, Response, jsonify, redirect, render_template, request,
                    session, url_for)
 
-from app import analises, auth, envio_email, google
+from app import analises, auth, casos, envio_email, google
 from banco import conexao as db
 from banco import migracoes, repositorio
 from nucleo import analise, configuracao
@@ -83,17 +83,18 @@ def compactar(resposta):
 
 # ---------------------------------------------------------------- análise
 
-def resultados(usuario, dias=0, com_matrizes=False):
-    """Resposta da análise para o usuário: base + a simulação dele, no período pedido."""
+def resultados(usuario, recorte=0, com_matrizes=False):
+    """Resposta da análise para o usuário: base + a simulação dele, no recorte pedido."""
     simuladas = repositorio.listar_simuladas(usuario["id"])
-    calculado, info = analises.calcular(dias, simuladas)
+    calculado, info = analises.calcular(recorte, simuladas)
     ids_simulados = {s["id_transacao"] for s in simuladas}
     # cópias rasas: o resultado em cache é compartilhado entre usuários e não pode ser alterado
     dados = {k: v for k, v in calculado.items() if com_matrizes or k != "matrizes"}
     dados["transacoes"] = [{**t, "simulada": t["id"] in ids_simulados} for t in calculado["transacoes"]]
     dados["analise"] = {k: info[k] for k in ("id", "assinatura", "versao_motor", "duracao_ms", "origem")}
     dados["simulacao"] = {
-        "periodo_dias": dias, "data_referencia": info["data_referencia"],
+        "periodo_dias": info["recorte"]["dias"], "data_referencia": info["data_referencia"],
+        "recorte": info["recorte"], "datas_base": info["datas_base"],
         "transacoes_simuladas": len(simuladas),
         "lista_simuladas": simuladas,
         "total_base_original": info["total_base_original"],
@@ -105,11 +106,27 @@ def resultados(usuario, dias=0, com_matrizes=False):
     return dados
 
 
-def dias_param():
+def recorte_param():
+    """Recorte pedido na URL: ?dias=N ou ?inicio=&fim=&tipos=PIX,TED&valor_min=&valor_max=."""
+    a = request.args
     try:
-        return max(0, int(request.args.get("dias", 0)))
+        dias = max(0, int(a.get("dias", 0) or 0))
     except ValueError:
-        return 0
+        dias = 0
+    tipos = [x.strip() for x in a.get("tipos", "").split(",") if x.strip()]
+    return analises.normalizar_recorte({"dias": dias, "inicio": a.get("inicio"), "fim": a.get("fim"), "tipos": tipos,
+                                        "valor_min": a.get("valor_min"), "valor_max": a.get("valor_max")})
+
+
+def com_recorte(funcao):
+    """Recorte inválido ou sem transações vira 400 com a mensagem pronta para a tela."""
+    @wraps(funcao)
+    def interna(*args, **kwargs):
+        try:
+            return funcao(*args, **kwargs)
+        except ValueError as erro:
+            return jsonify({"erro": str(erro)}), 400
+    return interna
 
 
 def resumo_contas(dados):
@@ -551,15 +568,17 @@ def api_auditoria():
 
 @app.get("/api/resultados")
 @exige("consultar")
+@com_recorte
 def api_resultados():
     """Análise completa, sem as matrizes n×n (essas vêm sob demanda em /api/matrizes)."""
-    return jsonify(resultados(usuario_atual(), dias_param()))
+    return jsonify(resultados(usuario_atual(), recorte_param()))
 
 
 @app.get("/api/matrizes")
 @exige("consultar")
+@com_recorte
 def api_matrizes():
-    dados = resultados(usuario_atual(), dias_param(), com_matrizes=True)
+    dados = resultados(usuario_atual(), recorte_param(), com_matrizes=True)
     return jsonify({"matrizes": dados["matrizes"], "analise": dados["analise"]})
 
 
@@ -613,10 +632,38 @@ def api_restaurar():
     return jsonify({"ok": True})
 
 
+# ---------------------------------------------------------------- investigação
+
+@app.get("/api/casos")
+@exige("consultar")
+def api_casos():
+    return jsonify({"casos": casos.listar(), "situacoes": casos.SITUACOES})
+
+
+@app.get("/api/casos/<conta>")
+@exige("consultar")
+def api_caso(conta):
+    return jsonify(casos.detalhe(conta.upper()))
+
+
+@app.post("/api/casos/<conta>")
+@exige("investigar")
+def api_atualizar_caso(conta):
+    d = corpo()
+    contas_validas = {c["id_conta"] for c in analises.obter_base()[0]}
+    try:
+        caso = casos.atualizar(conta.upper(), d.get("situacao"), d.get("comentario"), usuario_atual(),
+                               contas_validas, request.remote_addr)
+    except auth.ErroAuth as erro:
+        return erro_auth(erro)
+    return jsonify(caso)
+
+
 @app.get("/api/exportar")
 @exige("exportar")
+@com_recorte
 def api_exportar():
-    dados = resultados(usuario_atual(), dias_param(), com_matrizes=True)
+    dados = resultados(usuario_atual(), recorte_param(), com_matrizes=True)
     return Response(json.dumps(dados, ensure_ascii=False, indent=2),
                     mimetype="application/json",
                     headers={"Content-Disposition": "attachment; filename=resultados_nexo.json"})

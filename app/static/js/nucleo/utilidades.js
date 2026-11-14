@@ -20,3 +20,30 @@ export const corCom = n => CORES_COM[(n-1) % CORES_COM.length];
 
 export const iniciais = nome => nome.split(/\s+/).filter(Boolean).map(p=>p[0]).slice(0,2).join("").toUpperCase();
 export const digitos = t => String(t||"").replace(/\D/g,"");
+
+/* ---------- valores em R$ (Fase 2) ---------- */
+// "1234567" → "12.345,67": a pessoa digita só os números, os centavos entram sozinhos
+export function formatarDigitosBRL(texto){
+  const d = digitos(texto).replace(/^0+(?=\d)/, "").slice(0, 13);
+  if(!d) return "";
+  const n = d.padStart(3, "0");
+  return (+n.slice(0, -2)).toLocaleString("pt-BR") + "," + n.slice(-2);
+}
+// "12.345,67" → 12345.67 (ou null se vazio)
+export function lerBRL(texto){
+  const d = digitos(texto);
+  return d ? Number(d) / 100 : null;
+}
+export function mascararCampoBRL(input){
+  input.addEventListener("input", () => {
+    input.value = formatarDigitosBRL(input.value);
+    input.setSelectionRange(input.value.length, input.value.length);
+  });
+}
+export const valorParaCampo = v => (v === "" || v == null) ? "" : formatarDigitosBRL(Math.round(+v * 100));
+
+/* ---------- prioridade de risco e investigação (Fase 2) ---------- */
+const CLASSE_RISCO = {"Alta":"alta", "Moderada":"analise", "Baixa":"revisar", "Sem indícios":"normal"};
+export const pillRisco = n => `<span class="pill ${CLASSE_RISCO[n] || "normal"}" title="Prioridade de verificação">${esc(n)}</span>`;
+export const chipInvestigacao = (situacao, nome) =>
+  `<span class="chip invest ${esc(situacao)}">${esc(nome || "Não iniciada")}</span>`;

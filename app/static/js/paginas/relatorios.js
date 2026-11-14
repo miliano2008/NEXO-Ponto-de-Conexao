@@ -1,6 +1,7 @@
 /* NEXO — tela Relatórios: rede, contas, memorial de cálculo, validação matemática e exportação. */
 import {obterMatrizes} from "../nucleo/dados.js";
 import {estado} from "../nucleo/estado.js";
+import {consulta} from "../nucleo/filtros.js";
 import {ui} from "../nucleo/ui.js";
 import {esc, el, fmtBRL, fmtNum, pill} from "../nucleo/utilidades.js";
 
@@ -35,7 +36,7 @@ async function conteudo(i){
     </tbody></table><p style="font-size:12px;color:var(--ink-3)">Conferências executadas no navegador sobre o JSON do backend. A validação completa está em <code>testes/test_nucleo.py</code>.</p>`;
   }
   return `<p style="margin-top:0">Exporta todos os resultados atuais (incluindo simulações e período selecionado) em JSON, pronto para Power BI ou para o relatório A3.</p>
-    <a class="btn" style="text-decoration:none;display:inline-block" href="/api/exportar?dias=${estado.periodo}">Baixar resultados_nexo.json</a>`;
+    <a class="btn" style="text-decoration:none;display:inline-block" href="/api/exportar?${consulta()}">Baixar resultados_nexo.json</a>`;
 }
 const itens = [
   ["Relatório de Rede","Panorama do grafo: número de nós, arestas, densidade, comunidades e conectividade.","Gerado"],

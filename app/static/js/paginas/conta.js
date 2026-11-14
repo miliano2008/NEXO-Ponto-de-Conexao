@@ -1,7 +1,11 @@
 /* NEXO — tela Detalhe da conta: métricas, composição do score, entradas/saídas e volume semanal. */
+import {api} from "../nucleo/api.js";
+import {carregarCasos} from "../nucleo/dados.js";
+import {emitir, estado} from "../nucleo/estado.js";
 import {charts} from "../nucleo/graficos.js";
-import {estado} from "../nucleo/estado.js";
-import {el, esc, fmtBRL, fmtData, fmtNum, pill} from "../nucleo/utilidades.js";
+import {pode} from "../nucleo/sessao.js";
+import {ui} from "../nucleo/ui.js";
+import {chipInvestigacao, el, esc, fmtBRL, fmtData, fmtDataHora, fmtNum, paraData, pill, pillRisco} from "../nucleo/utilidades.js";
 
 const nomes = {degree:"Degree", betweenness:"Betweenness", closeness:"Closeness", flow:"Flow", imbalance:"Imbalance"};
 let atual = null;
@@ -58,6 +62,13 @@ function render(id){
     </div>
 
     <div class="grid g2 mt">
+      <div class="card"><div class="card-head"><div><h3>Indícios de risco</h3><p>Prioridade de verificação: ${pillRisco(c.nivel_risco)} <b>${c.risco}</b> ponto(s)</p></div></div>
+        <div class="card-body">${indicios(id)}</div></div>
+      <div class="card"><div class="card-head"><div><h3>Investigação</h3><p>Decisão humana registrada, com histórico</p></div></div>
+        <div class="card-body" id="contaInvest"><p class="empty" style="margin:0">Carregando…</p></div></div>
+    </div>
+
+    <div class="grid g2 mt">
       <div class="card"><div class="card-head"><div><h3>Contas que enviaram valores</h3><p>${recebidas.length} transferências recebidas</p></div></div>
         <div class="table-wrap"><table><thead><tr><th>Conta</th><th>Data</th><th>Tipo</th><th class="num">Valor</th></tr></thead><tbody>${linhas(recebidas,"de")}</tbody></table></div></div>
       <div class="card"><div class="card-head"><div><h3>Contas que receberam valores</h3><p>${enviadas.length} transferências enviadas</p></div></div>
@@ -69,13 +80,57 @@ function render(id){
 
     <p style="font-size:12px;color:var(--ink-3);margin-top:12px">* Score NEXO provisório. A fórmula definitiva será definida, documentada e validada matematicamente pela equipe.</p>`;
 
-  const maxDias = Math.max(...d.transacoes.map(t=>t.dias), 0);
-  const nSem = Math.max(1, Math.ceil((estado.periodo || maxDias+1)/7));
+  const rec = d.simulacao.recorte;
+  const diasRecorte = Math.round((paraData(rec.fim_efetivo) - paraData(rec.inicio_efetivo)) / 86400000) + 1;
+  const nSem = Math.max(1, Math.ceil(diasRecorte/7));
   const semanas = Array.from({length:nSem}, (_,s)=>{
     const tx = d.transacoes.filter(t=>(t.de===id||t.para===id) && t.dias>=s*7 && t.dias<(s+1)*7);
     return {rotulo:`S-${s}`, valor: tx.reduce((a,t)=>a+t.valor,0)};
   }).reverse();
   charts.barras(el("contaHist"), semanas);
+  investigacao(id);
+}
+
+function indicios(id){
+  const r = estado.dados.risco.contas[id];
+  if(!r.indicios.length) return `<p style="margin:0;font-size:13px;color:var(--ink-3)">Nenhuma regra encontrou indícios para esta conta no recorte atual.</p>`;
+  return `<ul class="evidencias">${r.indicios.map(i => `<li><b>${esc(i.nome)}</b> <span class="peso">+${i.peso}</span><br>${esc(i.evidencia)}</li>`).join("")}</ul>
+    <p style="margin:8px 0 0;font-size:11.5px;color:var(--ink-3)">Indícios orientam a verificação; não são prova de irregularidade.</p>`;
+}
+
+async function investigacao(id){
+  const alvo = el("contaInvest");
+  let caso;
+  try{ caso = await api(`/api/casos/${encodeURIComponent(id)}`); }
+  catch(err){ alvo.innerHTML = `<p class="empty" style="margin:0">${esc(err.message)}</p>`; return; }
+  if(atual !== id) return;   // a pessoa já abriu outra conta
+  const situacoes = Object.entries(estado.situacoes || {}).filter(([k]) => k !== "nao_iniciada");
+  const historico = caso.historico.length ? `<ul class="historico-inv">${caso.historico.map(h => `
+      <li><b>${esc(h.de_nome)} → ${esc(h.para_nome)}</b> · ${esc(h.usuario)} <span class="quando">${fmtDataHora(h.data)}</span><br>${esc(h.comentario)}</li>`).join("")}</ul>`
+    : `<p style="margin:10px 0 0;font-size:12.5px;color:var(--ink-3)">Nenhuma decisão registrada ainda.</p>`;
+  alvo.innerHTML = `
+    <div style="margin-bottom:10px">Situação atual: ${chipInvestigacao(caso.situacao, caso.situacao_nome)}
+      ${caso.responsavel ? `<span style="font-size:12px;color:var(--ink-3)"> · ${esc(caso.responsavel)}, ${fmtDataHora(caso.atualizado_em)}</span>` : ""}</div>
+    ${pode("investigar") ? `
+    <form class="form-invest" id="formInvest">
+      <label class="sr-only" for="invSituacao">Nova situação</label>
+      <select id="invSituacao">${situacoes.map(([k, v]) => `<option value="${k}" ${k === caso.situacao ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
+      <textarea id="invComentario" maxlength="500" placeholder="Explique a decisão (obrigatório): o que foi verificado, fontes consultadas, próximos passos"></textarea>
+      <div><button class="btn sm" type="submit" id="invSalvar">Registrar decisão</button></div>
+    </form>` : `<p style="font-size:12px;color:var(--ink-3);margin:0">Seu cargo pode consultar o histórico, mas não registrar decisões.</p>`}
+    ${historico}`;
+  el("formInvest")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    el("invSalvar").disabled = true;
+    try{
+      await api(`/api/casos/${encodeURIComponent(id)}`, {method:"POST", body: JSON.stringify({
+        situacao: el("invSituacao").value, comentario: el("invComentario").value})});
+      await carregarCasos();
+      emitir("casos");
+      ui.toast("✓ Decisão registrada no histórico da conta.");
+      investigacao(id);
+    } catch(err){ ui.toast(esc(err.message), true); el("invSalvar").disabled = false; }
+  });
 }
 
 export function mostrar(id){ if(estado.porId[id]) render(id); }

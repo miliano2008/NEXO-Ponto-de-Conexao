@@ -26,7 +26,7 @@ export const charts = {
       ${ticks}<path d="${area}" fill="url(#gA)"/><path d="${linha}" fill="none" stroke="var(--blue)" stroke-width="2"/>${labels}${marcas}</svg>`;
   },
 
-  rosca(alvo, fatias){
+  rosca(alvo, fatias, rotulo="transações"){
     const total = fatias.reduce((a,f)=>a+f.valor,0), R=74, r=48, cx=95, cy=95;
     if(!total){ alvo.innerHTML = `<div class="empty">Sem transações no período.</div>`; return; }
     let ang = -Math.PI/2, paths="";
@@ -41,7 +41,7 @@ export const charts = {
     alvo.innerHTML = `<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
       <svg viewBox="0 0 190 190" style="width:170px;height:170px;flex:0 0 170px">${paths}
         <text x="95" y="92" text-anchor="middle" font-size="24" font-weight="700" fill="var(--ink)">${total}</text>
-        <text x="95" y="108" text-anchor="middle" font-size="10" fill="var(--ink-3)">transações</text></svg>
+        <text x="95" y="108" text-anchor="middle" font-size="10" fill="var(--ink-3)">${rotulo}</text></svg>
       <div style="font-size:12.5px;line-height:2.1">
         ${fatias.map(f=>`<div><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${f.cor};margin-right:8px"></i>${f.nome} <b style="margin-left:6px">${f.valor}</b> <span style="color:var(--ink-3)">(${Math.round(f.valor/total*100)}%)</span></div>`).join("")}
       </div></div>`;

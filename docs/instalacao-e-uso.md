@@ -91,8 +91,8 @@ Pela linha de comando, sempre a partir da raiz: `.venv\Scripts\python -m app`, `
 | Cargo | O que pode |
 |---|---|
 | Administrador | Tudo, inclusive usuários, cargos e convites |
-| Analista | Consultar, relatórios, exportar, simulador, configurações |
-| Auditor | Consultar, relatórios, exportar, auditoria |
+| Analista | Consultar, relatórios, exportar, simulador, configurações e registrar a investigação das contas |
+| Auditor | Consultar (inclusive o histórico das investigações), relatórios, exportar, auditoria |
 | Visualizador | Apenas consultar. É o padrão de quem se cadastra sem convite |
 
 Para dar um cargo a um colega, o administrador gera um **código de convite** em *Usuários e cargos* ou altera o cargo depois do cadastro.

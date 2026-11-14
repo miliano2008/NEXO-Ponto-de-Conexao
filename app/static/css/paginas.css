@@ -32,3 +32,56 @@
 
 .heat td{min-width:22px;padding:3px 4px;font-size:10px}
 .heat th{font-size:10px;padding:3px 4px}
+
+/* ============ FASE 2: filtros, painel de risco e investigação ============ */
+.filtros-wrap{position:relative}
+.filtros-qtd{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--blue);color:#fff;font-size:11px;font-weight:600}
+.painel-filtros{position:absolute;right:0;top:calc(100% + 8px);z-index:40;width:min(560px,calc(100vw - 32px));max-height:min(78vh,720px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 48px rgba(11,31,58,.18);padding:18px 20px}
+.painel-filtros section{padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.painel-filtros h4{margin:0 0 10px;font-size:13.5px}
+.painel-filtros h4 span{font-weight:400;font-size:11.5px;color:var(--ink-3);margin-left:6px}
+.painel-filtros label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-2);font-weight:500}
+.painel-filtros input,.painel-filtros select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+.painel-filtros label.check{flex-direction:row;align-items:center;gap:6px;font-weight:400;font-size:13px}
+.painel-filtros label.check input{padding:0}
+.atalhos{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.atalhos button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:99px;padding:5px 11px;cursor:pointer}
+.atalhos button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.linha-datas{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
+.painel-filtros .grade{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.painel-filtros .checks{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin-bottom:10px}
+.painel-filtros .checks .rot{font-size:12px;color:var(--ink-2);font-weight:500}
+.painel-filtros .dica{margin:6px 0 0;font-size:11.5px;color:var(--ink-3)}
+.painel-filtros footer{display:flex;gap:8px;align-items:center;position:sticky;bottom:-18px;background:var(--surface);margin:0 -20px -18px;padding:12px 20px 18px;border-top:1px solid var(--line)}
+.aviso-filtro{color:var(--amber);font-weight:600}
+.link-limpar{background:none;border:0;color:var(--blue);cursor:pointer;font:inherit;font-size:12px;padding:0;text-decoration:underline}
+
+.barra-regra{display:grid;grid-template-columns:minmax(170px,1.1fr) 2fr 34px;gap:12px;align-items:center;width:100%;background:none;border:0;border-radius:8px;padding:6px 8px;cursor:pointer;font:inherit;color:var(--ink);text-align:left}
+.barra-regra:hover{background:var(--bg)}
+.barra-regra.on{background:var(--blue-soft)}
+.barra-regra .nome{font-size:13px}
+.barra-regra .trilho{background:var(--bg);border-radius:4px;height:10px;overflow:hidden}
+.barra-regra .trilho i{display:block;height:100%;background:var(--blue);border-radius:4px}
+.barra-regra b{text-align:right;font-size:13px}
+tr.aberta td{background:var(--blue-soft)}
+tr.linha-evidencia td{background:var(--bg);padding:14px 18px}
+.evidencias{margin:0;padding-left:18px;font-size:13px;line-height:1.55}
+.evidencias li{margin-bottom:8px}
+.evidencias .peso{display:inline-block;margin-left:6px;font-size:11px;color:var(--ink-3)}
+.evidencias .tx{display:block;font-size:11.5px;color:var(--ink-3)}
+tr.destaque td{background:var(--amber-soft)}
+.chip.invest{white-space:nowrap}
+.chip.invest.em_analise{background:var(--amber-soft);border-color:var(--amber);color:var(--amber)}
+.chip.invest.investigada{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.chip.invest.sem_indicio{background:var(--bg);color:var(--green);border-color:var(--green)}
+.chip.invest.encaminhada{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+th.ordenavel{cursor:pointer;user-select:none;white-space:nowrap}
+th.ordenavel:hover{color:var(--blue)}
+th.ordenavel .seta{font-size:10px;margin-left:3px;color:var(--blue)}
+.historico-inv{list-style:none;margin:12px 0 0;padding:0;font-size:12.5px}
+.historico-inv li{border-left:2px solid var(--line);padding:0 0 10px 12px;position:relative}
+.historico-inv li:before{content:"";position:absolute;left:-5px;top:4px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
+.historico-inv .quando{color:var(--ink-3);font-size:11.5px}
+.form-invest{display:grid;gap:10px}
+.form-invest select,.form-invest textarea{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.form-invest textarea{min-height:70px;resize:vertical}

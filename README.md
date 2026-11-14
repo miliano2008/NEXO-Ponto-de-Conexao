@@ -7,7 +7,7 @@ estrutural**, mostrando tudo num sistema web com login, cargos e um **simulador*
 
 > Relevância estrutural **não é** detecção de fraude. O NEXO apoia a análise humana.
 
-**Versão atual:** 0.5 (Fase 1: identidade, login e página institucional). Base de demonstração: **40 contas, 160 transações**.
+**Versão atual:** 0.6 (Fase 2: análise e inteligência: painel de risco, filtros e investigação). Base de demonstração: **40 contas, 160 transações**.
 
 ---
 
