@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXO — Ponto de Conexão · Análise estrutural de redes de transações</title>
+<meta name="description" content="NEXO transforma transações financeiras em uma rede e usa grafos, matrizes e centralidades para revelar contas estruturalmente relevantes, apoiando a análise humana.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/inicio.css') }}">
+</head>
+<body>
+
+<!-- ================= CABEÇALHO (fixo: o acesso fica sempre a um clique) ================= -->
+<header class="topo" id="topo">
+  <div class="topo-in">
+    <a class="marca" href="/" aria-label="NEXO — página inicial">
+      <svg viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <circle cx="5" cy="6" r="3" fill="#4D94DD"/><circle cx="21" cy="5" r="2.4" fill="#7FA4CE"/>
+        <circle cx="13" cy="14" r="4.2" fill="currentColor"/><circle cx="4" cy="21" r="2.4" fill="#7FA4CE"/>
+        <circle cx="22" cy="20" r="3" fill="#4D94DD"/>
+        <path d="M5 6l8 8M21 5l-8 9M13 14l-9 7M13 14l9 6" stroke="#4D94DD" stroke-width="1.2" opacity=".75"/>
+      </svg>
+      <span><b>NEXO</b><small>Ponto de conexão</small></span>
+    </a>
+    <nav class="menu" id="menu" aria-label="Seções da página">
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#recursos">Recursos</a>
+      <a href="#seguranca">Segurança</a>
+      <a href="#duvidas">Dúvidas</a>
+    </nav>
+    <div class="topo-acoes">
+      {% if usuario %}
+        <a class="botao" href="/app">Abrir o NEXO</a>
+      {% else %}
+        <a class="botao contorno so-largo" href="/cadastro">Criar cadastro</a>
+        <a class="botao" href="/login" id="topoEntrar">Entrar</a>
+      {% endif %}
+      <button class="menu-botao" id="menuBotao" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<!-- ================= BANNER PRINCIPAL ================= -->
+<section class="hero">
+  <svg class="hero-rede" viewBox="0 0 800 520" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
+    <g stroke="#4D94DD" stroke-width="1.1" opacity=".35">
+      <line x1="80" y1="90" x2="250" y2="200"/><line x1="250" y1="200" x2="420" y2="120"/><line x1="250" y1="200" x2="200" y2="380"/>
+      <line x1="420" y1="120" x2="560" y2="230"/><line x1="560" y1="230" x2="700" y2="140"/><line x1="560" y1="230" x2="620" y2="420"/>
+      <line x1="200" y1="380" x2="380" y2="440"/><line x1="380" y1="440" x2="560" y2="230"/><line x1="420" y1="120" x2="380" y2="440"/>
+      <line x1="700" y1="140" x2="760" y2="320"/><line x1="620" y1="420" x2="760" y2="320"/><line x1="40" y1="260" x2="250" y2="200"/>
+    </g>
+    <g fill="#4D94DD" opacity=".55">
+      <circle cx="80" cy="90" r="6"/><circle cx="420" cy="120" r="8"/><circle cx="200" cy="380" r="7"/><circle cx="700" cy="140" r="7"/>
+      <circle cx="620" cy="420" r="6"/><circle cx="380" cy="440" r="8"/><circle cx="760" cy="320" r="5"/><circle cx="40" cy="260" r="5"/>
+    </g>
+    <circle cx="250" cy="200" r="13" fill="#D99311" opacity=".8"/><circle cx="560" cy="230" r="16" fill="#C2263C" opacity=".85"/>
+  </svg>
+
+  <div class="hero-in">
+    <div class="hero-texto">
+      <p class="selo">Projeto acadêmico · Teoria dos Grafos e Álgebra Linear</p>
+      <h1>Enxergue a estrutura por trás das transações.</h1>
+      <p class="hero-lead">O NEXO transforma uma base de transações financeiras em uma <b>rede</b> e usa grafos, matrizes e
+        centralidades para mostrar quais contas são <b>estruturalmente relevantes</b>: hubs, pontes e comunidades que uma
+        tabela comum esconde.</p>
+      <div class="hero-cta">
+        {% if usuario %}
+          <a class="botao grande" href="/app">Abrir o NEXO</a>
+        {% else %}
+          <a class="botao grande" href="/cadastro">Criar cadastro</a>
+        {% endif %}
+        <a class="botao grande vazado" href="#como-funciona">Entender como funciona</a>
+      </div>
+      {% if resumo %}
+      <dl class="numeros" aria-label="Base de demonstração">
+        <div><dt>{{ resumo.contas }}</dt><dd>contas</dd></div>
+        <div><dt>{{ resumo.transacoes }}</dt><dd>transações</dd></div>
+        <div><dt>{{ resumo.comunidades }}</dt><dd>comunidades</dd></div>
+        <div><dt>5</dt><dd>métricas no score</dd></div>
+      </dl>
+      <p class="numeros-nota">Base de demonstração com dados fictícios.</p>
+      {% endif %}
+    </div>
+
+    <!-- cartão de acesso: entrar sem sair da página -->
+    <div class="cartao-acesso" id="acesso">
+      {% if usuario %}
+        <h2>Olá, {{ usuario.nome.split(' ')[0] }}!</h2>
+        <p class="sub">Você já está conectado como <b>{{ usuario.cargo_nome }}</b>.</p>
+        <a class="botao largo" href="/app">Abrir o NEXO</a>
+      {% else %}
+        <h2>Acessar o NEXO</h2>
+        <p class="sub">Entre com seu e-mail (ou CPF/CNPJ) e senha.</p>
+        {% if google %}
+        <a class="botao-google" href="/auth/google">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.2-8.5 2.2-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+          Entrar com Google</a>
+        <div class="divisor"><span>ou</span></div>
+        {% endif %}
+        <form id="formAcesso" autocomplete="on" novalidate>
+          <label for="hLogin">E-mail ou CPF/CNPJ</label>
+          <input id="hLogin" name="username" autocomplete="username" placeholder="seu@email.com" maxlength="190" autocapitalize="off" spellcheck="false">
+          <label for="hSenha">Senha</label>
+          <input id="hSenha" name="password" type="password" autocomplete="current-password">
+          <div class="erro" id="hErro" role="alert" hidden></div>
+          <button class="botao largo" type="submit" id="hEntrar">Entrar</button>
+        </form>
+        <div class="links-acesso"><a href="/login?etapa=esqueci">Esqueci minha senha</a><a href="/cadastro">Criar cadastro</a></div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- ================= COMO FUNCIONA ================= -->
+<section class="secao" id="como-funciona">
+  <div class="secao-in">
+    <p class="sobretitulo">Como funciona</p>
+    <h2>Da tabela de transações à análise da rede</h2>
+    <p class="secao-lead">Contas viram <b>nós</b>, transações viram <b>conexões</b>. A partir daí, a matemática revela o papel de cada conta.</p>
+    <ol class="passos">
+      <li>
+        <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="7" y="8" width="26" height="24" rx="3"/><path d="M7 15h26M7 22h26M16 8v24"/></svg>
+        <h3>1. Dados</h3><p>Contas e transações (origem, destino, valor, data e tipo) vêm do banco MySQL e são validadas.</p></li>
+      <li>
+        <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="10" cy="12" r="4"/><circle cx="30" cy="10" r="4"/><circle cx="20" cy="29" r="5"/><path d="M13 14l5 11M27 13l-5 12M14 12h12"/></svg>
+        <h3>2. Rede</h3><p>O sistema monta o grafo dirigido e as matrizes de adjacência, pesos, grau e Laplaciana.</p></li>
+      <li>
+        <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M7 32V20M15 32V12M23 32V17M31 32V7"/><path d="M5 32h30"/></svg>
+        <h3>3. Métricas</h3><p>Centralidades, fluxo financeiro, comunidades (Louvain) e autovalores descrevem cada conta.</p></li>
+      <li>
+        <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="17" cy="17" r="9"/><path d="M24 24l9 9"/><path d="M13 17h8M17 13v8"/></svg>
+        <h3>4. Análise humana</h3><p>Um ranking explicável aponta onde olhar primeiro. A decisão é sempre do analista.</p></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================= RECURSOS ================= -->
+<section class="secao alterna" id="recursos">
+  <div class="secao-in">
+    <p class="sobretitulo">Recursos</p>
+    <h2>Tudo o que o analista precisa num só lugar</h2>
+    <div class="cartoes">
+      <article><span class="icone">📊</span><h3>Dashboard</h3><p>Volume, distribuição por status e as contas mais relevantes do período escolhido.</p></article>
+      <article><span class="icone">🕸️</span><h3>Rede interativa</h3><p>Grafo com cores por status ou comunidade, padrões como fan-in, fan-out, cadeias, hubs e pontes.</p></article>
+      <article><span class="icone">🧮</span><h3>Matrizes e espectral</h3><p>Matrizes A, W, D e L, autovalores e componentes conexas, com a validação matemática à vista.</p></article>
+      <article><span class="icone">🔎</span><h3>Score explicável</h3><p>Cada conta mostra a composição do score: quanto vem de conexões, intermediação, proximidade e fluxo.</p></article>
+      <article><span class="icone">🧪</span><h3>Simulador</h3><p>Insira uma transação hipotética e veja na hora o impacto no score, no ranking e nas comunidades.</p></article>
+      <article><span class="icone">📄</span><h3>Relatórios</h3><p>Relatório da rede, memorial de parâmetros e exportação dos resultados.</p></article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= BANNER: LIMITES ÉTICOS ================= -->
+<section class="faixa">
+  <div class="faixa-in">
+    <svg viewBox="0 0 120 120" aria-hidden="true">
+      <path d="M60 10l38 14v30c0 26-17 45-38 54C39 99 22 80 22 54V24z" fill="none" stroke="#7FA4CE" stroke-width="3"/>
+      <circle cx="60" cy="56" r="17" fill="none" stroke="#fff" stroke-width="3"/><circle cx="60" cy="56" r="6" fill="#D99311"/>
+    </svg>
+    <div>
+      <h2>Relevância estrutural não é acusação.</h2>
+      <p>Uma conta central na rede merece atenção, mas isso não significa irregularidade. O NEXO não bloqueia transações,
+        não acusa ninguém e não substitui o analista: ele organiza as evidências para uma <b>investigação humana</b> bem fundamentada.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PARA QUEM ================= -->
+<section class="secao" id="para-quem">
+  <div class="secao-in">
+    <p class="sobretitulo">Para quem</p>
+    <h2>Pensado para quem analisa transações</h2>
+    <ul class="perfis">
+      <li><b>Compliance</b><span>Priorizar casos com critérios claros e rastreáveis.</span></li>
+      <li><b>Risco</b><span>Entender concentrações de fluxo e contas intermediárias.</span></li>
+      <li><b>Auditoria</b><span>Trilha de acessos e resultados reproduzíveis.</span></li>
+      <li><b>Ciência de dados</b><span>Métricas de rede validadas e exportáveis.</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= SEGURANÇA ================= -->
+<section class="secao alterna" id="seguranca">
+  <div class="secao-in duas-colunas">
+    <div>
+      <p class="sobretitulo">Segurança</p>
+      <h2>Acesso protegido em cada etapa</h2>
+      <p class="secao-lead">Cada pessoa vê apenas o que o seu cargo permite, e toda ação de acesso fica registrada.</p>
+    </div>
+    <ul class="lista-check">
+      <li>Senhas guardadas só como <b>hash</b>, nunca em texto.</li>
+      <li><b>Confirmação de e-mail</b> antes do primeiro acesso.</li>
+      <li>Bloqueio temporário após <b>5 tentativas</b> erradas.</li>
+      <li><b>Quatro cargos</b>: administrador, analista, auditor e visualizador.</li>
+      <li>Trocar a senha <b>desconecta os outros computadores</b>.</li>
+      <li>Banco de dados com <b>conexão criptografada</b> (SSL) e auditoria de acessos.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= DÚVIDAS ================= -->
+<section class="secao" id="duvidas">
+  <div class="secao-in estreita">
+    <p class="sobretitulo">Dúvidas frequentes</p>
+    <h2>Perguntas e respostas</h2>
+    <div class="faq" id="faq">
+      <details><summary>O NEXO detecta fraudes?</summary>
+        <p>Não. Ele mede a <b>relevância estrutural</b> de cada conta na rede (conexões, intermediação, proximidade e fluxo).
+          Os resultados indicam onde vale a pena olhar primeiro; a conclusão é sempre de uma análise humana.</p></details>
+      <details><summary>Os dados são reais?</summary>
+        <p>Não. A base de demonstração tem {{ resumo.contas if resumo else 40 }} contas e {{ resumo.transacoes if resumo else 160 }}
+          transações fictícias, criadas para o projeto acadêmico com cenários conhecidos (hubs, pontes, cadeias e ciclos).</p></details>
+      <details><summary>Como consigo acesso e um cargo?</summary>
+        <p>Clique em <a href="/cadastro">Criar cadastro</a> e confirme o e-mail. Sem código de convite, você entra como
+          <b>Visualizador</b>. Para entrar como Analista ou Auditor, peça ao administrador um <b>código de convite</b>.</p></details>
+      <details><summary>Posso entrar com o e-mail em vez do CPF?</summary>
+        <p>Sim. O login aceita o <b>e-mail</b> ou o <b>CPF/CNPJ</b> do cadastro, com a mesma senha.
+          {% if google %}Também é possível usar o botão <b>Entrar com Google</b>.{% endif %}</p></details>
+      <details><summary>Esqueci minha senha. E agora?</summary>
+        <p>Use <a href="/login?etapa=esqueci">Esqueci minha senha</a>: enviamos ao e-mail do cadastro um link que vale por
+          30 minutos e só pode ser usado uma vez.</p></details>
+      <details><summary>O que é o score e por que ele é "provisório"?</summary>
+        <p>É uma nota de 0 a 100 que combina cinco métricas normalizadas: conexões, intermediação, proximidade, fluxo e
+          desequilíbrio entre entradas e saídas. Os pesos e os limiares ainda estão em teste e podem ser ajustados nas Configurações.</p></details>
+      <details><summary>Que tecnologia o NEXO usa?</summary>
+        <p>Python com NetworkX e NumPy para a matemática, Flask para o servidor web, MySQL para os dados e uma interface
+          web própria, sem bibliotecas pesadas.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= RODAPÉ ================= -->
+<footer class="rodape">
+  <div class="rodape-in">
+    <div class="rodape-marca">
+      <b>NEXO</b> — Ponto de Conexão
+      <p>Ferramenta acadêmica de análise de redes aplicada a transações financeiras.
+        Transformar transações em conexões, conexões em estruturas e estruturas em informação para análise.</p>
+    </div>
+    <nav aria-label="Projeto"><h3>Projeto</h3>
+      <a href="#como-funciona">Como funciona</a><a href="#recursos">Recursos</a><a href="#duvidas">Dúvidas</a>
+      <a href="https://github.com/miliano2008/NEXO-Ponto-de-Conexao" rel="noopener">Código no GitHub</a></nav>
+    <nav aria-label="Acesso"><h3>Acesso</h3>
+      <a href="/login">Entrar</a><a href="/cadastro">Criar cadastro</a><a href="/login?etapa=esqueci">Esqueci minha senha</a></nav>
+  </div>
+  <p class="rodape-aviso">Protótipo acadêmico com dados fictícios. Score e limiares são provisórios e indicam relevância estrutural, nunca fraude.</p>
+</footer>
+
+<script type="module" src="{{ url_for('static', filename='js/inicio.js') }}"></script>
+</body>
+</html>

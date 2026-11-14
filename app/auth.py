@@ -4,8 +4,10 @@ Banco: MySQL (Aiven) se configurado (.env ou config.ini), senão SQLite em banco
 A conexão fica em banco/conexao.py e as tabelas em banco/migracoes.py.
 
 Regras de segurança:
-- login com CPF/CNPJ + senha juntos; qualquer falha responde a mesma mensagem
-  ("CPF/CNPJ ou senha inválidos"), sem revelar se o documento tem cadastro;
+- login com (e-mail ou CPF/CNPJ) + senha juntos; qualquer falha responde a mesma mensagem
+  ("E-mail, CPF/CNPJ ou senha inválidos"), sem revelar se o cadastro existe;
+- trocar a senha aumenta a versão da sessão: os outros computadores são desconectados;
+- contas Google só são vinculadas a cadastros com e-mail já confirmado;
 - novos usuários só entram depois de confirmar o e-mail pelo link enviado;
 - links (confirmação e redefinição) são guardados só como hash e têm validade;
 - cargos podem vir de códigos de convite gerados pelo administrador.
@@ -28,7 +30,7 @@ BLOQUEIO_MINUTOS = 15
 VALIDADE_TOKEN_MINUTOS = 30          # link de redefinição de senha
 VALIDADE_CONFIRMACAO_HORAS = 24      # link de confirmação de e-mail
 INTERVALO_ENVIO_SEGUNDOS = 60        # mínimo entre dois e-mails do mesmo tipo
-MENSAGEM_LOGIN_INVALIDO = "CPF/CNPJ ou senha inválidos."
+MENSAGEM_LOGIN_INVALIDO = "E-mail, CPF/CNPJ ou senha inválidos."
 
 CARGOS = {
     "administrador": "Administrador",
@@ -197,6 +199,30 @@ def buscar_por_documento(doc):
         return c.execute("SELECT * FROM usuarios WHERE documento = ?", (doc,)).fetchone()
 
 
+def buscar_por_email(email):
+    with conectar() as c:
+        return c.execute("SELECT * FROM usuarios WHERE email = ?", (str(email or "").strip().lower(),)).fetchone()
+
+
+def localizar(identificador):
+    """Usuário pelo e-mail OU pelo CPF/CNPJ (o login aceita os dois).
+
+    Retorna (linha ou None, rótulo para a auditoria). Nunca lança erro: quem chama
+    responde a mesma mensagem exista ou não o cadastro.
+    """
+    texto = str(identificador or "").strip()
+    if "@" in texto:
+        email = texto.lower()
+        linha = buscar_por_email(email)
+        rotulo = linha["documento"] if linha else None
+        return linha, rotulo or (f"e-mail {mascarar_email(email)}" if email.count("@") == 1 else "e-mail inválido")
+    try:
+        doc, _ = validar_documento(texto)
+    except ErroAuth:
+        return None, None
+    return buscar_por_documento(doc), doc
+
+
 def buscar_por_id(uid):
     with conectar() as c:
         return c.execute("SELECT * FROM usuarios WHERE id = ?", (uid,)).fetchone()
@@ -236,17 +262,17 @@ def cadastrar(documento, nome, email, telefone, senha, confirmacao, cargo=CARGO_
     return publico(buscar_por_id(uid))
 
 
-def _verificar_credenciais(documento, senha, ip):
-    """Confere CPF/CNPJ + senha. Qualquer falha gera a MESMA mensagem."""
-    try:
-        doc, _ = validar_documento(documento)
-    except ErroAuth:
-        raise ErroAuth(MENSAGEM_LOGIN_INVALIDO) from None
-    linha = buscar_por_documento(doc)
+def _verificar_credenciais(identificador, senha, ip):
+    """Confere (e-mail ou CPF/CNPJ) + senha. Qualquer falha gera a MESMA mensagem."""
+    linha, rotulo = localizar(identificador)
     if linha is None:
         check_password_hash(_HASH_FICTICIO, senha or "")
-        registrar("login_falhou", doc, "documento não cadastrado", ip)
+        if rotulo and rotulo.isdigit():
+            registrar("login_falhou", rotulo, "documento não cadastrado", ip)
+        else:
+            registrar("login_falhou", None, f"{rotulo or 'identificador inválido'} não cadastrado", ip)
         raise ErroAuth(MENSAGEM_LOGIN_INVALIDO)
+    doc = linha["documento"]
     if not linha["ativo"]:
         check_password_hash(linha["senha_hash"], senha or "")
         registrar("login_negado_inativo", doc, ip=ip)
@@ -265,8 +291,9 @@ def _verificar_credenciais(documento, senha, ip):
     return linha
 
 
-def autenticar(documento, senha, ip=None):
-    linha = _verificar_credenciais(documento, senha, ip)
+def autenticar(identificador, senha, ip=None):
+    """Login por e-mail OU CPF/CNPJ + senha."""
+    linha = _verificar_credenciais(identificador, senha, ip)
     if not linha["email_confirmado"]:
         registrar("login_email_pendente", linha["documento"], ip=ip)
         raise EmailNaoConfirmado(linha["email"])
@@ -314,17 +341,13 @@ def _token_valido(c, token, tipo):
     return linha
 
 
-def criar_token_recuperacao(documento):
-    """Retorna (usuario, token) ou (None, None).
+def criar_token_recuperacao(identificador):
+    """Retorna (usuario, token) ou (None, None). Aceita e-mail ou CPF/CNPJ.
 
     (None, None) quando não há cadastro ativo OU um link acabou de ser enviado: quem
-    chama responde a mesma mensagem nos dois casos, sem revelar se o CPF existe.
+    chama responde a mesma mensagem nos dois casos, sem revelar se o cadastro existe.
     """
-    try:
-        doc, _ = validar_documento(documento)
-    except ErroAuth:
-        return None, None
-    linha = buscar_por_documento(doc)
+    linha, _ = localizar(identificador)
     if linha is None or not linha["ativo"]:
         return None, None
     with conectar() as c:
@@ -337,6 +360,51 @@ def verificar_token(token):
         return publico(buscar_por_id(_token_valido(c, token, "senha")["usuario_id"]))
 
 
+# ---------------------------------------------------------------- sessões
+
+def versao_sessao(linha):
+    """Número gravado na sessão no login. Quando muda, as sessões antigas deixam de valer."""
+    try:
+        return int(linha["versao_sessao"] or 0)
+    except (KeyError, IndexError):  # banco ainda sem a migração 4
+        return 0
+
+
+def _encerrar_sessoes(c, uid):
+    c.execute("UPDATE usuarios SET versao_sessao = versao_sessao + 1 WHERE id = ?", (uid,))
+
+
+def encerrar_sessoes(uid, por=None, ip=None):
+    """Desconecta o usuário em todos os computadores (ex.: suspeita de senha vazada)."""
+    with conectar() as c:
+        _encerrar_sessoes(c, uid)
+    linha = buscar_por_id(uid)
+    registrar("sessoes_encerradas", linha["documento"], f"por={por}" if por else None, ip)
+    return versao_sessao(buscar_por_id(uid))
+
+
+def alterar_minha_senha(uid, atual, nova, confirmacao, ip=None):
+    """Troca feita pelo próprio usuário logado. Encerra as outras sessões dele.
+
+    Retorna a nova versão da sessão, para manter conectado só quem fez a troca.
+    """
+    linha = buscar_por_id(uid)
+    if linha is None or not check_password_hash(linha["senha_hash"], atual or ""):
+        registrar("senha_alteracao_falhou", linha["documento"] if linha else None, "senha atual incorreta", ip)
+        raise ErroAuth("A senha atual está incorreta.")
+    if nova != confirmacao:
+        raise ErroAuth("A confirmação não confere com a nova senha.")
+    validar_senha(nova)
+    if nova == atual:
+        raise ErroAuth("A nova senha precisa ser diferente da atual.")
+    with conectar() as c:
+        c.execute("UPDATE usuarios SET senha_hash = ?, tentativas_falhas = 0, bloqueado_ate = NULL WHERE id = ?",
+                  (generate_password_hash(nova), uid))
+        _encerrar_sessoes(c, uid)
+    registrar("senha_alterada", linha["documento"], "pelo próprio usuário; outras sessões encerradas", ip)
+    return versao_sessao(buscar_por_id(uid))
+
+
 def redefinir_senha(token, senha, confirmacao, ip=None):
     if senha != confirmacao:
         raise ErroAuth("A confirmação não confere com a senha.")
@@ -346,6 +414,7 @@ def redefinir_senha(token, senha, confirmacao, ip=None):
         # o link chegou no e-mail do cadastro: abri-lo também comprova o e-mail
         c.execute("UPDATE usuarios SET senha_hash = ?, tentativas_falhas = 0, bloqueado_ate = NULL, "
                   "email_confirmado = 1 WHERE id = ?", (generate_password_hash(senha), registro["usuario_id"]))
+        _encerrar_sessoes(c, registro["usuario_id"])  # quem estava logado com a senha antiga é desconectado
         c.execute("UPDATE tokens_recuperacao SET usado = 1 WHERE id = ?", (registro["id"],))
     usuario = buscar_por_id(registro["usuario_id"])
     registrar("senha_redefinida", usuario["documento"], ip=ip)
@@ -361,6 +430,7 @@ def definir_senha_manual(uid, senha, confirmacao, por):
     with conectar() as c:
         c.execute("UPDATE usuarios SET senha_hash = ?, tentativas_falhas = 0, bloqueado_ate = NULL WHERE id = ?",
                   (generate_password_hash(senha), uid))
+        _encerrar_sessoes(c, uid)
     usuario = buscar_por_id(uid)
     registrar("senha_redefinida", usuario["documento"], f"manual por {por}")
     return publico(usuario)
@@ -527,3 +597,79 @@ def listar_auditoria(limite=200):
         linhas = c.execute("SELECT * FROM auditoria ORDER BY id DESC LIMIT ?", (limite,)).fetchall()
     return [{**dict(l), "data": para_texto(l["data"]),
              "documento": mascarar(l["documento"]) if l["documento"] else None} for l in linhas]
+
+
+# ---------------------------------------------------------------- contas externas (Google)
+
+PROVEDORES = {"google": "Google"}
+
+
+def buscar_identidade(provedor, sujeito):
+    with conectar() as c:
+        return c.execute("SELECT * FROM identidades_externas WHERE provedor = ? AND sujeito = ?",
+                         (provedor, str(sujeito))).fetchone()
+
+
+def _vincular(c, uid, provedor, sujeito, email):
+    c.execute("INSERT INTO identidades_externas (usuario_id, provedor, sujeito, email, criado_em, ultimo_uso) "
+              "VALUES (?, ?, ?, ?, ?, ?)", (uid, provedor, str(sujeito), email, agora().isoformat(), agora().isoformat()))
+
+
+def _entrar(linha, provedor, ip):
+    with conectar() as c:
+        c.execute("UPDATE usuarios SET ultimo_login = ? WHERE id = ?", (agora().isoformat(), linha["id"]))
+        c.execute("UPDATE identidades_externas SET ultimo_uso = ? WHERE usuario_id = ? AND provedor = ?",
+                  (agora().isoformat(), linha["id"], provedor))
+    registrar(f"login_{provedor}", linha["documento"], ip=ip)
+    return publico(buscar_por_id(linha["id"]))
+
+
+def entrar_externo(provedor, sujeito, email, ip=None):
+    """Login por conta externa já verificada pelo provedor (e-mail confirmado por ele).
+
+    Retorna o usuário, ou None quando ainda não há cadastro (a pessoa completa o
+    cadastro com CPF/CNPJ e telefone). Lança ErroAuth quando não pode entrar.
+    """
+    email = validar_email(email)
+    nome_provedor = PROVEDORES[provedor]
+    identidade = buscar_identidade(provedor, sujeito)
+    if identidade:
+        linha = buscar_por_id(identidade["usuario_id"])
+    else:
+        linha = buscar_por_email(email)
+        if linha is None:
+            return None
+        # Só vincula a um cadastro com e-mail JÁ confirmado. Assim ninguém cadastra o e-mail
+        # de outra pessoa (sem confirmar) e espera ela entrar pelo Google para tomar a conta.
+        if not linha["email_confirmado"]:
+            registrar(f"login_{provedor}_negado", linha["documento"], "e-mail do cadastro ainda não confirmado", ip)
+            raise ErroAuth(f"Já existe um cadastro com este e-mail, mas ele ainda não foi confirmado. Entre com "
+                           f"sua senha e confirme o e-mail antes de usar o {nome_provedor}.")
+        try:
+            with conectar() as c:
+                _vincular(c, linha["id"], provedor, sujeito, email)
+        except db.ErroIntegridade:
+            pass  # vinculado ao mesmo tempo por outro pedido
+        registrar(f"{provedor}_vinculado", linha["documento"], mascarar_email(email), ip)
+    if not linha["ativo"]:
+        registrar(f"login_{provedor}_negado", linha["documento"], "usuário desativado", ip)
+        raise ErroAuth("Este acesso está desativado. Procure o administrador.")
+    return _entrar(linha, provedor, ip)
+
+
+def cadastrar_externo(provedor, sujeito, email, documento, nome, telefone, convite=None, ip=None):
+    """Cadastro de quem entrou pelo provedor e ainda não tinha conta.
+
+    O e-mail já foi verificado pelo provedor, então entra confirmado. Não há senha NEXO:
+    se quiser entrar sem o Google, a pessoa cria uma em "Esqueci minha senha".
+    """
+    senha_aleatoria = secrets.token_urlsafe(24) + "a1"
+    usuario = cadastrar(documento, nome, email, telefone, senha_aleatoria, senha_aleatoria,
+                        convite=convite, email_confirmado=True, ip=ip)
+    try:
+        with conectar() as c:
+            _vincular(c, usuario["id"], provedor, sujeito, validar_email(email))
+    except db.ErroIntegridade as erro:
+        raise ErroAuth("Esta conta já está vinculada a outro cadastro.") from erro
+    registrar(f"cadastro_{provedor}", somente_digitos(documento), mascarar_email(email), ip)
+    return _entrar(buscar_por_id(usuario["id"]), provedor, ip)

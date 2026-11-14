@@ -50,6 +50,10 @@ async function init(){
     await api("/auth/sair", {method:"POST"}).catch(()=>{});
     location.href = "/login";
   });
+  el("btnSenha").addEventListener("click", async ()=>{
+    const {abrirMinhaSenha} = await import("./nucleo/minha-senha.js");   // baixado só quando usado
+    abrirMinhaSenha();
+  });
   el("menuToggle").addEventListener("click", ()=> el("sidebar").classList.toggle("open"));
 
   try{

@@ -179,6 +179,20 @@ def testar_email(usuario):
         print("  Rode o scripts\\CONFIGURAR.bat de novo para corrigir (Enter mantém o que está certo).")
 
 
+def guardar_config_antigo(antigo):
+    """Renomeia o config.ini para config.ini.bak sem apagar um .bak anterior.
+
+    No Windows, renomear por cima de um arquivo existente dá erro; se já houver
+    config.ini.bak, usa config.ini.bak2, .bak3... (nenhuma cópia é perdida).
+    """
+    destino, n = antigo.with_name("config.ini.bak"), 1
+    while destino.exists():
+        n += 1
+        destino = antigo.with_name(f"config.ini.bak{n}")
+    antigo.rename(destino)
+    return destino
+
+
 def main():
     v = configuracao.valores()           # .env + config.ini antigo, já combinados
     v.setdefault("APP_URL_BASE", "http://127.0.0.1:5000")
@@ -229,12 +243,32 @@ def main():
                                          origem="Google" if gmail else "e-mail", prefixo="", sem_espacos=gmail)
         v["SMTP_FROM"] = f"NEXO <{v['SMTP_USER']}>"
 
+    # ------------------------------------------------------------ Entrar com Google (opcional)
+    ja_tem = "s" if v.get("GOOGLE_CLIENT_ID") else "n"
+    if perguntar("\nConfigurar o botão 'Entrar com Google'? (s/n)", ja_tem).lower().startswith("s"):
+        retorno = f"{v['APP_URL_BASE'].rstrip('/')}/auth/google/retorno"
+        print("No Google Cloud Console (console.cloud.google.com):")
+        print("  APIs e serviços → Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web")
+        print(f"  Em 'URIs de redirecionamento autorizados', cadastre exatamente: {retorno}")
+        print("  Passo a passo completo: docs/instalacao-e-uso.md (seção Entrar com Google)")
+        v["GOOGLE_CLIENT_ID"] = perguntar("ID do cliente (termina com .apps.googleusercontent.com)",
+                                          v.get("GOOGLE_CLIENT_ID", ""))
+        v["GOOGLE_CLIENT_SECRET"] = pedir_senha(v.get("GOOGLE_CLIENT_SECRET", ""), rotulo="Chave secreta do cliente",
+                                                origem="Google Cloud", prefixo="GOCSPX-")
+        v["GOOGLE_DOMINIOS"] = perguntar("Aceitar só e-mails de certos domínios? (ex.: empresa.com.br; Enter = qualquer conta)",
+                                         v.get("GOOGLE_DOMINIOS", ""))
+        if not v["GOOGLE_CLIENT_ID"].endswith(".apps.googleusercontent.com"):
+            print("  Atenção: o ID do cliente do Google costuma terminar com '.apps.googleusercontent.com'.")
+
     arquivo = configuracao.salvar_env(v)
     print(f"\nConfigurações salvas em {arquivo}")
     for antigo in configuracao.CONFIG_INI:
         if antigo.exists():
-            antigo.rename(antigo.with_name("config.ini.bak"))
-            print(f"  O config.ini antigo foi convertido e renomeado para {antigo.with_name('config.ini.bak')}")
+            try:
+                destino = guardar_config_antigo(antigo)
+                print(f"  O config.ini antigo foi convertido para o .env e guardado como {destino.name}")
+            except OSError as erro:  # ex.: arquivo aberto no Bloco de Notas
+                print(f"  Aviso: não foi possível renomear {antigo.name} ({erro}). O .env já vale; pode apagar o config.ini.")
 
     if configurou_email:
         testar_email(v["SMTP_USER"])

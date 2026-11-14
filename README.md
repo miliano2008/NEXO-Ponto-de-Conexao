@@ -7,7 +7,7 @@ estrutural**, mostrando tudo num sistema web com login, cargos e um **simulador*
 
 > Relevância estrutural **não é** detecção de fraude. O NEXO apoia a análise humana.
 
-**Versão atual:** 0.4 (Fase 0: reorganização e base técnica). Base de demonstração: **40 contas, 160 transações**.
+**Versão atual:** 0.5 (Fase 1: identidade, login e página institucional). Base de demonstração: **40 contas, 160 transações**.
 
 ---
 
@@ -18,7 +18,8 @@ estrutural**, mostrando tudo num sistema web com login, cargos e um **simulador*
 3. Na primeira vez, o sistema pergunta os dados do banco (Aiven) e do e-mail e cria o arquivo **`.env`**.
    Coloque o **`ca.pem`** do Aiven em `banco\dados\`. Esse arquivo é enviado pelo grupo por um canal privado.
 
-O navegador abre em **http://127.0.0.1:5000**. No Linux e no macOS, use `bash iniciar.sh`.
+O navegador abre em **http://127.0.0.1:5000**: a página institucional, com o acesso no banner. O sistema fica em `/app`.
+Para entrar, use o e-mail ou o CPF/CNPJ do cadastro. No Linux e no macOS, use `bash iniciar.sh`.
 
 O passo a passo completo, com Aiven, e-mail, atualização e problemas comuns, está em
 **[docs/instalacao-e-uso.md](docs/instalacao-e-uso.md)**.

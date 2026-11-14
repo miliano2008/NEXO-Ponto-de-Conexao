@@ -8,7 +8,8 @@
         ▼
  app/servidor.py ── Flask: páginas, login, permissões e API
         │
-        ├── app/auth.py ........ usuários, cargos, convites, tokens e auditoria
+        ├── app/auth.py ........ usuários, cargos, convites, tokens, sessões e auditoria
+        ├── app/google.py ...... "Entrar com Google" (OpenID Connect, sem biblioteca extra)
         ├── app/envio_email.py . e-mails de confirmação e recuperação (SMTP)
         └── app/analises.py .... base atual + cache de resultados
                  │
@@ -46,7 +47,8 @@ O arquivo `nucleo/configuracao.py` lê as configurações nesta ordem de priorid
 3. o `config.ini` antigo da versão 0.3, ainda aceito para ninguém do grupo ficar sem acesso.
 
 Chaves: `APP_URL_BASE`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL_CA`,
-`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`. O modelo está em `.env.example`.
+`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` e, opcionais,
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_DOMINIOS`. O modelo está em `.env.example`.
 
 Variáveis só para desenvolvimento e testes:
 

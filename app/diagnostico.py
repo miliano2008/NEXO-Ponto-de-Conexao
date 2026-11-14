@@ -2,7 +2,7 @@
 
 Executar: scripts\\DIAGNOSTICO.bat  ou  python -m app.diagnostico
 Confere Python, bibliotecas, arquivos, configuração (.env), banco (Aiven ou local),
-versão do esquema, base de dados, usuários, e-mail e porta.
+versão do esquema, base de dados, usuários, e-mail, Google e porta.
 Com --rapido mostra só avisos e erros.
 """
 
@@ -181,16 +181,41 @@ def main():
     # 10. E-mail (confirmação de cadastro e "Esqueci minha senha")
     from app import envio_email
     try:
-        c = envio_email.testar_login()
-        ok(f"E-mail: login OK em {c['host']} como {c['usuario'] or '(sem usuário)'}")
+        if RAPIDO:
+            # ao abrir o NEXO só confere a configuração: fazer login no Gmail a cada abertura
+            # soma tentativas e pode levar a um bloqueio temporário ("tentativas demais")
+            c = envio_email.configuracao()
+            ok(f"E-mail configurado ({c['host']}). Para testar o envio: scripts\\TESTAR_EMAIL.bat")
+        else:
+            c = envio_email.testar_login()
+            ok(f"E-mail: login OK em {c['host']} como {c['usuario'] or '(sem usuário)'}")
     except envio_email.ErroEmail as e:
         if "não configurado" in str(e):
             aviso("E-mail não configurado: cadastros novos não recebem confirmação e 'Esqueci minha senha' não funciona.",
                   "Dois cliques em scripts\\CONFIGURAR.bat → responda 's' em 'Configurar o e-mail'.")
+        elif "logo no início" in str(e) or "conectar ao servidor" in str(e):
+            # rede/antivírus bloqueando: o NEXO funciona normalmente, só sem enviar e-mails
+            aviso(f"{e} O NEXO abre normalmente; só os e-mails não saem desta rede.",
+                  "Teste em outra rede (hotspot do celular). Sem e-mail, o administrador confirma "
+                  "cadastros em Usuários e cargos e troca senhas pelo scripts\\CRIAR_ADMIN.bat.")
         else:
-            erro(str(e), "Dois cliques em scripts\\CONFIGURAR.bat e cole a senha de app de novo (botão direito do mouse).")
+            aviso(f"{e} O NEXO abre normalmente; só os e-mails não saem.",
+                  "Dois cliques em scripts\\CONFIGURAR.bat e informe a senha de app de novo (opção 1).")
 
-    # 11. Porta
+    # 11. Entrar com Google (opcional)
+    from app import google
+    cfg_google = google.config()
+    if google.configurado():
+        dominios = ", ".join(cfg_google["dominios"]) or "qualquer conta Google"
+        ok(f"Entrar com Google: configurado ({dominios}). Retorno cadastrado no Google deve ser "
+           f"{configuracao.obter('APP_URL_BASE', 'http://127.0.0.1:5000').rstrip('/')}/auth/google/retorno")
+    elif cfg_google["client_id"] or cfg_google["client_secret"]:
+        aviso("Entrar com Google incompleto: falta o ID do cliente ou a chave secreta.",
+              "Dois cliques em scripts\\CONFIGURAR.bat → responda 's' em 'Entrar com Google'.")
+    elif not RAPIDO:
+        print("  [--]   Entrar com Google: não configurado (opcional; o login por e-mail/CPF funciona normalmente)")
+
+    # 12. Porta
     with socket.socket() as s:
         livre = s.connect_ex(("127.0.0.1", 5000)) != 0
     if livre:

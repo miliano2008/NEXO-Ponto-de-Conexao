@@ -40,48 +40,103 @@ def configuracao():
     }
 
 
-def _explicar(erro, c=None):
-    """Traduz os erros mais comuns do SMTP (principalmente do Gmail)."""
+class _Etapa:
+    """Guarda em que ponto da conversa com o servidor a falha aconteceu."""
+    def __init__(self):
+        self.nome = "conectar"
+
+
+def _explicar(erro, c=None, etapa="conectar"):
+    """Traduz os erros do SMTP (principalmente do Gmail), dizendo em que etapa falhou."""
     texto = str(erro)
+    usado = f" ({c['host']}, porta {c['porta']}, {c['seguranca']})" if c else ""
+    if isinstance(erro, smtplib.SMTPAuthenticationError):
+        resposta = (erro.smtp_error.decode(errors="replace") if isinstance(erro.smtp_error, bytes)
+                    else str(erro.smtp_error)).replace("\n", " ").strip()
+        if erro.smtp_code == 454 or "Too many" in resposta:
+            return ("o Gmail bloqueou temporariamente o login por TENTATIVAS DEMAIS. Espere cerca de 1 hora "
+                    "sem testar e tente de novo; se continuar, crie uma senha de app nova "
+                    f"(myaccount.google.com/apppasswords). Resposta do servidor: {erro.smtp_code} {resposta}")
+        if erro.smtp_code == 534 or "Application-specific" in resposta:
+            return ("o Gmail exige uma SENHA DE APP (16 letras), não a senha normal da conta. Crie em "
+                    f"myaccount.google.com/apppasswords. Resposta do servidor: {erro.smtp_code} {resposta}")
+        return ("o servidor RECUSOU o usuário ou a senha. Confira: (1) SMTP_USER é exatamente o Gmail em que "
+                "a senha de app foi criada; (2) a senha de app ainda existe (o Google apaga as senhas de app "
+                "quando a senha da conta é trocada); (3) a verificação em duas etapas está ativa. Se precisar, "
+                "crie uma senha de app nova e rode scripts\\CONFIGURAR.bat (opção 1). "
+                f"Resposta do servidor: {erro.smtp_code} {resposta}")
     if isinstance(erro, smtplib.SMTPServerDisconnected) or "unexpectedly closed" in texto:
-        usado = f" (agora: {c['host']}, porta {c['porta']}, {c['seguranca']})" if c else ""
-        return (f"o servidor fechou a conexão antes do login{usado}. Não é a senha. Causas comuns: "
-                "(1) porta e segurança que não combinam: use 587 + starttls ou 465 + ssl; "
-                "(2) a rede (ex.: faculdade) ou o antivírus bloqueia o e-mail: teste no hotspot do celular; "
-                "(3) servidor digitado errado.")
-    if isinstance(erro, smtplib.SMTPAuthenticationError) or "535" in texto:
-        return ("o servidor recusou usuário/senha. No Gmail, use a SENHA DE APP de 16 letras "
-                "(myaccount.google.com/apppasswords), não a senha normal, com a verificação em duas etapas ativa.")
+        if etapa == "login":
+            return ("o servidor encerrou a conexão DURANTE O LOGIN, o que no Gmail costuma significar senha "
+                    "recusada ou tentativas demais. Crie uma senha de app nova (myaccount.google.com/apppasswords), "
+                    "espere alguns minutos e rode scripts\\CONFIGURAR.bat (opção 1).")
+        return (f"o servidor fechou a conexão logo no início{usado}, antes de pedir a senha. Causas: porta e "
+                "segurança que não combinam (use 587 + starttls ou 465 + ssl), servidor digitado errado, ou "
+                "a rede/antivírus bloqueando o e-mail (teste no hotspot do celular).")
+    if isinstance(erro, ssl.SSLError):
+        return (f"falha na conexão segura (TLS){usado}: {texto}. Confira se a segurança combina com a porta "
+                "(587 + starttls ou 465 + ssl) e se o antivírus não intercepta e-mails.")
     if isinstance(erro, (TimeoutError, ConnectionRefusedError, OSError)) and not isinstance(erro, smtplib.SMTPException):
-        return f"não foi possível conectar ao servidor de e-mail ({texto}). Confira servidor/porta e a internet."
-    return texto
+        return (f"não foi possível conectar ao servidor de e-mail{usado}: {texto}. Confira servidor, porta e "
+                "internet; a rede ou o antivírus podem estar bloqueando.")
+    return f"{texto} (etapa: {etapa})"
 
 
-def _conectar(c):
+def _conectar(c, etapa=None):
+    """Conecta e faz login, uma etapa por vez, para saber exatamente onde falhou."""
+    etapa = etapa or _Etapa()
     contexto = ssl.create_default_context()
+    # nome fixo no EHLO: alguns computadores têm nome com acento/espaço, que o servidor pode rejeitar
     if c["seguranca"] == "ssl":
-        servidor = smtplib.SMTP_SSL(c["host"], c["porta"], context=contexto, timeout=20)
+        servidor = smtplib.SMTP_SSL(c["host"], c["porta"], context=contexto, timeout=20, local_hostname="nexo.local")
     else:
-        servidor = smtplib.SMTP(c["host"], c["porta"], timeout=20)
+        servidor = smtplib.SMTP(c["host"], c["porta"], timeout=20, local_hostname="nexo.local")
     try:
+        etapa.nome = "apresentar"
+        servidor.ehlo()
         if c["seguranca"] == "starttls":
+            etapa.nome = "starttls"
             servidor.starttls(context=contexto)
+            servidor.ehlo()
         if c["usuario"]:
-            servidor.login(c["usuario"], c["senha"])
+            etapa.nome = "login"
+            _login(servidor, c["usuario"], c["senha"])
+        etapa.nome = "enviar"
     except Exception:
         servidor.close()
         raise
     return servidor
 
 
+def _login(servidor, usuario, senha):
+    """Login com UM método só (PLAIN, senão LOGIN).
+
+    O smtplib.login() tenta vários métodos em sequência; quando o Gmail recusa a senha
+    e fecha a conexão, a segunda tentativa vira "Connection unexpectedly closed" e
+    esconde o motivo real (senha recusada, tentativas demais...).
+    """
+    metodos = servidor.esmtp_features.get("auth", "").upper().split()
+    servidor.user, servidor.password = usuario, senha
+    if "PLAIN" in metodos:
+        codigo, resposta = servidor.auth("PLAIN", servidor.auth_plain)
+    elif "LOGIN" in metodos:
+        codigo, resposta = servidor.auth("LOGIN", servidor.auth_login)
+    else:
+        servidor.login(usuario, senha)
+        return
+    if codigo not in (235, 503):
+        raise smtplib.SMTPAuthenticationError(codigo, resposta)
+
+
 def testar_login():
     """Conecta e faz login no servidor de e-mail, sem enviar nada."""
     c = configuracao()
+    etapa = _Etapa()
     try:
-        with _conectar(c):
+        with _conectar(c, etapa):
             pass
     except (smtplib.SMTPException, OSError) as erro:
-        raise ErroEmail(f"Falha no e-mail: {_explicar(erro, c)}") from erro
+        raise ErroEmail(f"Falha no e-mail: {_explicar(erro, c, etapa.nome)}") from erro
     return c
 
 
@@ -92,11 +147,12 @@ def enviar(destino, assunto, texto, html=None):
     msg.set_content(texto)
     if html:
         msg.add_alternative(html, subtype="html")
+    etapa = _Etapa()
     try:
-        with _conectar(c) as servidor:
+        with _conectar(c, etapa) as servidor:
             servidor.send_message(msg)
     except (smtplib.SMTPException, OSError) as erro:
-        raise ErroEmail(f"Falha ao enviar e-mail: {_explicar(erro, c)}") from erro
+        raise ErroEmail(f"Falha ao enviar e-mail: {_explicar(erro, c, etapa.nome)}") from erro
 
 
 def configurado():

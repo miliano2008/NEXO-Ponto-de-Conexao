@@ -48,15 +48,29 @@ with sync_playwright() as p:
     navegador = p.chromium.launch(**opcoes)
     pg = navegador.new_page(viewport={"width": 1366, "height": 900})
     pg.on("pageerror", lambda e: erros.append(f"pageerror: {e}"))
-    pg.on("console", lambda m: m.type == "error" and "401" not in m.text and erros.append(f"console: {m.text}"))
+    # 400/401 são respostas esperadas nos testes de senha errada; qualquer outro erro falha o teste
+    pg.on("console", lambda m: m.type == "error" and not any(s in m.text for s in ("status of 400", "status of 401"))
+          and erros.append(f"console: {m.text}"))
 
-    # login com mensagem única para dados inválidos
+    # página institucional: pública, com FAQ e acesso rápido no banner
+    pg.goto(f"{BASE}/")
+    assert "Enxergue a estrutura" in pg.inner_text("h1")
+    pg.click("#faq summary >> nth=0"); assert pg.locator("#faq details[open]").count() == 1
+    pg.click("#faq summary >> nth=1"); pg.wait_for_timeout(200)
+    assert pg.locator("#faq details[open]").count() == 1                      # uma resposta aberta por vez
+    pg.fill("#hLogin", "grupo@nexo.local"); pg.fill("#hSenha", "Errada123"); pg.click("#hEntrar")
+    pg.wait_for_selector("#hErro:not([hidden])")
+    assert pg.inner_text("#hErro") == "E-mail, CPF/CNPJ ou senha inválidos."
+
+    # tela de login: CPF com máscara, mensagem única; entra pelo e-mail
     pg.goto(f"{BASE}/login")
-    pg.fill("#docInput", DOC); pg.fill("#senhaInput", "Errada123"); pg.click("#etapa-login button[type=submit]")
+    pg.fill("#docInput", DOC); assert pg.input_value("#docInput") == "529.982.247-25"
+    pg.fill("#senhaInput", "Errada123"); pg.click("#etapa-login button[type=submit]")
     pg.wait_for_selector("#erro:not([hidden])")
-    assert pg.inner_text("#erro") == "CPF/CNPJ ou senha inválidos."
+    assert pg.inner_text("#erro") == "E-mail, CPF/CNPJ ou senha inválidos."
+    pg.fill("#docInput", "grupo@nexo.local"); assert pg.input_value("#docInput") == "grupo@nexo.local"
     pg.fill("#senhaInput", SENHA); pg.click("#etapa-login button[type=submit]")
-    pg.wait_for_url(f"{BASE}/")
+    pg.wait_for_url(f"{BASE}/app")
     pg.wait_for_selector("#dashKpis .val")
     assert [x.inner_text() for x in pg.locator("#dashKpis .val").all()] == ["160", "40", "12", "9"]
 
@@ -112,13 +126,21 @@ with sync_playwright() as p:
     pg.click("#nav button[data-page=dashboard]"); pg.wait_for_timeout(300)
     assert int(pg.locator("#dashKpis .val").nth(2).inner_text()) > 12   # limiar menor → mais contas em análise
 
+    # "Minha senha": senha atual errada mostra o erro; a troca mantém esta sessão
+    pg.click("#btnSenha"); pg.wait_for_selector("#formSenha")
+    pg.fill("#msAtual", "Errada123"); pg.fill("#msNova", "Nova2026x"); pg.fill("#msConf", "Nova2026x")
+    pg.click("#msSalvar"); pg.wait_for_selector("#msErro:not([hidden])")
+    pg.fill("#msAtual", SENHA); pg.click("#msSalvar")
+    pg.wait_for_selector("#overlay:not(.open)", state="attached"); pg.wait_for_timeout(300)
+    assert "Senha alterada" in pg.inner_text("#toast")
+
     # navegação pelo endereço (#) e saída
-    pg.goto(f"{BASE}/#conta/C017"); pg.wait_for_selector("#page-conta.active #contaHist svg")
+    pg.goto(f"{BASE}/app#conta/C017"); pg.wait_for_selector("#page-conta.active #contaHist svg")
     assert "C017" in pg.inner_text("#contaDetalhe h2")
     pg.click("#btnSair"); pg.wait_for_url(f"{BASE}/login")
     navegador.close()
 
 http.shutdown()
 assert not erros, "\n".join(erros)
-print("TESTES OK: navegador — login, 11 telas (módulos sob demanda), rede, matrizes, validação, simulador, "
-      "período, limiares, tema e navegação.")
+print("TESTES OK: navegador — página inicial, login (e-mail e CPF), 11 telas (módulos sob demanda), rede, matrizes, validação, simulador, "
+      "período, limiares, tema, minha senha e navegação.")

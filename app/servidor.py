@@ -15,11 +15,12 @@ import time
 from collections import defaultdict, deque
 from datetime import timedelta
 from functools import wraps
+from urllib.parse import quote as url_quote
 
 from flask import (Flask, Response, jsonify, redirect, render_template, request,
                    session, url_for)
 
-from app import analises, auth, envio_email
+from app import analises, auth, envio_email, google
 from banco import conexao as db
 from banco import migracoes, repositorio
 from nucleo import analise, configuracao
@@ -119,13 +120,16 @@ def resumo_contas(dados):
 # ---------------------------------------------------------------- sessão e permissões
 
 def usuario_atual():
-    """Relê o usuário do banco a cada pedido: mudança de cargo ou desativação vale na hora."""
+    """Relê o usuário do banco a cada pedido: mudança de cargo, desativação ou troca de
+    senha (versão da sessão) vale na hora."""
     uid = session.get("uid")
-    usuario = auth.publico(auth.buscar_por_id(uid)) if uid else None
-    if usuario and not usuario["ativo"]:
+    linha = auth.buscar_por_id(uid) if uid else None
+    if linha is None:
+        return None
+    if not linha["ativo"] or session.get("v", 0) != auth.versao_sessao(linha):
         session.clear()
         return None
-    return usuario
+    return auth.publico(linha)
 
 
 def exige(permissao):
@@ -154,6 +158,12 @@ def iniciar_sessao(usuario):
     session.clear()
     session.permanent = True
     session["uid"] = usuario["id"]
+    session["v"] = auth.versao_sessao(auth.buscar_por_id(usuario["id"]))
+
+
+def identificador(dados):
+    """E-mail ou CPF/CNPJ informado ("login"; "documento" ainda aceito por compatibilidade)."""
+    return dados.get("login") or dados.get("documento")
 
 
 def corpo():
@@ -193,7 +203,30 @@ def resposta_limite():
 
 # ---------------------------------------------------------------- páginas
 
+_resumo_publico = {}
+
+
+def resumo_publico():
+    """Números da base de demonstração para a página inicial (sem dados de contas)."""
+    if not _resumo_publico:
+        try:
+            calculado, _ = analises.calcular(0, [])
+            _resumo_publico.update(contas=calculado["dashboard"]["total_contas"],
+                                   transacoes=len(calculado["transacoes"]),
+                                   comunidades=len({c["com"] for c in calculado["contas"]}))
+        except Exception:  # noqa: BLE001 — a página inicial abre mesmo sem a base
+            return {}
+    return _resumo_publico
+
+
 @app.get("/")
+def inicio():
+    """Página institucional pública. Quem já entrou vê o atalho para o sistema."""
+    return render_template("inicio.html", usuario=usuario_atual(), google=google.configurado(),
+                           resumo=resumo_publico())
+
+
+@app.get("/app")
 def index():
     if usuario_atual() is None:
         return redirect(url_for("pagina_login"))
@@ -204,7 +237,7 @@ def index():
 def pagina_login():
     if usuario_atual() is not None:
         return redirect(url_for("index"))
-    return render_template("login.html")
+    return render_template("login.html", google=google.configurado())
 
 
 @app.get("/cadastro")
@@ -212,7 +245,7 @@ def pagina_login():
 @app.get("/confirmar")
 def pagina_acesso():
     # mesma página de login; o login.js escolhe a etapa pelo endereço
-    return render_template("login.html")
+    return render_template("login.html", google=google.configurado())
 
 
 @app.get("/favicon.ico")
@@ -241,7 +274,7 @@ def auth_entrar():
         return resposta_limite()
     dados = corpo()
     try:
-        usuario = auth.autenticar(dados.get("documento"), dados.get("senha"), request.remote_addr)
+        usuario = auth.autenticar(identificador(dados), dados.get("senha"), request.remote_addr)
     except auth.EmailNaoConfirmado as erro:
         return jsonify({"erro": str(erro), "codigo": "email_nao_confirmado"}), 403
     except auth.ErroAuth as erro:
@@ -274,7 +307,7 @@ def auth_reenviar_confirmacao():
         return resposta_limite()
     d = corpo()
     try:
-        linha, token = auth.preparar_reenvio_confirmacao(d.get("documento"), d.get("senha"), request.remote_addr)
+        linha, token = auth.preparar_reenvio_confirmacao(identificador(d), d.get("senha"), request.remote_addr)
         envio_email.enviar_confirmacao(linha["email"], linha["nome"], f"{url_base()}/confirmar?token={token}",
                                        auth.VALIDADE_CONFIRMACAO_HORAS)
     except auth.ErroAuth as erro:
@@ -302,7 +335,7 @@ def auth_esqueci():
         return resposta_limite()
     if not envio_email.configurado():
         return erro_auth("O envio de e-mail ainda não foi configurado. Procure o administrador.", 503)
-    linha, token = auth.criar_token_recuperacao(corpo().get("documento"))
+    linha, token = auth.criar_token_recuperacao(identificador(corpo()))
     if linha is not None:
         try:
             envio_email.enviar_recuperacao(linha["email"], linha["nome"], f"{url_base()}/redefinir?token={token}",
@@ -311,7 +344,7 @@ def auth_esqueci():
         except envio_email.ErroEmail as erro:
             auth.registrar("email_falhou", linha["documento"], str(erro), request.remote_addr)
     # mesma resposta exista ou não o cadastro: não revela quem é usuário
-    return jsonify({"mensagem": "Se houver um cadastro ativo com este CPF/CNPJ, enviamos um link para o "
+    return jsonify({"mensagem": "Se houver um cadastro ativo com estes dados, enviamos um link para o "
                                 f"e-mail cadastrado. Ele vale por {auth.VALIDADE_TOKEN_MINUTOS} minutos e só "
                                 "pode ser usado uma vez. Verifique também a caixa de spam."})
 
@@ -345,10 +378,105 @@ def auth_sair():
     return jsonify({"ok": True})
 
 
+@app.post("/auth/alterar-senha")
+@exige("consultar")
+def auth_alterar_senha():
+    """O próprio usuário troca a senha; as outras sessões dele são encerradas."""
+    if excedeu_limite("entrar"):
+        return resposta_limite()
+    d, usuario = corpo(), usuario_atual()
+    try:
+        session["v"] = auth.alterar_minha_senha(usuario["id"], d.get("atual", ""), d.get("nova", ""),
+                                                d.get("confirmacao", ""), request.remote_addr)
+    except auth.ErroAuth as erro:
+        return erro_auth(erro)
+    return jsonify({"ok": True})
+
+
+@app.post("/auth/encerrar-sessoes")
+@exige("consultar")
+def auth_encerrar_sessoes():
+    """Desconecta o usuário dos outros computadores e mantém esta sessão."""
+    usuario = usuario_atual()
+    session["v"] = auth.encerrar_sessoes(usuario["id"], por=usuario["nome"], ip=request.remote_addr)
+    return jsonify({"ok": True})
+
+
+# ---------------------------------------------------------------- entrar com Google
+
+def retorno_google():
+    return f"{url_base()}/auth/google/retorno"
+
+
+@app.get("/auth/google")
+def auth_google():
+    if not google.configurado():
+        return "", 404
+    if excedeu_limite("entrar"):
+        return redirect("/login?erro=" + url_quote("Muitas tentativas a partir deste computador. Aguarde alguns minutos."))
+    destino, pedido = google.iniciar(retorno_google())
+    session["google_pedido"] = pedido
+    return redirect(destino)
+
+
+@app.get("/auth/google/retorno")
+def auth_google_retorno():
+    if not google.configurado():
+        return "", 404
+    pedido = session.pop("google_pedido", None)
+    try:
+        conta = google.concluir(request.args, pedido, retorno_google())
+        usuario = auth.entrar_externo("google", conta["sujeito"], conta["email"], request.remote_addr)
+    except (google.ErroGoogle, auth.ErroAuth) as erro:
+        auth.registrar("login_google_falhou", None, str(erro)[:200], request.remote_addr)
+        return redirect("/login?erro=" + url_quote(str(erro)))
+    if usuario is None:
+        # primeira vez: completa o cadastro (CPF/CNPJ e telefone) sem criar senha
+        session["google_cadastro"] = {**conta, "criado": int(time.time())}
+        return redirect("/cadastro?google=1")
+    iniciar_sessao(usuario)
+    return redirect(url_for("index"))
+
+
+def cadastro_google_pendente():
+    pendente = session.get("google_cadastro")
+    if not pendente or int(time.time()) - pendente["criado"] > google.VALIDADE_PEDIDO_SEGUNDOS:
+        session.pop("google_cadastro", None)
+        return None
+    return pendente
+
+
+@app.get("/auth/google/pendente")
+def auth_google_pendente():
+    pendente = cadastro_google_pendente()
+    if pendente is None:
+        return erro_auth("O tempo para concluir o cadastro com Google acabou. Entre com Google de novo.", 404)
+    return jsonify({"email": pendente["email"], "nome": pendente["nome"]})
+
+
+@app.post("/auth/google/concluir")
+def auth_google_concluir():
+    if excedeu_limite("cadastrar"):
+        return resposta_limite()
+    pendente = cadastro_google_pendente()
+    if pendente is None:
+        return erro_auth("O tempo para concluir o cadastro com Google acabou. Entre com Google de novo.", 400)
+    d = corpo()
+    try:
+        usuario = auth.cadastrar_externo("google", pendente["sujeito"], pendente["email"], d.get("documento"),
+                                         d.get("nome") or pendente["nome"], d.get("telefone"),
+                                         convite=d.get("convite"), ip=request.remote_addr)
+    except auth.ErroAuth as erro:
+        return erro_auth(erro)
+    session.pop("google_cadastro", None)
+    iniciar_sessao(usuario)
+    return jsonify({"usuario": usuario}), 201
+
+
 @app.get("/auth/eu")
 @exige("consultar")
 def auth_eu():
-    return jsonify({"usuario": usuario_atual(), "cargos": auth.CARGOS,
+    return jsonify({"usuario": usuario_atual(), "cargos": auth.CARGOS, "google": google.configurado(),
                     "permissoes": {p: sorted(c) for p, c in auth.PERMISSOES.items()},
                     "email_configurado": envio_email.configurado()})
 
