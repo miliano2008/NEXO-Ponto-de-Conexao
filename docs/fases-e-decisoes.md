@@ -6,7 +6,7 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 | Fase | Tema | Situação |
 |---|---|---|
 | **0** | Reorganização e base técnica: pastas, `.env`, migrações, backup, simulação por usuário, cache, desempenho, frontend em módulos, testes | **Concluída e validada** (na `main`) |
-| **1** | Identidade, login e página institucional: login por e-mail (aceitando CPF/CNPJ na transição), Google opcional, landing page com FAQ, sessão encerrada ao trocar a senha | **Concluída. Aguarda validação** (branch `fase-1`) |
+| **1** | Identidade, login e página institucional: login por e-mail (aceitando CPF/CNPJ na transição), Google opcional, landing page com FAQ, sessão encerrada ao trocar a senha | **Concluída e validada** (pull request para a `main`) |
 | 2 | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | Planejada |
 | 3 | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | Planejada |
 | 4 | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | Planejada |
@@ -17,7 +17,7 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 | # | Assunto | Decisão |
 |---|---|---|
 | D1 | Identificador do login | **E-mail + senha**, com o CPF/CNPJ como dado do cadastro. Na transição, o login aceita os dois (Fase 1) |
-| D2 | Login com Google | Na Fase 1, opcional, possivelmente restrito ao domínio da empresa |
+| D2 | Login com Google | Implementado na Fase 1 como opcional, mas **mantido desligado** por decisão do grupo (sem `GOOGLE_CLIENT_ID`, o botão não aparece). Pode ser ativado depois, sem mudar código |
 | D3 | Quem cria empresas | Cargo "Administrador da plataforma" *(implementação adiada com o multiempresa)* |
 | D4 | Empresas por usuário | Uma *(adiada)* |
 | D5 | CNPJ da empresa | Obrigatório e validado *(adiada)* |
@@ -59,7 +59,13 @@ O que já ficou pronto para facilitar esses itens:
 | Ferramentas | `CONFIGURAR` com seção opcional do Google; `DIAGNOSTICO` mostra se o Google está configurado |
 | Testes | Novo `test_fase1.py` (Google simulado, sem internet); teste no navegador cobre a página inicial, o login por e-mail e "Minha senha" |
 
-**Itens da Fase 1 que dependem de vocês:** criar o projeto no Google Cloud e cadastrar os e-mails de teste (passo a passo em [instalacao-e-uso.md](instalacao-e-uso.md#3b-entrar-com-google-opcional)).
+**Validação do grupo (Fase 1):** foram testados o envio de e-mail, cadastros com diferentes CNPJs, a recuperação de senha por e-mail, a página institucional, a visualização e as abas novas, cargos e permissões, e "Minha senha" / "Desconectar outros computadores".
+
+**Decisões do grupo na validação:**
+
+- **Google:** por enquanto sem acesso pelo Google. Para ativar depois, siga [instalacao-e-uso.md](instalacao-e-uso.md#3b-entrar-com-google-opcional).
+- **Backup do Aiven:** feito e guardado pelo grupo.
+- **Senha do Aiven:** mantida até o fim do projeto, por decisão do grupo, apesar de ter aparecido num print. O `.env` continua sendo compartilhado só por canal privado.
 
 ## Fase 0: o que foi entregue
 | Item planejado | Entrega |

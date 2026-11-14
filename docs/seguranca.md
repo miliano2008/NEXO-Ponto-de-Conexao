@@ -11,7 +11,7 @@
 
 O `.gitignore` já bloqueia todos eles. Compartilhe o `.env` e o `ca.pem` **só por canal privado**, como uma mensagem direta.
 
-> **Pendência:** a senha do Aiven apareceu num print durante o desenvolvimento. Antes da entrega final, use **Reset password** no console do Aiven e atualize o `.env` de cada pessoa com `scripts\CONFIGURAR.bat`.
+> **Decisão do grupo:** a senha do Aiven apareceu num print durante o desenvolvimento e será mantida até o fim do projeto. Se ela for compartilhada fora do grupo, use **Reset password** no console do Aiven e atualize o `.env` de cada pessoa com `scripts\CONFIGURAR.bat` (opção 1).
 
 ## Login e senhas
 - Senhas guardadas só como **hash scrypt** (Werkzeug), nunca em texto puro.
