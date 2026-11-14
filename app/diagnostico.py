@@ -187,8 +187,14 @@ def main():
         if "não configurado" in str(e):
             aviso("E-mail não configurado: cadastros novos não recebem confirmação e 'Esqueci minha senha' não funciona.",
                   "Dois cliques em scripts\\CONFIGURAR.bat → responda 's' em 'Configurar o e-mail'.")
+        elif "fechou a conexão" in str(e) or "conectar ao servidor" in str(e):
+            # rede/antivírus bloqueando: o NEXO funciona normalmente, só sem enviar e-mails
+            aviso(f"{e} O NEXO abre normalmente; só os e-mails não saem desta rede.",
+                  "Teste em outra rede (hotspot do celular). Sem e-mail, o administrador confirma "
+                  "cadastros em Usuários e cargos e troca senhas pelo scripts\\CRIAR_ADMIN.bat.")
         else:
-            erro(str(e), "Dois cliques em scripts\\CONFIGURAR.bat e informe a senha de app de novo (opção 1).")
+            aviso(f"{e} O NEXO abre normalmente; só os e-mails não saem.",
+                  "Dois cliques em scripts\\CONFIGURAR.bat e informe a senha de app de novo (opção 1).")
 
     # 11. Entrar com Google (opcional)
     from app import google
