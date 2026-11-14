@@ -215,4 +215,14 @@ print("ok — Google: vínculo, segunda entrada, state/nonce/PKCE, e-mail não v
 # ------------------------------------------------------------------ 6. senha do Google nunca aparece para o navegador
 for nome in ("inicio.html", "login.html"):
     assert "segredo" not in cliente().get("/" if nome == "inicio.html" else "/login").get_data(as_text=True)
+# ------------------------------------------------------------------ 7. CONFIGURAR com config.ini.bak já existente (erro no Windows)
+from app import configurar  # noqa: E402
+
+pasta = Path(tempfile.mkdtemp())
+for n in range(3):
+    (pasta / "config.ini").write_text(f"[app]\nurl_base = http://127.0.0.1:5000\n; rodada {n}\n")
+    destino = configurar.guardar_config_antigo(pasta / "config.ini")
+    assert not (pasta / "config.ini").exists() and f"rodada {n}" in destino.read_text()
+assert sorted(a.name for a in pasta.iterdir()) == ["config.ini.bak", "config.ini.bak2", "config.ini.bak3"]
+print("ok — CONFIGURAR guarda o config.ini antigo sem apagar cópias anteriores")
 print("TESTES OK: Fase 1 — página institucional, login por e-mail, sessões e Entrar com Google.")
