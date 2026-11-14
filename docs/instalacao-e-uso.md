@@ -55,7 +55,7 @@ Sem e-mail configurado, o administrador pode confirmar os cadastros manualmente 
 | `CONFIGURAR.bat` | Cria ou atualiza o `.env` (Aiven e e-mail) e testa a conexão |
 | `BACKUP.bat` | Cópia de segurança do banco |
 | `MIGRAR_MYSQL.bat` | Envia a base (contas, transações e usuários locais) para o MySQL |
-| `CRIAR_ADMIN.bat` | Cria um administrador ou promove um usuário existente |
+| `CRIAR_ADMIN.bat` | Cria um administrador, promove um usuário existente ou **define uma senha nova** para quem a esqueceu |
 | `TESTAR_EMAIL.bat` | Testa o envio de e-mail |
 | `TESTAR.bat` | Roda todos os testes automáticos |
 
@@ -85,6 +85,7 @@ Rode primeiro o **`scripts\DIAGNOSTICO.bat`**: ele aponta a causa e a correção
 | "O banco está na versão N do esquema, mas este NEXO conhece só até a…" | Um colega já usou uma versão mais nova e o seu código está desatualizado | Atualize o código (`git pull`) |
 | "CPF/CNPJ ou senha inválidos" com usuário criado em outro PC | No modo local, cada PC tem o próprio `nexo.db` | Conecte ao Aiven (os usuários são compartilhados) ou use `CRIAR_ADMIN.bat` |
 | E-mail não chega | SMTP não configurado ou senha comum em vez de senha de app | `scripts\CONFIGURAR.bat` e `scripts\TESTAR_EMAIL.bat`; veja também a caixa de spam |
+| Administrador esqueceu a senha e o e-mail não funciona | O link de recuperação depende do SMTP | `scripts\CRIAR_ADMIN.bat`: informe o CPF/CNPJ, responda `s` em "Definir uma NOVA senha". Também desbloqueia a conta |
 | Página em branco ou sem estilo | Abriu o arquivo HTML direto | Acesse pelo endereço `http://127.0.0.1:...` com o NEXO rodando |
 | Erro ao ler a base | CSV salvo pelo Excel com outro formato | `python -m banco.exportar_excel` regenera os CSVs |
 

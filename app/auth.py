@@ -352,6 +352,20 @@ def redefinir_senha(token, senha, confirmacao, ip=None):
     return publico(usuario)
 
 
+def definir_senha_manual(uid, senha, confirmacao, por):
+    """Troca a senha direto no banco (usado por criar_admin.py, para quem ficou sem acesso).
+    Desbloqueia a conta e fica na auditoria."""
+    if senha != confirmacao:
+        raise ErroAuth("A confirmação não confere com a senha.")
+    validar_senha(senha)
+    with conectar() as c:
+        c.execute("UPDATE usuarios SET senha_hash = ?, tentativas_falhas = 0, bloqueado_ate = NULL WHERE id = ?",
+                  (generate_password_hash(senha), uid))
+    usuario = buscar_por_id(uid)
+    registrar("senha_redefinida", usuario["documento"], f"manual por {por}")
+    return publico(usuario)
+
+
 def criar_token_confirmacao(uid):
     """Link de confirmação de e-mail (24 h). Lança ErroAuth se pedido há menos de 1 min."""
     with conectar() as c:

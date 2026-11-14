@@ -8,7 +8,7 @@ Dois cliques no Windows. Todos os atalhos criam o `.venv` sozinhos se ele ainda 
 | `CONFIGURAR.bat` | Cria/atualiza o `.env` (Aiven e e-mail) e testa | `python -m app.configurar` |
 | `BACKUP.bat` | Cópia de segurança do banco em `banco/dados/backups/` | `python -m banco.backup` |
 | `MIGRAR_MYSQL.bat` | Envia a base para o MySQL (Aiven) | `python -m banco.migrar_mysql` |
-| `CRIAR_ADMIN.bat` | Cria ou promove um administrador | `python -m app.criar_admin` |
+| `CRIAR_ADMIN.bat` | Cria ou promove um administrador; também define senha nova para quem a esqueceu | `python -m app.criar_admin` |
 | `TESTAR_EMAIL.bat` | Envia um e-mail de teste | `python -m app.envio_email` |
 | `TESTAR.bat` | Roda todos os testes | `python -m testes.executar` |
 | `preparar.bat` | Usado pelos outros: encontra o Python, cria o `.venv` e instala as bibliotecas | — |
