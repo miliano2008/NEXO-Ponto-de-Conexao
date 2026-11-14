@@ -7,7 +7,8 @@
 - **Minha senha**: o usuário troca a própria senha dentro do sistema e pode desconectar os outros computadores.
 - **Trocar a senha encerra as outras sessões**, seja pela tela, pelo link do e-mail ou pelo `CRIAR_ADMIN`.
 - **Banco:** migração 4 (`versao_sessao` e `identidades_externas`).
-- **Testes:** novo `test_fase1.py`; teste no navegador ampliado. São 6 conjuntos ao todo.
+- **Testes:** novos `test_fase1.py` e `test_email.py`; teste no navegador ampliado. São 7 conjuntos ao todo.
+- **E-mail:** o login no servidor usa um método só. Antes, quando o Gmail recusava a senha e fechava a conexão, aparecia apenas "Connection unexpectedly closed", com a explicação errada "não é a senha". Agora a mensagem diz o motivo real: senha recusada, tentativas demais ou conexão bloqueada. O `iniciar.bat` também deixou de fazer login no Gmail a cada abertura.
 
 ## 0.4 — Fase 0: reorganização e base técnica (branch `fase-0`)
 **Para quem usa, nada muda na tela.** Por dentro:

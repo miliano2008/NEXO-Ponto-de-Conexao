@@ -181,13 +181,19 @@ def main():
     # 10. E-mail (confirmação de cadastro e "Esqueci minha senha")
     from app import envio_email
     try:
-        c = envio_email.testar_login()
-        ok(f"E-mail: login OK em {c['host']} como {c['usuario'] or '(sem usuário)'}")
+        if RAPIDO:
+            # ao abrir o NEXO só confere a configuração: fazer login no Gmail a cada abertura
+            # soma tentativas e pode levar a um bloqueio temporário ("tentativas demais")
+            c = envio_email.configuracao()
+            ok(f"E-mail configurado ({c['host']}). Para testar o envio: scripts\\TESTAR_EMAIL.bat")
+        else:
+            c = envio_email.testar_login()
+            ok(f"E-mail: login OK em {c['host']} como {c['usuario'] or '(sem usuário)'}")
     except envio_email.ErroEmail as e:
         if "não configurado" in str(e):
             aviso("E-mail não configurado: cadastros novos não recebem confirmação e 'Esqueci minha senha' não funciona.",
                   "Dois cliques em scripts\\CONFIGURAR.bat → responda 's' em 'Configurar o e-mail'.")
-        elif "fechou a conexão" in str(e) or "conectar ao servidor" in str(e):
+        elif "logo no início" in str(e) or "conectar ao servidor" in str(e):
             # rede/antivírus bloqueando: o NEXO funciona normalmente, só sem enviar e-mails
             aviso(f"{e} O NEXO abre normalmente; só os e-mails não saem desta rede.",
                   "Teste em outra rede (hotspot do celular). Sem e-mail, o administrador confirma "

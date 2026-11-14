@@ -110,6 +110,9 @@ Rode primeiro o **`scripts\DIAGNOSTICO.bat`**: ele aponta a causa e a correção
 | "o banco 'nexo' não existe" | Base ainda não enviada | `scripts\MIGRAR_MYSQL.bat` |
 | "O banco está na versão N do esquema, mas este NEXO conhece só até a…" | Um colega já usou uma versão mais nova e o seu código está desatualizado | Atualize o código (`git pull`) |
 | "E-mail, CPF/CNPJ ou senha inválidos" com usuário criado em outro PC | No modo local, cada PC tem o próprio `nexo.db` | Conecte ao Aiven (os usuários são compartilhados) ou use `CRIAR_ADMIN.bat` |
+| "o servidor RECUSOU o usuário ou a senha" (535) | Senha de app errada, apagada (o Google apaga as senhas de app quando a senha da conta muda) ou criada em outro Gmail | Crie uma senha de app nova no mesmo Gmail do `SMTP_USER` e rode `scripts\CONFIGURAR.bat` (opção 1) |
+| "TENTATIVAS DEMAIS" (454) | Muitos testes seguidos com senha errada | Espere cerca de 1 hora sem testar; se continuar, crie uma senha de app nova |
+| "fechou a conexão logo no início" | Porta e segurança trocadas, ou a rede/antivírus bloqueando | 587 + `starttls` (ou 465 + `ssl`); teste no hotspot do celular; desligue a "proteção de e-mail" do antivírus por um minuto |
 | E-mail não chega | SMTP não configurado ou senha comum em vez de senha de app | `scripts\CONFIGURAR.bat` e `scripts\TESTAR_EMAIL.bat`; veja também a caixa de spam |
 | Administrador esqueceu a senha e o e-mail não funciona | O link de recuperação depende do SMTP | `scripts\CRIAR_ADMIN.bat`: informe o CPF/CNPJ, responda `s` em "Definir uma NOVA senha". Também desbloqueia a conta |
 | "redirect_uri_mismatch" ao entrar com Google | O endereço de retorno cadastrado no Google é diferente do usado pelo NEXO | Cadastre exatamente `http://127.0.0.1:5000/auth/google/retorno` e confira o `APP_URL_BASE` no `.env` |
