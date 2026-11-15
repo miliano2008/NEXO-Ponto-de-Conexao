@@ -33,6 +33,7 @@
     <nav class="nav" id="nav">
       <div class="nav-label">Análise</div>
       <button data-page="dashboard" class="active">📊 Dashboard</button>
+      <button data-page="risco">🚩 Painel de risco</button>
       <button data-page="transacoes">💳 Transações</button>
       <button data-page="rede">🕸️ Rede de transações</button>
       <button data-page="contas">🔎 Contas em análise</button>
@@ -62,16 +63,13 @@
       <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Abrir menu">☰</button>
       <div>
         <h2 id="pageTitle">Visão geral</h2>
-        <div class="period">Período analisado: <span id="periodLabel">base completa</span> · <span id="baseLabel">base fictícia do projeto</span></div>
+        <div class="period">Análise: <span id="periodLabel">base completa</span> · <span id="baseLabel">base fictícia do projeto</span><span id="filtrosAviso"></span></div>
       </div>
       <div class="spacer"></div>
-      <div class="field">
-        <select id="periodSelect" aria-label="Filtro de período">
-          <option value="7">Últimos 7 dias</option>
-          <option value="15">Últimos 15 dias</option>
-          <option value="30">Últimos 30 dias</option>
-          <option value="0" selected>Base completa</option>
-        </select>
+      <div class="filtros-wrap">
+        <button class="btn ghost" id="btnFiltros" aria-haspopup="dialog" aria-expanded="false" aria-controls="painelFiltros">
+          📅 Período e filtros <span class="filtros-qtd" id="filtrosQtd" hidden></span></button>
+        <div class="painel-filtros" id="painelFiltros" role="dialog" aria-label="Período e filtros" hidden></div>
       </div>
       <button class="icon-btn" id="btnNotif" aria-label="Notificações">🔔<i class="badge-dot"></i></button>
       <div class="profile-chip"><div class="avatar" id="chipAvatar" style="width:26px;height:26px;font-size:10px">··</div><span id="chipCargo"></span></div>
@@ -108,6 +106,34 @@
         <div class="note mt">O NEXO indica <strong>relevância estrutural</strong> dentro da rede analisada. Um indicador elevado sinaliza que a conta necessita investigação — nunca que houve irregularidade confirmada.</div>
       </section>
 
+      <!-- ---------- PAINEL DE RISCO (Fase 2) ---------- -->
+      <section class="page" id="page-risco">
+        <div class="note" style="margin-bottom:16px"><strong>Indícios, não acusações.</strong> Cada regra mede algo nos dados e mostra a evidência e o limite usado. O resultado é uma <b>prioridade de verificação</b> para a análise humana, nunca prova de irregularidade.</div>
+        <div class="grid g4" id="riscoKpis"></div>
+        <div class="grid g-2-1 mt">
+          <div class="card"><div class="card-head"><div><h3>Indícios por regra</h3><p>Contas em que cada regra encontrou evidência. Clique para filtrar a lista.</p></div></div>
+            <div class="card-body" id="riscoPorRegra"></div></div>
+          <div class="card"><div class="card-head"><div><h3>Prioridade de verificação</h3><p>Soma dos pesos das regras (0 a 100)</p></div></div>
+            <div class="card-body" id="riscoNiveis"></div></div>
+        </div>
+        <div class="card mt">
+          <div class="card-head"><div><h3>Contas priorizadas</h3><p id="riscoSub">Clique numa conta para ver as evidências</p></div>
+            <div class="spacer" style="flex:1"></div><div class="chip-row" id="riscoFiltroRegra"></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Conta</th><th>Prioridade</th><th class="num">Pontos</th><th>Indícios</th><th class="num">Comunidade</th><th>Investigação</th></tr></thead>
+            <tbody id="riscoBody"></tbody></table></div>
+        </div>
+        <div class="grid g2 mt">
+          <div class="card"><div class="card-head"><div><h3>Comunidades</h3><p>Destaque: 2 ou mais contas com prioridade moderada ou alta</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th class="num">Com.</th><th class="num">Contas</th><th>Com prioridade</th><th class="num">Densidade</th><th class="num">Volume interno</th></tr></thead>
+            <tbody id="riscoComBody"></tbody></table></div></div>
+          <div class="card"><div class="card-head"><div><h3>Regras e limites</h3><p>Limites relativos à base: valem para qualquer recorte</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Regra</th><th>Limite</th><th class="num">Peso</th></tr></thead>
+            <tbody id="riscoRegrasBody"></tbody></table></div></div>
+        </div>
+        <p style="font-size:12px;color:var(--ink-3);margin-top:12px">Prioridade: <b>Alta</b> ≥ 60 pontos · <b>Moderada</b> 30–59 · <b>Baixa</b> 1–29. As regras foram conferidas com os cenários planejados na planilha da base (fan-in, fan-out, cadeia, circuitos, hub e pontes).</p>
+      </section>
+
       <!-- ---------- TRANSAÇÕES ---------- -->
       <section class="page" id="page-transacoes">
         <div class="card">
@@ -120,7 +146,8 @@
             <div class="field"><label for="txStatus">Status</label><select id="txStatus">
               <option value="">Todos</option><option>Normal</option><option>Em análise</option><option>Alta relevância</option></select></div>
             <div class="field"><label for="txTipo">Tipo</label><select id="txTipo"></select></div>
-            <div class="field"><label for="txMin">Valor mínimo (R$)</label><input type="number" id="txMin" placeholder="0" style="width:130px"></div>
+            <div class="field"><label for="txCom">Comunidade</label><select id="txCom"></select></div>
+            <div class="field"><label for="txMin">Valor mínimo (R$)</label><input id="txMin" inputmode="numeric" placeholder="0,00" style="width:130px"></div>
             <div class="field"><label>&nbsp;</label><button class="btn ghost" id="txReset">Limpar filtros</button></div>
           </div>
           <div class="table-wrap"><table>
@@ -212,10 +239,12 @@
               <div class="field"><label for="fCom">Comunidade</label><select id="fCom"></select></div>
               <div class="field"><label for="fStat">Status</label><select id="fStat">
                 <option value="">Todos</option><option>Alta relevância</option><option>Em análise</option><option>Revisar</option><option>Normal</option></select></div>
+              <div class="field"><label for="fRisco">Prioridade de risco</label><select id="fRisco">
+                <option value="">Todas</option><option>Alta</option><option>Moderada</option><option>Baixa</option><option>Sem indícios</option></select></div>
             </div>
           </div>
           <div class="table-wrap"><table>
-            <thead><tr><th>#</th><th>Conta</th><th class="num">Score NEXO*</th><th class="num">Degree</th><th class="num">In / Out</th><th class="num">Betweenness</th><th class="num">Closeness</th><th class="num">Flow</th><th class="num">Imbalance</th><th class="num">Comunidade</th><th>Status</th></tr></thead>
+            <thead id="contasHead"><tr><th class="ordenavel" data-ordem="ranking">#</th><th class="ordenavel" data-ordem="id">Conta</th><th class="num ordenavel" data-ordem="score">Score NEXO*</th><th class="num ordenavel" data-ordem="degree">Degree</th><th class="num ordenavel" data-ordem="inDeg">In / Out</th><th class="num ordenavel" data-ordem="betw">Betweenness</th><th class="num ordenavel" data-ordem="close">Closeness</th><th class="num ordenavel" data-ordem="flow">Flow</th><th class="num ordenavel" data-ordem="imbalance">Imbalance</th><th class="num ordenavel" data-ordem="com">Comunidade</th><th class="ordenavel" data-ordem="score">Status</th><th class="num ordenavel" data-ordem="risco">Risco</th><th class="ordenavel" data-ordem="investigacao">Investigação</th></tr></thead>
             <tbody id="contasBody"></tbody>
           </table></div>
         </div>
@@ -236,7 +265,7 @@
               <form id="simForm" class="form-grid" autocomplete="off">
                 <div class="field"><label for="simDe">Conta de origem</label><select id="simDe" required></select></div>
                 <div class="field"><label for="simPara">Conta de destino</label><select id="simPara" required></select></div>
-                <div class="field"><label for="simValor">Valor (R$)</label><input type="number" id="simValor" min="0.01" step="0.01" required placeholder="ex.: 15000"></div>
+                <div class="field"><label for="simValor">Valor (R$)</label><input id="simValor" inputmode="numeric" required placeholder="0,00" autocomplete="off"></div>
                 <div class="field"><label for="simData">Data</label><input type="date" id="simData" required></div>
                 <div class="field"><label for="simHora">Hora</label><input type="time" id="simHora" required value="12:00"></div>
                 <div class="field"><label for="simTipo">Tipo</label><select id="simTipo"></select></div>

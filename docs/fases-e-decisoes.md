@@ -6,8 +6,8 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 | Fase | Tema | Situação |
 |---|---|---|
 | **0** | Reorganização e base técnica: pastas, `.env`, migrações, backup, simulação por usuário, cache, desempenho, frontend em módulos, testes | **Concluída e validada** (na `main`) |
-| **1** | Identidade, login e página institucional: login por e-mail (aceitando CPF/CNPJ na transição), Google opcional, landing page com FAQ, sessão encerrada ao trocar a senha | **Concluída e validada** (pull request para a `main`) |
-| 2 | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | Planejada |
+| **1** | Identidade, login e página institucional: login por e-mail (aceitando CPF/CNPJ na transição), Google opcional, landing page com FAQ, sessão encerrada ao trocar a senha | **Concluída e validada** (na `main`) |
+| **2** | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | **Concluída e validada** (pull request para a `main`) |
 | 3 | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | Planejada |
 | 4 | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | Planejada |
 | 5 | Relatórios e configurações: exportação em **PDF, Excel, CSV, Word e PowerPoint**, com gráficos de verdade, não capturas de tela | Planejada |
@@ -46,6 +46,29 @@ O que já ficou pronto para facilitar esses itens:
 - configuração por variáveis de ambiente (`.env`), exigida pelas hospedagens;
 - simulações guardadas no banco, porque hospedagens reiniciam a máquina;
 - migrações numeradas com backup, que tornam segura a troca de chaves do multiempresa.
+
+## Fase 2: o que foi entregue
+| Item planejado | Entrega |
+|---|---|
+| Dashboard de risco | Nova tela **Painel de risco**: 10 regras explicáveis com evidência, limite e peso; prioridade de verificação (Alta, Moderada, Baixa); contas priorizadas com as evidências; comunidades em destaque; tabela de regras e limites. Linguagem de "indícios", nunca "fraude" |
+| Regras validadas | Todas as regras encontram os cenários planejados na aba *Leia-me* da planilha (ver [matematica.md](matematica.md), seção 9) |
+| Filtros dinâmicos | Painel **Período e filtros**. *Recorte* (recalcula a rede): período, tipos, faixa de valor. *Mostrar somente*: origem, destino, comunidade, prioridade, status, investigação, mínimo de transações. Dashboard, Painel de risco, Transações e Contas respondem aos filtros |
+| Calendário | Atalhos (base completa, últimos 7/15/30 dias, cada mês), data inicial e final, dia específico |
+| Status da investigação | Não iniciada → Em análise / Investigada / Sem indício / Encaminhada, com comentário obrigatório, responsável, histórico e auditoria. Analista e Administrador registram; os outros cargos consultam |
+| Valor em R$ | Máscara no simulador e nos filtros de valor (`4500000` vira `45.000,00`); o servidor continua validando em centavos |
+| Filtro de comunidades | Novo filtro na tela Transações (e no painel global) |
+| Contas em análise | Ordenação por qualquer coluna (crescente ou decrescente), colunas de risco e investigação, filtro por prioridade. O detalhe da conta mostra os indícios e a investigação |
+| Banco | Migração 5: `casos` e `casos_historico` |
+| Desempenho | 300 transações: análise completa com as regras em cerca de 35 ms |
+
+**Validação do grupo (Fase 2):** foram testados o Painel de risco (evidências de C001 e C016, filtro "Circuito recorrente" com os dois ciclos da planilha), o período pelo calendário (agosto) e o registro de investigação.
+
+**Ficaram para as fases seguintes, como no plano:**
+
+- exportação em PDF, Excel, CSV, Word e PowerPoint: Fase 5;
+- edição dos limites das regras pela tela: Fase 5, Configurações;
+- modalidades PIX, TED e transferência com regras e dados bancários fictícios: Fase 4, Simulador;
+- comparação lado a lado entre períodos: Fase 4.
 
 ## Fase 1: o que foi entregue
 | Item planejado | Entrega |

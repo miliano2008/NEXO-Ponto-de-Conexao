@@ -1,7 +1,8 @@
 /* NEXO — tela Transações: busca, filtros, paginação e detalhe de cada transação. */
 import {estado} from "../nucleo/estado.js";
+import {transacoesVisiveis} from "../nucleo/filtros.js";
 import {ui} from "../nucleo/ui.js";
-import {el, esc, fmtBRL, fmtData, fmtNum, pill} from "../nucleo/utilidades.js";
+import {el, esc, fmtBRL, fmtData, fmtNum, lerBRL, mascararCampoBRL, pill} from "../nucleo/utilidades.js";
 
 const porPagina = 12;
 let pagina = 1, ligado = false;
@@ -9,8 +10,10 @@ let pagina = 1, ligado = false;
 function filtrar(){
   const busca = el("txSearch").value.trim().toUpperCase();
   const conta = el("txConta").value, status = el("txStatus").value;
-  const tipo = el("txTipo").value, min = parseFloat(el("txMin").value) || 0;
-  return estado.dados.transacoes.filter(t =>
+  const tipo = el("txTipo").value, min = lerBRL(el("txMin").value) || 0, com = el("txCom").value;
+  const por = estado.porId;
+  return transacoesVisiveis().filter(t =>
+    (!com || String(por[t.de].com)===com || String(por[t.para].com)===com) &&
     (!busca || t.id.includes(busca) || t.de.includes(busca) || t.para.includes(busca)) &&
     (!conta || t.de===conta || t.para===conta) &&
     (!status || t.status===status) &&
@@ -28,7 +31,7 @@ function render(){
   el("txBody").innerHTML = fatia.length ? fatia.map(t=>`
     <tr class="clickable" data-tx="${t.id}">
       <td class="mono-id">${t.id} ${t.simulada?'<span class="chip sim">simulada</span>':""}</td><td>${fmtData(t.data)} ${t.hora}</td>
-      <td>${t.de}</td><td>${t.para}</td><td class="num">${fmtBRL(t.valor)}</td>
+      <td>${t.de}</td><td>${t.para}</td><td class="num">${fmtBRL(t.valor)}${t.atipica?' <span class="chip" title="Acima do percentil 95 dos valores do recorte">atípico</span>':""}</td>
       <td>${esc(t.tipo)}</td><td>${pill(t.status)}</td></tr>`).join("")
     : `<tr><td colspan="7" class="empty">Nenhuma transação atende a esses filtros. Ajuste a busca ou limpe os filtros.</td></tr>`;
 
@@ -56,6 +59,8 @@ function detalhe(id){
       <dt>Hora</dt><dd>${t.hora}</dd>
       <dt>Tipo</dt><dd>${esc(t.tipo)}</dd>
       <dt>Status</dt><dd>${pill(t.status)}</dd>
+      <dt>Comunidades</dt><dd>${estado.porId[t.de].com} → ${estado.porId[t.para].com}</dd>
+      ${t.atipica ? `<dt>Valor</dt><dd><span class="chip">atípico</span> acima do percentil 95 dos valores do recorte</dd>` : ""}
     </dl>
     <p style="font-size:12px;color:var(--ink-3)">O status da transação herda a maior classificação das duas contas; não indica irregularidade da operação.</p>
     <h4 style="margin:18px 0 8px;font-size:13.5px">Conexões relacionadas (${relacionadas.length})</h4>
@@ -71,12 +76,16 @@ function init(){
   const tipos = [...new Set(estado.dados.transacoes.map(t=>t.tipo))].sort();
   el("txTipo").innerHTML = `<option value="">Todos</option>` + tipos.map(t=>`<option>${esc(t)}</option>`).join("");
   el("txConta").value = contaSel; el("txTipo").value = tipos.includes(tipoSel) ? tipoSel : "";
+  const comSel = el("txCom").value;
+  el("txCom").innerHTML = `<option value="">Todas</option>` + estado.dados.comunidades.map(c=>`<option value="${c.id}">Comunidade ${c.id}</option>`).join("");
+  el("txCom").value = estado.dados.comunidades.some(c=>String(c.id)===comSel) ? comSel : "";
   if(!ligado){
     ligado = true;
-    ["txSearch","txConta","txStatus","txTipo","txMin"].forEach(id =>
+    mascararCampoBRL(el("txMin"));
+    ["txSearch","txConta","txStatus","txTipo","txMin","txCom"].forEach(id =>
       el(id).addEventListener("input", ()=>{ pagina=1; render(); }));
     el("txReset").addEventListener("click", ()=>{
-      ["txSearch","txMin","txConta","txStatus","txTipo"].forEach(id=>el(id).value="");
+      ["txSearch","txMin","txConta","txStatus","txTipo","txCom"].forEach(id=>el(id).value="");
       pagina=1; render();
     });
     el("txPager").addEventListener("click", e=>{
@@ -92,3 +101,5 @@ function init(){
 
 export const atualizar = init;
 export const reclassificar = render;
+function aoFiltrar(){ pagina = 1; render(); }
+export {aoFiltrar as filtrar};

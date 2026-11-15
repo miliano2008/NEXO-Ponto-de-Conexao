@@ -3,9 +3,10 @@
 import {api} from "../nucleo/api.js";
 import {carregar} from "../nucleo/dados.js";
 import {estado} from "../nucleo/estado.js";
+import {consulta} from "../nucleo/filtros.js";
 import {irPara} from "../nucleo/roteador.js";
 import {ui} from "../nucleo/ui.js";
-import {el, esc, fmtBRL, fmtData, fmtNum, pill} from "../nucleo/utilidades.js";
+import {el, esc, fmtBRL, fmtData, fmtNum, lerBRL, mascararCampoBRL, pill, valorParaCampo} from "../nucleo/utilidades.js";
 
 let verTodas = false;
 
@@ -28,7 +29,7 @@ function render(){
       <dt>Comunidades / modularidade</dt><dd>${d.dashboard.total_comunidades} · ${fmtNum(d.dashboard.modularidade_louvain,3)}</dd>
       <dt>Líder do ranking</dt><dd><a href="#" data-conta="${d.contas[0].id}" class="mono-id">${d.contas[0].id}</a> · score ${fmtNum(d.contas[0].score,1)}</dd>
     </dl>
-    <a class="btn ghost sm" style="display:inline-block;margin-top:14px;text-decoration:none" href="/api/exportar?dias=${estado.periodo}">Baixar resultados (JSON)</a>`;
+    <a class="btn ghost sm" style="display:inline-block;margin-top:14px;text-decoration:none" href="/api/exportar?${consulta()}">Baixar resultados (JSON)</a>`;
 
   el("simLista").innerHTML = sim.lista_simuladas.length ? sim.lista_simuladas.map(s=>`
     <tr><td class="mono-id">${s.id_transacao}</td><td>${fmtData(s.data)} ${esc(s.hora)}</td>
@@ -61,7 +62,9 @@ function renderImpacto(){
 
 async function enviar(e){
   e.preventDefault();
-  const corpo = {de:el("simDe").value, para:el("simPara").value, valor:el("simValor").value,
+  const valor = lerBRL(el("simValor").value);
+  if(!valor){ ui.toast("Informe um valor maior que zero.", true); el("simValor").focus(); return; }
+  const corpo = {de:el("simDe").value, para:el("simPara").value, valor:valor.toFixed(2),
                  data:el("simData").value, hora:el("simHora").value, tipo:el("simTipo").value};
   if(corpo.de===corpo.para){ ui.toast("Origem e destino precisam ser contas diferentes.", true); return; }
   el("simEnviar").disabled = true;
@@ -83,7 +86,7 @@ function aleatoria(){
   const de = ids[Math.floor(Math.random()*ids.length)];
   let para; do { para = ids[Math.floor(Math.random()*ids.length)]; } while(para===de);
   el("simDe").value = de; el("simPara").value = para;
-  el("simValor").value = (500 + Math.random()*29500).toFixed(2);
+  el("simValor").value = valorParaCampo(500 + Math.random()*29500);
   el("simData").value = estado.dados.simulacao.data_referencia;
   el("simHora").value = `${String(Math.floor(Math.random()*24)).padStart(2,"0")}:${String(Math.floor(Math.random()*60)).padStart(2,"0")}`;
   const tipos = estado.dados.simulacao.tipos_transacao;
@@ -106,6 +109,7 @@ async function restaurar(){
 
 export function iniciar(){
   el("simForm").addEventListener("submit", enviar);
+  mascararCampoBRL(el("simValor"));   // digita só números: "4500000" vira 45.000,00
   el("simAleatoria").addEventListener("click", aleatoria);
   el("simRestaurar").addEventListener("click", restaurar);
   el("simVerRede").addEventListener("click", ()=>irPara("rede"));

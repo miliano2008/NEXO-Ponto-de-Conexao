@@ -13,8 +13,10 @@ from decimal import Decimal, InvalidOperation
 import networkx as nx
 import numpy as np
 
+from nucleo.risco import avaliar as avaliar_risco
+
 # Muda quando a matemática muda: resultados guardados de versões antigas são recalculados.
-VERSAO_MOTOR = "1.0"
+VERSAO_MOTOR = "2.0"  # 2.0: indícios de risco (nucleo/risco.py)
 
 # PROPOSTA de teste do guia matemático, NÃO fórmula aprovada pela equipe.
 PESOS = {"degree": 0.15, "betweenness": 0.25, "closeness": 0.10,
@@ -279,12 +281,19 @@ def calcular(contas_origem, transacoes):
     ranking = score_e_ranking(contas_origem, metricas, espectral)
     por_id = {c["id"]: c for c in ranking}
     padroes = detectar_padroes(grafo, ranking)
+    risco = avaliar_risco(ranking, transacoes)
+    for conta in ranking:
+        r = risco["contas"][conta["id"]]
+        conta["risco"], conta["nivel_risco"] = r["pontos"], r["nivel"]
+        conta["indicios"] = [i["regra"] for i in r["indicios"]]
+    atipicas = set(risco["transacoes_atipicas"])
 
     # Cada transação é preservada; a indicação de status usa a maior
     # classificação das DUAS CONTAS, não prova nada sobre a transação.
     for t in transacoes:
         nota = max(por_id[t["de"]]["score"], por_id[t["para"]]["score"])
         t["status"] = "Alta relevância" if nota >= LIMIAR_ALTA else "Em análise" if nota >= LIMIAR_ANALISE else "Normal"
+        t["atipica"] = t["id"] in atipicas
         del t["centavos"]
 
     resumo_comunidades = []
@@ -334,6 +343,7 @@ def calcular(contas_origem, transacoes):
         "espectral": espectral,
         "comunidades": resumo_comunidades,
         "padroes": padroes,
+        "risco": risco,
         "observacoes": [
             "Dados ficticios e resultados de natureza academica.",
             "Comunidades reais do Louvain podem ser diferentes das comunidades planejadas no Excel ou simuladas no HTML.",

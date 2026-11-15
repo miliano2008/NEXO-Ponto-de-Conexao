@@ -19,9 +19,11 @@ js/
 │   ├── graficos.js    gráficos em SVG próprio (barras, linhas, rosca), sem biblioteca
 │   ├── ui.js          modal, painel lateral (drawer) e avisos (toast)
 │   ├── minha-senha.js janela "Minha senha" (trocar a senha, desconectar outros computadores); baixada só ao clicar
+│   ├── filtros.js     filtros globais em duas camadas: recorte (recalcula) e visualização (não recalcula)
+│   ├── painel-filtros.js painel "Período e filtros": calendário, atalhos, tipos, faixa de valor e "mostrar somente"
 │   └── roteador.js    navegação por #endereço e carregamento sob demanda das telas
 └── paginas/           uma tela por arquivo
-    dashboard · transacoes · rede · contas · conta · simulador · relatorios
+    dashboard · risco · transacoes · rede · contas · conta · simulador · relatorios
     arquitetura · config · usuarios · auditoria
 ```
 
@@ -44,6 +46,13 @@ As telas **não chamam umas às outras**: avisam por eventos.
 | `reclassificado` | Configurações (limiares) | roteador → `reclassificar()` |
 | `tema` | Configurações (claro/escuro) | Rede (redesenha o grafo) |
 | `rotulos` | Configurações (nomes no grafo) | Rede |
+| `filtros` | Painel "Período e filtros" (filtros de visualização) | roteador → `filtrar()` (ou `atualizar()`) das telas abertas |
+| `casos` | Detalhe da conta (decisão registrada) | roteador → `casos()`: Painel de risco e Contas atualizam a coluna Investigação |
+
+## Filtros (Fase 2)
+- **Recorte** (`estado.recorte`): período (atalhos, data inicial e final, dia específico), tipos e faixa de valor. Mudou: nova análise em `/api/resultados?...` (cache por assinatura no servidor).
+- **Visualização** (`estado.filtros`): conta de origem e de destino, comunidade, prioridade de risco, status de relevância, investigação e mínimo de transações. Mudou: evento `filtros`, sem chamar o servidor. Use `contasVisiveis()` e `transacoesVisiveis()` de `filtros.js` nas telas.
+- **Valores em R$:** `mascararCampoBRL(input)` e `lerBRL(texto)` em `utilidades.js`. A pessoa digita só números (`4500000` vira `45.000,00`).
 
 ## Atributos de navegação (em qualquer HTML gerado)
 - `data-conta="C025"` abre o detalhe da conta.

@@ -10,6 +10,7 @@ import {api} from "./nucleo/api.js";
 import {carregar} from "./nucleo/dados.js";
 import {estado} from "./nucleo/estado.js";
 import {irPara, rotaAtual} from "./nucleo/roteador.js";
+import {alternar as alternarFiltros, atualizarIndicador} from "./nucleo/painel-filtros.js";
 import {carregarUsuario} from "./nucleo/sessao.js";
 import {ui} from "./nucleo/ui.js";
 import {el, esc, fmtNum} from "./nucleo/utilidades.js";
@@ -34,11 +35,7 @@ async function init(){
   });
   window.addEventListener("popstate", rotaAtual);
 
-  el("periodSelect").addEventListener("change", async e=>{
-    estado.periodo = +e.target.value;
-    el("periodLabel").textContent = estado.periodo ? `últimos ${estado.periodo} dias` : "base completa";
-    try{ await carregar(); } catch(err){ ui.toast(esc(err.message), true); }
-  });
+  el("btnFiltros").addEventListener("click", alternarFiltros);
 
   el("btnNotif").addEventListener("click", ()=>{
     const alerta = estado.dados.contas.filter(c=>c.status==="Alta relevância"||c.status==="Em análise").slice(0,5);
@@ -59,6 +56,7 @@ async function init(){
   try{
     await carregarUsuario();
     await carregar();
+    atualizarIndicador();
     await rotaAtual();
   } catch(err){
     el("sysStatus").textContent = "Backend indisponível";

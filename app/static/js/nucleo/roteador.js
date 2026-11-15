@@ -13,7 +13,7 @@ import {ui} from "./ui.js";
 import {el} from "./utilidades.js";
 
 const TITULOS = {
-  dashboard:"Visão geral", transacoes:"Transações", rede:"Rede de transações",
+  dashboard:"Visão geral", risco:"Painel de risco", transacoes:"Transações", rede:"Rede de transações",
   contas:"Contas em análise", conta:"Detalhes da conta", simulador:"Simulador de transações",
   relatorios:"Relatórios", arquitetura:"Arquitetura do sistema", config:"Configurações",
   usuarios:"Usuários e cargos", auditoria:"Auditoria de acessos"
@@ -21,6 +21,7 @@ const TITULOS = {
 
 const MODULOS = {
   dashboard:   () => import("../paginas/dashboard.js"),
+  risco:       () => import("../paginas/risco.js"),
   transacoes:  () => import("../paginas/transacoes.js"),
   rede:        () => import("../paginas/rede.js"),
   contas:      () => import("../paginas/contas.js"),
@@ -47,6 +48,10 @@ function modulo(nome){
 
 ouvir("dados", () => Object.values(carregados).forEach(m => m.atualizar?.()));
 ouvir("reclassificado", () => Object.values(carregados).forEach(m => m.reclassificar?.()));
+// filtros de visualização: as telas já carregadas redesenham com os dados atuais (sem nova análise)
+ouvir("filtros", () => Object.values(carregados).forEach(m => (m.filtrar || m.atualizar)?.()));
+// situação da investigação mudou: telas que mostram a situação redesenham
+ouvir("casos", () => Object.values(carregados).forEach(m => m.casos?.()));
 
 export async function irPara(pagina, param){
   if(!TITULOS[pagina]) pagina = "dashboard";

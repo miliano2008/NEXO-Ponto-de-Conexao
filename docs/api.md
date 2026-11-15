@@ -60,12 +60,15 @@ Só funciona com `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env`; sem eles
 ## Análise
 | Método e rota | Permissão | Uso |
 |---|---|---|
-| `GET /api/resultados?dias=N` | consultar | Análise completa **sem** as matrizes n×n. `dias=0` = base completa; 7, 15 ou 30 = últimos N dias a partir da data mais recente. Inclui a simulação do usuário |
-| `GET /api/matrizes?dias=N` | consultar | Matrizes A, W, D, L e versões simétricas. Carregada só quando a aba Matrizes é aberta |
+| `GET /api/resultados?...` | consultar | Análise completa **sem** as matrizes n×n, já com o bloco `risco` (indícios, regras, comunidades). Recorte opcional (recalcula a rede): `dias=N` (últimos N dias), **ou** `inicio`/`fim` (AAAA-MM-DD; dia específico = mesmo valor), `tipos=PIX,TED`, `valor_min`, `valor_max`. Recorte inválido ou sem transações: `400` com a mensagem. Inclui a simulação do usuário |
+| `GET /api/matrizes?...` | consultar | Matrizes A, W, D, L e versões simétricas. Carregada só quando a aba Matrizes é aberta |
 | `POST /api/transacoes` | simular | `{de, para, valor, data, hora, tipo}`. Valida, grava na simulação **do usuário** e devolve `{transacao, impacto}` (score, status e comunidade antes e depois) |
 | `DELETE /api/transacoes/<id>` | simular | Remove uma transação simulada (`S0001`…). A base oficial é protegida: `404` |
 | `POST /api/simulacao/restaurar` | simular | Apaga todas as transações simuladas do usuário |
-| `GET /api/exportar?dias=N` | exportar | Baixa o JSON completo, com as matrizes |
+| `GET /api/exportar?...` | exportar | Baixa o JSON completo, com as matrizes, no mesmo recorte |
+| `GET /api/casos` | consultar | Situação da investigação de cada conta com registro, e a lista de situações |
+| `GET /api/casos/<conta>` | consultar | Situação atual e histórico (quem, quando, de → para, comentário) |
+| `POST /api/casos/<conta>` | investigar | `situacao` (`em_analise`, `investigada`, `sem_indicio`, `encaminhada`) e `comentario` obrigatório (mínimo de 5 caracteres). Vai para a auditoria |
 
 ### Campos acrescentados em `/api/resultados` na versão 0.4
 - `analise`: `{id, assinatura, versao_motor, duracao_ms, origem}`. `origem` é "cálculo" ou "memória"; `id` é o número da análise guardada na tabela `analises`, quando não há simulação.
@@ -78,6 +81,7 @@ Só funciona com `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env`; sem eles
 | relatorios, exportar | ✓ | ✓ | ✓ | — |
 | simular | ✓ | ✓ | — | — |
 | configurar | ✓ | ✓ | — | — |
+| investigar (mudar a situação da investigação) | ✓ | ✓ | — | — |
 | ver_auditoria | ✓ | — | ✓ | — |
 | gerenciar_usuarios | ✓ | — | — | — |
 

@@ -47,6 +47,7 @@ PERMISSOES = {
     "exportar":           {"administrador", "analista", "auditor"},
     "simular":            {"administrador", "analista"},
     "configurar":         {"administrador", "analista"},
+    "investigar":         {"administrador", "analista"},   # mudar a situação da investigação
     "ver_auditoria":      {"administrador", "auditor"},
     "gerenciar_usuarios": {"administrador"},
 }

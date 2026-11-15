@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.6 — Fase 2: análise e inteligência (branch `fase-2`)
+- **Painel de risco**: 10 regras explicáveis (volume atípico, repasse rápido, cadeia de repasse, circuito recorrente, fan-in, fan-out, intermediação, ponte entre comunidades, concentração no tempo e valor atípico), cada uma com evidência, limite e peso. Prioridade de verificação (Alta, Moderada, Baixa) e comunidades em destaque. As regras foram conferidas com o gabarito da planilha.
+- **Período e filtros**: calendário (atalhos, mês, data inicial e final, dia específico), tipos e faixa de valor recalculam a rede. Filtros de visualização (origem, destino, comunidade, prioridade, status, investigação, mínimo de transações) valem no Dashboard, no Painel de risco, em Transações e em Contas.
+- **Investigação**: situação por conta, com comentário obrigatório, histórico e auditoria.
+- **Contas em análise**: ordenação por qualquer coluna, colunas de risco e investigação. O detalhe da conta mostra os indícios e a investigação.
+- **Valores em R$** com máscara; filtro de comunidade em Transações; marca de valor atípico.
+- **Banco:** migração 5 (`casos`, `casos_historico`). **Motor:** versão 2.0.
+- **Testes:** novo `test_fase2.py` (gabarito, regras, recorte, investigação, 300 transações); teste no navegador ampliado. São 8 conjuntos.
+
 ## 0.5 — Fase 1: identidade, login e página institucional (branch `fase-1`)
 - **Página institucional** em `/`, pública, com acesso rápido no banner, como funciona, recursos, segurança, FAQ e rodapé. O sistema passou para **`/app`**.
 - **Login por e-mail ou CPF/CNPJ** no mesmo campo. Mensagem única: "E-mail, CPF/CNPJ ou senha inválidos." "Esqueci minha senha" também aceita o e-mail.

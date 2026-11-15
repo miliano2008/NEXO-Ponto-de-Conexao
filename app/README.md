@@ -7,6 +7,7 @@
 | `servidor.py` | Flask: páginas, rotas `/auth/*` e `/api/*`, permissões por cargo, anti-CSRF, limite por IP e compressão gzip |
 | `analises.py` | Base atual (relida a cada 60 s), cache de resultados por assinatura e rastreabilidade das análises |
 | `auth.py` | Usuários, login por e-mail ou CPF/CNPJ, senhas (scrypt), versão da sessão, cargos e permissões, convites, links por e-mail, contas externas e auditoria |
+| `casos.py` | Investigação (Fase 2): situação de cada conta, comentário obrigatório, histórico e auditoria |
 | `google.py` | "Entrar com Google" (OpenID Connect com PKCE), sem biblioteca extra. Só ativo com `GOOGLE_CLIENT_ID` no `.env` |
 | `envio_email.py` | Envio SMTP dos e-mails de confirmação e recuperação. `python -m app.envio_email` testa o envio |
 | `configurar.py` | Assistente que cria o `.env` (Aiven e e-mail) e testa a conexão. `scripts\CONFIGURAR.bat` |

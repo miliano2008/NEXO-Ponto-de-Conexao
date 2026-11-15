@@ -281,11 +281,63 @@ CREATE TABLE IF NOT EXISTS identidades_externas (
 CREATE INDEX IF NOT EXISTS ix_identidade_usuario ON identidades_externas (usuario_id)""")
 
 
+# ---------------------------------------------------------------- 5. investigação
+
+def m5_casos(c, mysql):
+    """Fase 2: situação da investigação de cada conta e o histórico de cada decisão."""
+    if mysql:
+        c.executar_script("""
+CREATE TABLE IF NOT EXISTS casos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    conta_id VARCHAR(10) NOT NULL UNIQUE,
+    situacao VARCHAR(20) NOT NULL,
+    responsavel_id INT NULL,
+    criado_em DATETIME NOT NULL,
+    atualizado_em DATETIME NOT NULL,
+    CONSTRAINT fk_caso_responsavel FOREIGN KEY (responsavel_id) REFERENCES usuarios(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS casos_historico (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    caso_id INT NOT NULL,
+    situacao_anterior VARCHAR(20) NULL,
+    situacao_nova VARCHAR(20) NOT NULL,
+    comentario VARCHAR(500) NOT NULL,
+    usuario_id INT NULL,
+    usuario_nome VARCHAR(150) NOT NULL,
+    criado_em DATETIME NOT NULL,
+    INDEX ix_historico_caso (caso_id),
+    CONSTRAINT fk_historico_caso FOREIGN KEY (caso_id) REFERENCES casos(id) ON DELETE CASCADE,
+    CONSTRAINT fk_historico_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+    else:
+        c.executar_script("""
+CREATE TABLE IF NOT EXISTS casos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conta_id TEXT NOT NULL UNIQUE,
+    situacao TEXT NOT NULL,
+    responsavel_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+    criado_em TEXT NOT NULL,
+    atualizado_em TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS casos_historico (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    caso_id INTEGER NOT NULL REFERENCES casos(id) ON DELETE CASCADE,
+    situacao_anterior TEXT,
+    situacao_nova TEXT NOT NULL,
+    comentario TEXT NOT NULL,
+    usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+    usuario_nome TEXT NOT NULL,
+    criado_em TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_historico_caso ON casos_historico (caso_id)""")
+
+
 MIGRACOES = [
     (1, "Acesso: usuários, links por e-mail, convites e auditoria", m1_acesso),
     (2, "Simulações por usuário", m2_simulacoes),
     (3, "Análises guardadas e rastreáveis", m3_analises),
     (4, "Versão da sessão e contas externas (Google)", m4_sessoes_e_identidades),
+    (5, "Investigação: situação e histórico por conta", m5_casos),
 ]
 VERSAO_ATUAL = MIGRACOES[-1][0]
 

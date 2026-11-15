@@ -22,6 +22,8 @@ O PyMySQL foi escolhido em vez do `mysql-connector-python` por ser escrito só e
 | `simulacoes` | migração 2 | um rascunho por usuário (usuario_id → usuarios, apagado em cascata) |
 | `simulacao_transacoes` | migração 2 | transações simuladas, com (simulacao_id, id_transacao) único, valor > 0 e origem ≠ destino |
 | `identidades_externas` | migração 4 | contas externas vinculadas a um usuário: provedor (`google`; Microsoft no futuro), identificador da conta no provedor (`sujeito`), e-mail, datas. (provedor, sujeito) é único |
+| `casos` | migração 5 | situação da investigação por conta (única), responsável e datas |
+| `casos_historico` | migração 5 | cada decisão: situação anterior e nova, comentário, usuário e data |
 | `analises` | migração 3 | assinatura (única), base, período, versão do motor, contagens, tempo de cálculo, resultado compactado (zlib), datas de criação e último uso |
 | `versao_esquema` | automática | número, descrição e data de cada migração aplicada |
 
@@ -36,6 +38,7 @@ Cada mudança de estrutura é uma função numerada, aplicada **uma única vez**
 | 2 | Simulações por usuário |
 | 3 | Análises guardadas e rastreáveis |
 | 4 | Versão da sessão (`usuarios.versao_sessao`) e contas externas (`identidades_externas`), da Fase 1 |
+| 5 | Investigação: `casos` e `casos_historico`, da Fase 2 |
 
 Regras:
 

@@ -41,7 +41,7 @@ ADM = auth.cadastrar("52998224725", "Ana Admin", "Ana@Empresa.com.br", "11912345
                      cargo="administrador", email_confirmado=True)
 
 # ------------------------------------------------------------------ 1. migração 4
-assert 4 in migracoes.versoes_aplicadas() and migracoes.VERSAO_ATUAL == 4
+assert 4 in migracoes.versoes_aplicadas() and migracoes.VERSAO_ATUAL >= 4
 linha = auth.buscar_por_id(ADM["id"])
 assert auth.versao_sessao(linha) == 0
 print("ok — migração 4 (versão da sessão e identidades externas)")

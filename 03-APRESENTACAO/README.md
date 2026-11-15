@@ -11,6 +11,8 @@ Os slides e relatórios da apresentação final entram aqui. A partir da Fase 5,
 1. Página institucional (`/`) e login pelo cartão do banner, com e-mail. Mostrar os cargos (Administrador e Visualizador).
 2. Dashboard: 160 transações, 40 contas, 9 comunidades.
 3. Rede: grafo, matrizes e autovalores.
-4. Conta C025: composição do score.
-5. Simulador: inserir uma transação grande e mostrar o impacto no ranking.
-6. Relatórios: validação matemática.
+4. **Painel de risco**: abrir C001 (fan-in) e C016; clicar em "Circuito recorrente" e mostrar os dois ciclos do gabarito.
+5. **Período e filtros**: escolher agosto e mostrar como as prioridades mudam. Registrar a investigação de uma conta.
+6. Conta C025: composição do score e indícios.
+7. Simulador: inserir uma transação grande (digite só números, ex.: 4500000 = R$ 45.000,00) e mostrar o impacto no ranking e no risco.
+8. Relatórios: validação matemática.
