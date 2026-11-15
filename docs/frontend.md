@@ -20,10 +20,11 @@ js/
 │   ├── ui.js          modal, painel lateral (drawer) e avisos (toast)
 │   ├── minha-senha.js janela "Minha senha" (trocar a senha, desconectar outros computadores); baixada só ao clicar
 │   ├── filtros.js     filtros globais em duas camadas: recorte (recalcula) e visualização (não recalcula)
+│   ├── grafo.js       Cytoscape sob demanda, esquemas de cores e paletas, estilo, elementos e minimapa (Fase 3)
 │   ├── painel-filtros.js painel "Período e filtros": calendário, atalhos, tipos, faixa de valor e "mostrar somente"
 │   └── roteador.js    navegação por #endereço e carregamento sob demanda das telas
 └── paginas/           uma tela por arquivo
-    dashboard · risco · transacoes · rede · contas · conta · simulador · relatorios
+    dashboard · risco · transacoes · rede (+ rede-animacao) · contas · conta · simulador · relatorios
     arquitetura · config · usuarios · auditoria
 ```
 
@@ -77,6 +78,12 @@ As telas **não chamam umas às outras**: avisam por eventos.
 | `inicio.html` | `/` | Página institucional pública: cabeçalho fixo com "Entrar", banner com cartão de acesso, como funciona, recursos, limites éticos, público, segurança, perguntas frequentes e rodapé |
 | `login.html` | `/login`, `/cadastro`, `/redefinir`, `/confirmar` | Acesso. O botão do Google só aparece se estiver configurado |
 | `index.html` | `/app` | O sistema |
+
+## Grafo (Fase 3)
+- **Biblioteca:** `app/static/vendor/cytoscape/cytoscape.esm.min.js` (ES module), importada por `carregarCytoscape()` só quando uma tela com grafo é aberta. Nenhuma página a carrega de início.
+- **Cores:** o Cytoscape desenha em canvas e não entende `var(--...)`. `grafo.js` lê as variáveis do tema na hora (`tema()`), e o evento `tema` refaz o estilo.
+- **Testes:** a instância fica em `#graph.cy`, `#animGrafo.cy` e `#grafoCom.cy`, para o teste no navegador consultar nós, arestas e classes.
+- **Animação:** `paginas/rede-animacao.js` monta as ocorrências a partir de `estado.dados.risco` (as transações de cada indício) e reproduz uma transação por vez.
 
 ## Como criar uma tela nova
 1. Crie `js/paginas/minha.js` exportando `iniciar()` e/ou `atualizar()`.

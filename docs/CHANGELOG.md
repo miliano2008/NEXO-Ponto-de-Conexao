@@ -1,5 +1,15 @@
 # Histórico de versões
 
+## 0.7 — Fase 3: rede de transações (branch `fase-3`)
+- **Grafo com Cytoscape.js** (3.34.4, licença MIT, copiado em `app/static/vendor/` e baixado só pela tela Rede).
+  - **Navegação estilo mapa:** roda do mouse para zoom, arrastar o fundo para mover, botões de aproximar, afastar, ajustar à tela, centralizar na conta e reorganizar, e **minimapa** clicável.
+  - **Localizar conta:** aproxima a conta e mostra só a vizinhança. Clique numa conta para ver as conexões; duplo clique para aproximar.
+- **Esquemas de cores com legenda:** status de relevância, prioridade de risco, comunidade e papel na rede (intermediária, repasse). A **paleta segura para daltonismo** (Okabe–Ito) também usa formas diferentes por comunidade. A escolha fica salva no navegador.
+- **Grafo de cada comunidade** (só as conexões internas, com recebido e enviado por conta) e "Destacar na rede".
+- **Animação dos padrões** com as transações reais, em ordem cronológica: valor e data na seta, um ponto percorrendo cada ligação, controles de reproduzir, pausar, anterior, próximo, reiniciar e velocidade. Vale para fan-in, fan-out, cadeia de repasse, circuito recorrente e repasse rápido.
+- O grafo respeita os filtros de visualização da Fase 2 e o tema escuro.
+- **Testes:** novo `test_fase3.py` (biblioteca íntegra por SHA-256 e carregada sob demanda, dados dos padrões, 300 contas desenhadas em cerca de 1,3 s); teste no navegador cobre a navegação, as cores, a comunidade e a animação. São 9 conjuntos.
+
 ## 0.6 — Fase 2: análise e inteligência (branch `fase-2`)
 - **Painel de risco**: 10 regras explicáveis (volume atípico, repasse rápido, cadeia de repasse, circuito recorrente, fan-in, fan-out, intermediação, ponte entre comunidades, concentração no tempo e valor atípico), cada uma com evidência, limite e peso. Prioridade de verificação (Alta, Moderada, Baixa) e comunidades em destaque. As regras foram conferidas com o gabarito da planilha.
 - **Período e filtros**: calendário (atalhos, mês, data inicial e final, dia específico), tipos e faixa de valor recalculam a rede. Filtros de visualização (origem, destino, comunidade, prioridade, status, investigação, mínimo de transações) valem no Dashboard, no Painel de risco, em Transações e em Contas.

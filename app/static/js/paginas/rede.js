@@ -1,128 +1,146 @@
-/* NEXO — tela Rede de transações: grafo (layout de forças animado em SVG), padrões,
-   comunidades, matrizes e análise espectral. */
+/* NEXO — tela Rede de transações (Fase 3): grafo com Cytoscape.js e navegação estilo mapa
+   (roda do mouse = zoom, arrastar o fundo = mover, localizar conta, vizinhança, ajustar à tela,
+   minimapa), esquemas de cores com legenda (inclusive paleta segura para daltonismo), grafo de
+   cada comunidade, animação dos padrões com as transações reais, matrizes e análise espectral. */
 import {charts} from "../nucleo/graficos.js";
 import {obterMatrizes} from "../nucleo/dados.js";
 import {estado, ouvir} from "../nucleo/estado.js";
+import {contasVisiveis, filtrosDeVisualizacaoAtivos} from "../nucleo/filtros.js";
+import {ESQUEMAS, LAYOUT, carregarCytoscape, corDe, criarMinimapa, elementos, estilo, formaDe, legenda,
+        papel, posicaoInicial} from "../nucleo/grafo.js";
 import {ui} from "../nucleo/ui.js";
-import {corCom, corStatus, el, esc, fmtBRL, fmtNum, pill} from "../nucleo/utilidades.js";
+import {corCom, el, esc, fmtBRL, fmtNum, pill, pillRisco} from "../nucleo/utilidades.js";
+import {TIPOS, animar, ocorrencias} from "./rede-animacao.js";
 
-const W=1000, H=620;
-let nos = [], arestas = [], zoom = 1, mostrarRotulos = true, corPor = "status", focoCom = "";
-let arrastando = null, animacao = null;
-const posicoes = {};   // mantém posições entre recálculos: a rede "se move" após uma simulação
+/* ---------- preferências (por navegador; a Fase 5 leva para o cadastro do usuário) ---------- */
+const PREF = "nexo.rede";
+function lerPref(){ try{ return JSON.parse(localStorage.getItem(PREF)) || {}; } catch(_){ return {}; } }
+function salvarPref(){ try{ localStorage.setItem(PREF, JSON.stringify({esquema, paleta})); } catch(_){ /* modo privado */ } }
+let {esquema = "status", paleta = "padrao"} = lerPref();
+if(!ESQUEMAS[esquema]) esquema = "status";
 
-function preparar(reiniciar=false){
-  const d = estado.dados, nCom = d.comunidades.length || 1;
-  nos = d.contas.map((c,i)=>{
-    const p = !reiniciar && posicoes[c.id];
-    if(p) return {...c, x:p.x, y:p.y};
-    // posição inicial agrupada por comunidade para o layout convergir mais rápido
-    const a = ((c.com-1)/nCom)*Math.PI*2, j = (i*2.399)%(Math.PI*2);
-    return {...c, x: W/2 + Math.cos(a)*260 + Math.cos(j)*45, y: H/2 + Math.sin(a)*200 + Math.sin(j)*45};
+let cy = null, cytoscape = null, minimapa = null, mostrarRotulos = true;
+let focoCom = "", selecionado = null, ajustarAoMostrar = false, versaoDesenhada = -1;
+const posicoes = {};          // posições guardadas entre análises: a rede não "pula" após uma simulação
+
+const grafoVisivel = () => el("page-rede").classList.contains("active") && el("tab-grafo").style.display !== "none";
+
+/* ---------- grafo principal ---------- */
+async function garantirGrafo(){
+  if(cy) return cy;
+  cytoscape = await carregarCytoscape();
+  el("grafoCarregando").hidden = true;
+  cy = cytoscape({container: el("graph"), wheelSensitivity: 0.25, minZoom: 0.12, maxZoom: 4, boxSelectionEnabled: false,
+                  style: estilo(paleta, {rotulos: mostrarRotulos})});
+  el("graph").cy = cy;   // usado pelos testes
+  eventos();
+  minimapa = criarMinimapa(cytoscape, cy, el("minimapa"));
+  return cy;
+}
+
+async function desenhar(){
+  if(!estado.dados) return;
+  try{ await garantirGrafo(); }
+  catch(err){ el("grafoCarregando").hidden = false; el("grafoCarregando").textContent = err.message; return; }
+  const d = estado.dados;
+  const simuladas = new Set(d.transacoes.filter(t => t.simulada).map(t => `${t.de}>${t.para}`));
+  const novos = d.contas.filter(c => !posicoes[c.id]);
+  cy.batch(() => {
+    cy.elements().remove();
+    cy.add(elementos(d.contas, d.rede.arestas, {esquema, paleta, simuladas}));
+    d.contas.forEach((c, i) => cy.$id(c.id).position(posicoes[c.id] || posicaoInicial(c, i, d.comunidades.length)));
   });
-  const porId = Object.fromEntries(nos.map(n=>[n.id,n]));
-  const simuladas = new Set(d.transacoes.filter(t=>t.simulada).map(t=>t.de+">"+t.para));
-  arestas = d.rede.arestas.map(a=>({de:porId[a.de], para:porId[a.para], qtd:a.quantidade, valor:a.valor_total,
-    sim: simuladas.has(a.de+">"+a.para)}));
+  if(novos.length) organizar(novos.length === d.contas.length);
+  else if(versaoDesenhada === -1) cy.fit(undefined, 30);
+  versaoDesenhada = estado.versaoDados;
+  if(selecionado && !cy.$id(selecionado).length) selecionado = null;
+  realcar();
+  minimapa.atualizar();
+  if(!grafoVisivel()) ajustarAoMostrar = true;
 }
 
-// Fruchterman–Reingold, executado em pequenos passos por quadro (animação)
-function passo(temp){
-  const k = Math.sqrt((W*H)/nos.length)*0.50;
-  nos.forEach(v=>{v.dx=0; v.dy=0;});
-  for(let i=0;i<nos.length;i++) for(let j=i+1;j<nos.length;j++){
-    const a=nos[i], b=nos[j];
-    let dx=a.x-b.x, dy=a.y-b.y, d=Math.hypot(dx,dy)||0.01;
-    // repulsão extra quando os círculos (e rótulos) se sobrepõem
-    const f = (k*k)/d * (d < raio(a)+raio(b)+22 ? 4 : 1); dx/=d; dy/=d;
-    a.dx+=dx*f; a.dy+=dy*f; b.dx-=dx*f; b.dy-=dy*f;
-  }
-  arestas.forEach(e=>{
-    let dx=e.de.x-e.para.x, dy=e.de.y-e.para.y, d=Math.hypot(dx,dy)||0.01;
-    const f=(d*d)/k; dx/=d; dy/=d;
-    e.de.dx-=dx*f; e.de.dy-=dy*f; e.para.dx+=dx*f; e.para.dy+=dy*f;
+function organizar(ajustar = true){
+  const layout = cy.layout({...LAYOUT, fit: ajustar});
+  layout.one("layoutstop", () => {
+    cy.nodes().forEach(n => { posicoes[n.id()] = {...n.position()}; });
+    minimapa.atualizar();
   });
-  nos.forEach(v=>{
-    // leve gravidade ao centro: componentes desconexas não fogem da tela
-    v.dx += (W/2-v.x)*0.25; v.dy += (H/2-v.y)*0.45;
-    if(arrastando && arrastando.no===v) return;
-    const d = Math.hypot(v.dx,v.dy)||0.01;
-    v.x = Math.max(55, Math.min(W-90, v.x + (v.dx/d)*Math.min(d,temp)));
-    v.y = Math.max(45, Math.min(H-45, v.y + (v.dy/d)*Math.min(d,temp)));
-    posicoes[v.id] = {x:v.x, y:v.y};
+  layout.run();
+}
+
+function colorir(){
+  if(!cy) return;
+  cy.batch(() => cy.nodes().not(".pulso").forEach(n => {
+    const c = estado.porId[n.id()]; if(!c) return;
+    n.data({cor: corDe(c, esquema, paleta), forma: formaDe(c, esquema, paleta)});
+  }));
+  el("legenda").innerHTML = legenda(esquema, paleta, estado.dados.comunidades);
+  minimapa?.atualizar();
+}
+
+/* realce: filtros globais e "destacar comunidade" apagam o resto; a conta selecionada mostra a vizinhança */
+function realcar(){
+  if(!cy) return;
+  const visiveis = new Set(contasVisiveis().map(c => c.id));
+  cy.batch(() => {
+    cy.elements().removeClass("apagado vizinha selecionado destaque");
+    cy.nodes().forEach(n => {
+      const c = estado.porId[n.id()];
+      const fora = !visiveis.has(n.id()) || (focoCom && String(c.com) !== focoCom);
+      if(fora) n.addClass("apagado");
+      if(estado.destaque.has(n.id())) n.addClass("destaque");
+    });
+    cy.edges().forEach(e => { if(e.source().hasClass("apagado") || e.target().hasClass("apagado")) e.addClass("apagado"); });
+    if(selecionado){
+      const no = cy.$id(selecionado), viz = no.closedNeighborhood();
+      cy.elements().not(viz).addClass("apagado");
+      viz.removeClass("apagado"); no.addClass("selecionado"); no.connectedEdges().addClass("vizinha");
+    }
   });
+  const n = cy.nodes().not(".apagado").length;
+  el("grafoInfo").textContent = selecionado
+    ? `${selecionado}: ${cy.$id(selecionado).neighborhood("node").length} conta(s) conectada(s). Clique no fundo para ver toda a rede.`
+    : (focoCom || filtrosDeVisualizacaoAtivos()) ? `${n} de ${cy.nodes().length} contas em destaque.` : `${cy.nodes().length} contas · ${cy.edges().length} conexões dirigidas.`;
 }
 
-function animar(iteracoes=300, temp0=W/10){
-  cancelAnimationFrame(animacao);
-  let it = 0, temp = temp0;
-  const quadro = () => {
-    for(let s=0; s<6 && it<iteracoes; s++, it++){ passo(temp); temp *= 0.985; }
-    desenhar();
-    if(it<iteracoes) animacao = requestAnimationFrame(quadro);
-  };
-  quadro();
+function selecionar(id, aproximar = false){
+  selecionado = id;
+  realcar();
+  if(id && aproximar) cy.animate({fit: {eles: cy.$id(id).closedNeighborhood(), padding: 80}}, {duration: 450});
 }
 
-const raio = n => 8 + Math.min(n.degree,14)*1.25;
-const corNo = n => corPor==="com" ? corCom(n.com) : corStatus(estado.porId[n.id].status);
-
-function desenhar(){
-  const svg = el("graph");
-  if(!nos.length) return;
-  const maior = nos.reduce((a,b)=>a.score>b.score?a:b);
-  const cores = ["var(--ink-3)","var(--amber)","var(--red)","var(--green)"];
-  const defs = `<defs>${cores.map((c,i)=>
-      `<marker id="seta${i}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-         <path d="M0,0 L10,5 L0,10 Z" fill="${c}"/></marker>`).join("")}</defs>`;
-  const apagado = n => focoCom && String(n.com)!==focoCom;
-
-  const linhas = arestas.map(e=>{
-    const r2 = raio(e.para)+6, dx=e.para.x-e.de.x, dy=e.para.y-e.de.y, d=Math.hypot(dx,dy)||1;
-    const x2 = e.para.x - (dx/d)*r2, y2 = e.para.y - (dy/d)*r2;
-    const x1 = e.de.x + (dx/d)*(raio(e.de)+2), y1 = e.de.y + (dy/d)*(raio(e.de)+2);
-    const st = [estado.porId[e.de.id].status, estado.porId[e.para.id].status];
-    let alerta = st.includes("Alta relevância") ? 2 : st.includes("Em análise") ? 1 : 0;
-    if(e.sim) alerta = 3;
-    const cor = ["var(--line)","var(--amber)","var(--red)","var(--green)"][alerta];
-    const op = (apagado(e.de)||apagado(e.para)) ? .12 : .85;
-    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
-      stroke="${cor}" stroke-width="${e.sim?3:1 + Math.min(e.valor/15000,2.2)}" ${e.sim?'stroke-dasharray="6 4"':""} marker-end="url(#seta${alerta})" opacity="${op}"><title>${e.de.id} → ${e.para.id}: ${e.qtd} transação(ões) · ${fmtBRL(e.valor)}</title></line>`;
-  }).join("");
-
-  const circulos = nos.map(n=>{
-    const r = raio(n), destaque = n.id===maior.id || estado.destaque.has(n.id);
-    const cor = corNo(n);
-    return `<g class="node" data-id="${n.id}" transform="translate(${n.x.toFixed(1)},${n.y.toFixed(1)})" opacity="${apagado(n)?.18:1}">
-      ${destaque?`<circle r="${r+7}" fill="none" stroke="${estado.destaque.has(n.id)?"var(--green)":cor}" stroke-width="2" opacity=".6"/>`:""}
-      <circle r="${r}" fill="${cor}" stroke="var(--surface)" stroke-width="2.5"/>
-      <text y="3.5" text-anchor="middle" style="fill:#fff" font-size="9">${n.degree}</text>
-      ${mostrarRotulos?`<text y="${r+12}" text-anchor="middle">${n.id}</text>`:""}
-    </g>`;
-  }).join("");
-
-  const cx=W/2, cy=H/2, s=zoom;
-  svg.setAttribute("viewBox", `${cx-(W/2)/s} ${cy-(H/2)/s} ${W/s} ${H/s}`);
-  svg.innerHTML = defs + `<g>${linhas}</g><g>${circulos}</g>`;
+function eventos(){
+  const tip = el("tip");
+  cy.on("tap", "node", e => { if(e.target.hasClass("pulso")) return; selecionar(e.target.id()); painel(e.target.id()); });
+  cy.on("dbltap", "node", e => cy.animate({center: {eles: e.target}, zoom: Math.max(cy.zoom() * 1.8, 1.6)}, {duration: 400}));
+  cy.on("tap", e => { if(e.target === cy && selecionado){ selecionar(null); } });
+  cy.on("mouseover", "node", e => {
+    const c = estado.porId[e.target.id()]; if(!c) return;
+    const r = el("graph").getBoundingClientRect(), p = e.target.renderedPosition();
+    tip.innerHTML = `<b>Conta ${c.id}</b>
+      <div>Score<span>${fmtNum(c.score,1)}</span></div>
+      <div>Prioridade de risco<span>${esc(c.nivel_risco)} (${c.risco})</span></div>
+      <div>Papel<span>${esc(papel(c))}</span></div>
+      <div>Degree<span>${c.degree} (${c.inDeg} in / ${c.outDeg} out)</span></div>
+      <div>Betweenness<span>${fmtNum(c.betw,3)}</span></div>
+      <div>Flow<span>${fmtBRL(c.flow)}</span></div>
+      <div>Comunidade<span>${c.com}</span></div>`;
+    tip.style.left = (r.left + p.x + 16) + "px"; tip.style.top = (r.top + p.y + 16) + "px"; tip.style.opacity = 1;
+  });
+  cy.on("mouseout", "node", () => { tip.style.opacity = 0; });
+  cy.on("viewport", () => { tip.style.opacity = 0; });
+  cy.on("dragfree", "node", e => { posicoes[e.target.id()] = {...e.target.position()}; });
 }
 
-function legenda(){
-  el("legenda").innerHTML = corPor==="com"
-    ? estado.dados.comunidades.map(c=>`<span><i style="background:${corCom(c.id)}"></i>Comunidade ${c.id}</span>`).join("")
-    : `<span><i style="background:var(--blue)"></i>Normal / Revisar</span>
-       <span><i style="background:var(--amber)"></i>Em análise</span>
-       <span><i style="background:var(--red)"></i>Alta relevância estrutural</span>
-       <span><i style="background:var(--green)"></i>Conexão simulada</span>`;
-}
-
+/* ---------- painel lateral da conta ---------- */
 function painel(id){
   const c = estado.porId[id];
   const envia = estado.dados.transacoes.filter(t=>t.de===id), recebe = estado.dados.transacoes.filter(t=>t.para===id);
-  const unicos = l => [...new Set(l)].join(", ") || "—";
+  const unicos = l => [...new Set(l)].map(x => `<a href="#" data-localizar="${x}" class="mono-id">${x}</a>`).join(", ") || "—";
   ui.drawer(`Conta ${c.id}`, `
-    <div style="margin-bottom:14px">${pill(c.status)} <span style="font-size:12px;color:var(--ink-3)">${esc(c.titular)}</span></div>
+    <div style="margin-bottom:14px">${pill(c.status)} ${pillRisco(c.nivel_risco)} <span style="font-size:12px;color:var(--ink-3)">${esc(c.titular)} · ${esc(papel(c))}</span></div>
     <div class="grid g2" style="gap:10px">
-      ${[["Score",fmtNum(c.score,1)],["Ranking","#"+c.ranking],["Degree",c.degree],["Comunidade",c.com],["Betweenness",fmtNum(c.betw,3)],["Closeness",fmtNum(c.close,3)]]
+      ${[["Score",fmtNum(c.score,1)],["Risco",c.risco],["Degree",c.degree],["Comunidade",c.com],["Betweenness",fmtNum(c.betw,3)],["Closeness",fmtNum(c.close,3)]]
         .map(([k,v])=>`<div class="kpi" style="padding:12px 14px;box-shadow:none"><h4>${k}</h4><div class="val" style="font-size:22px">${v}</div></div>`).join("")}
     </div>
     <p style="font-size:12.5px;color:var(--ink-2);margin:16px 0 4px"><strong>${c.inDeg}</strong> contas enviaram valores e <strong>${c.outDeg}</strong> contas receberam valores desta conta.</p>
@@ -142,96 +160,55 @@ function estatisticas(){
       <dt>Conexões dirigidas distintas</dt><dd>${m}</dd>
       <dt>Transações</dt><dd>${d.transacoes.length}</dd>
       <dt>Densidade do grafo</dt><dd>${fmtNum(m/(n*(n-1)),3)}</dd>
-      <dt>Maior intermediação</dt><dd><a href="#" data-conta="${top.id}" class="mono-id">${top.id}</a> · betweenness ${fmtNum(top.betw,3)}</dd>
+      <dt>Maior intermediação</dt><dd><a href="#" data-localizar="${top.id}" class="mono-id">${top.id}</a> · betweenness ${fmtNum(top.betw,3)}</dd>
       <dt>Comunidades (Louvain)</dt><dd>${d.dashboard.total_comunidades} · modularidade ${fmtNum(d.dashboard.modularidade_louvain,3)}</dd>
       <dt>Componentes conexas</dt><dd>${d.espectral.componentes_conexas}</dd>
     </dl>`;
 }
 
-function interacoes(){
-  const svg = el("graph"), tip = el("tip");
-  svg.addEventListener("mousemove", e=>{
-    const g = e.target.closest(".node");
-    if(!g || arrastando){ tip.style.opacity=0; return; }
-    const c = estado.porId[g.dataset.id];
-    tip.innerHTML = `<b>Conta ${c.id}</b>
-      <div>Score<span>${fmtNum(c.score,1)}</span></div>
-      <div>Degree<span>${c.degree} (${c.inDeg} in / ${c.outDeg} out)</span></div>
-      <div>Betweenness<span>${fmtNum(c.betw,3)}</span></div>
-      <div>Closeness<span>${fmtNum(c.close,3)}</span></div>
-      <div>Flow<span>${fmtBRL(c.flow)}</span></div>
-      <div>Comunidade<span>${c.com}</span></div>
-      <div>Status<span>${c.status}</span></div>`;
-    tip.style.left = (e.clientX+14)+"px"; tip.style.top = (e.clientY+14)+"px"; tip.style.opacity=1;
-  });
-  svg.addEventListener("mouseleave", ()=> tip.style.opacity=0);
-
-  const pos = e => {
-    const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
-    return {x: vb.x + (e.clientX-r.left)/r.width*vb.width, y: vb.y + (e.clientY-r.top)/r.height*vb.height};
-  };
-  svg.addEventListener("pointerdown", e=>{
-    const g = e.target.closest(".node"); if(!g) return;
-    arrastando = {no: nos.find(n=>n.id===g.dataset.id), movido:false};
-    svg.setPointerCapture(e.pointerId);
-  });
-  svg.addEventListener("pointermove", e=>{
-    if(!arrastando) return;
-    const p = pos(e); arrastando.no.x = p.x; arrastando.no.y = p.y; arrastando.movido = true;
-    posicoes[arrastando.no.id] = {x:p.x, y:p.y};
-    desenhar();
-  });
-  svg.addEventListener("pointerup", ()=>{
-    if(arrastando && !arrastando.movido) painel(arrastando.no.id);
-    arrastando = null;
-  });
-
-  el("zIn").onclick = ()=>{ zoom = Math.min(zoom*1.2, 2.6); desenhar(); };
-  el("zOut").onclick = ()=>{ zoom = Math.max(zoom/1.2, 0.6); desenhar(); };
-  el("zReset").onclick = ()=>{ zoom = 1; preparar(true); animar(); };
-  el("corPor").onchange = e=>{ corPor = e.target.value; legenda(); desenhar(); };
-  el("focoCom").onchange = e=>{ focoCom = e.target.value; desenhar(); };
-}
-
-/* ---- padrões, comunidades e matrizes ---- */
+/* ---------- padrões: animáveis (com sequência no tempo) e estruturais ---------- */
 function mini(tipo){
-  const s = (pts, ligs) => `<svg viewBox="0 0 170 74" style="width:100%;max-width:200px;height:auto">
+  const s = (pts, ligs) => `<svg viewBox="0 0 170 74" style="width:100%;max-width:200px;height:auto" aria-hidden="true">
     ${ligs.map(([a,b])=>`<line x1="${pts[a][0]}" y1="${pts[a][1]}" x2="${pts[b][0]}" y2="${pts[b][1]}" stroke="var(--ink-3)" stroke-width="1.4" marker-end="url(#setaMini)"/>`).join("")}
     ${pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="${p[2]||7}" fill="${p[3]||"var(--blue)"}"/>`).join("")}</svg>`;
   return {
-    "Fan-in": s([[20,12],[20,37],[20,62],[130,37,11,"var(--amber)"]], [[0,3],[1,3],[2,3]]),
-    "Fan-out": s([[30,37,11,"var(--amber)"],[140,12],[140,37],[140,62]], [[0,1],[0,2],[0,3]]),
-    "Cadeia de repasse": s([[16,37],[62,37],[108,37],[152,37]], [[0,1],[1,2],[2,3]]),
-    "Hub": s([[85,37,13,"var(--red)"],[18,12],[18,62],[152,12],[152,62],[85,6,6],[85,68,6]], [[1,0],[2,0],[0,3],[0,4],[5,0],[0,6]]),
-    "Ponte": s([[18,20],[18,54],[85,37,11,"var(--amber)"],[152,20],[152,54]], [[0,2],[1,2],[2,3],[2,4]])
+    fan_in: s([[20,12],[20,37],[20,62],[130,37,11,"var(--amber)"]], [[0,3],[1,3],[2,3]]),
+    fan_out: s([[30,37,11,"var(--amber)"],[140,12],[140,37],[140,62]], [[0,1],[0,2],[0,3]]),
+    cadeia: s([[16,37],[62,37],[108,37],[152,37]], [[0,1],[1,2],[2,3]]),
+    ciclo: s([[85,10],[140,37],[85,64],[30,37]], [[0,1],[1,2],[2,3],[3,0]]),
+    repasse: s([[20,37],[85,37,11,"var(--amber)"],[150,20],[150,54]], [[0,1],[1,2],[1,3]]),
+    Hub: s([[85,37,13,"var(--red)"],[18,12],[18,62],[152,12],[152,62],[85,6,6],[85,68,6]], [[1,0],[2,0],[0,3],[0,4],[5,0],[0,6]]),
+    Ponte: s([[18,20],[18,54],[85,37,11,"var(--amber)"],[152,20],[152,54]], [[0,2],[1,2],[2,3],[2,4]])
   }[tipo];
 }
 
+let ocorrenciasAtuais = {};
 function padroes(){
-  const desc = {
-    "Fan-in":"Muitas contas distintas enviando para uma única conta.",
-    "Fan-out":"Uma conta distribuindo valores para várias contas distintas.",
-    "Cadeia de repasse":"O valor passa por contas em sequência: conta → conta → conta → conta.",
-    "Hub":"Conta com grande número de conexões de entrada e saída.",
-    "Ponte":"Conta com alta intermediação entre partes distintas da rede."
-  };
-  const link = id => `<a href="#" data-conta="${id}" class="mono-id">${id}</a>`;
-  const texto = p => p.tipo==="Fan-in" ? `${p.exemplo.join(", ")} → ${link(p.conta)}`
-    : p.tipo==="Fan-out" ? `${link(p.conta)} → ${p.exemplo.join(", ")}`
-    : p.tipo==="Cadeia de repasse" ? p.exemplo.map(link).join(" → ")
-    : p.tipo==="Hub" ? `${link(p.conta)} · degree ${p.exemplo}`
-    : `${link(p.conta)} · betweenness ${fmtNum(p.exemplo,3)}`;
-  el("padroesGrid").innerHTML = `<svg width="0" height="0" style="position:absolute"><defs><marker id="setaMini" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="var(--ink-3)"/></marker></defs></svg>` +
-    Object.keys(desc).map(tipo=>{
-      const casos = estado.dados.padroes.filter(p=>p.tipo===tipo);
-      return `<div class="pattern"><h4>${tipo} <span class="chip" style="margin-left:6px">${casos.length} ocorrência(s)</span></h4><p>${desc[tipo]}</p>
-        ${mini(tipo)}
-        <div style="font-size:12px;color:var(--ink-2);margin-top:10px;line-height:1.9">${casos.slice(0,4).map(texto).join("<br>") || "Nenhum caso no período."}
-        ${casos.length>4?`<br><span style="color:var(--ink-3)">+ ${casos.length-4} outros</span>`:""}</div>
-        <div class="chip-row" style="margin-top:10px"><span class="chip">Critério: ${esc(casos[0]?.criterio || "—")}</span></div></div>`;
-    }).join("");
+  const link = id => `<a href="#" data-localizar="${id}" class="mono-id">${id}</a>`;
+  ocorrenciasAtuais = Object.fromEntries(Object.keys(TIPOS).map(t => [t, ocorrencias(t)]));
+  const animaveis = Object.entries(TIPOS).map(([tipo, info]) => {
+    const casos = ocorrenciasAtuais[tipo];
+    const rotulo = oc => tipo === "cadeia" || tipo === "ciclo" ? oc.contas.map(link).join(" → ") : link(oc.conta);
+    return `<div class="pattern"><h4>${esc(info.nome)} <span class="chip" style="margin-left:6px">${casos.length} ocorrência(s)</span></h4>
+      <p>${esc(info.desc)}</p>${mini(tipo)}
+      <ul class="lista-padroes">${casos.slice(0, 5).map((oc, i) => `
+        <li><span>${rotulo(oc)} <small>${oc.transacoes.length} transação(ões)</small></span>
+          <button class="btn ghost sm" data-animar="${tipo}:${i}" aria-label="Animar ${esc(info.nome)} ${oc.conta}">▶ Animar</button></li>`).join("")
+        || `<li class="vazio">Nenhum caso no recorte atual.</li>`}
+        ${casos.length > 5 ? `<li class="vazio">+ ${casos.length - 5} outros (veja no Painel de risco)</li>` : ""}</ul></div>`;
+  }).join("");
+  const estruturais = ["Hub", "Ponte"].map(tipo => {
+    const casos = estado.dados.padroes.filter(p => p.tipo === tipo);
+    const desc = tipo === "Hub" ? "Conta com grande número de conexões de entrada e saída." : "Conta com alta intermediação entre partes distintas da rede.";
+    return `<div class="pattern"><h4>${tipo} <span class="chip" style="margin-left:6px">${casos.length} ocorrência(s)</span></h4><p>${desc} Padrão estrutural (sem sequência no tempo): clique para localizar no grafo.</p>
+      ${mini(tipo)}<div style="font-size:12px;color:var(--ink-2);margin-top:10px;line-height:1.9">
+      ${casos.map(p => tipo === "Hub" ? `${link(p.conta)} · degree ${p.exemplo}` : `${link(p.conta)} · betweenness ${fmtNum(p.exemplo,3)}`).join("<br>") || "Nenhum caso no período."}</div></div>`;
+  }).join("");
+  el("padroesGrid").innerHTML = `<svg width="0" height="0" style="position:absolute"><defs><marker id="setaMini" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="var(--ink-3)"/></marker></defs></svg>`
+    + animaveis + estruturais;
 }
 
+/* ---------- comunidades: cartões e grafo individual ---------- */
 function comunidades(){
   const d = estado.dados;
   el("comNota").innerHTML = `Comunidades obtidas pelo <strong>algoritmo de Louvain</strong> (NetworkX, grafo não direcionado, peso = número de transferências, semente 42). Modularidade: <strong>${fmtNum(d.dashboard.modularidade_louvain,3)}</strong>. O resultado pode diferir das comunidades planejadas na planilha.`;
@@ -243,11 +220,42 @@ function comunidades(){
         <dt>Volume incidente</dt><dd>${fmtBRL(g.volume_incidente)}</dd>
         <dt>Volume interno</dt><dd>${fmtBRL(g.volume_interno)}</dd>
         <dt>Conta mais conectada</dt><dd><a href="#" data-conta="${g.conta_mais_conectada}" class="mono-id">${g.conta_mais_conectada}</a> (degree ${estado.porId[g.conta_mais_conectada].degree})</dd>
-      </dl></div></div>`).join("");
+      </dl>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn sm" data-grafo-com="${g.id}">Ver grafo da comunidade</button>
+        <button class="btn ghost sm" data-focar-com="${g.id}">Destacar na rede</button></div></div></div>`).join("");
   const atual = el("focoCom").value;
   el("focoCom").innerHTML = `<option value="">Nenhuma</option>` + d.comunidades.map(c=>`<option value="${c.id}">Comunidade ${c.id}</option>`).join("");
   el("focoCom").value = d.comunidades.some(c=>String(c.id)===atual) ? atual : "";
   focoCom = el("focoCom").value;
+}
+
+let cyComunidade = null;
+async function grafoComunidade(id){
+  const d = estado.dados, g = d.comunidades.find(c => c.id === +id);
+  const membros = new Set(g.contas);
+  const internas = d.rede.arestas.filter(a => membros.has(a.de) && membros.has(a.para));
+  const externas = d.rede.arestas.filter(a => membros.has(a.de) !== membros.has(a.para));
+  const linhas = g.contas.map(cid => estado.porId[cid]).sort((a, b) => b.degree - a.degree).map(c => {
+    const ent = internas.filter(a => a.para === c.id).reduce((s, a) => s + a.valor_total, 0);
+    const sai = internas.filter(a => a.de === c.id).reduce((s, a) => s + a.valor_total, 0);
+    return `<tr class="clickable" data-conta="${c.id}"><td class="mono-id">${c.id}</td><td class="num">${c.degree}</td>
+      <td class="num">${fmtBRL(ent)}</td><td class="num">${fmtBRL(sai)}</td><td>${pillRisco(c.nivel_risco)}</td></tr>`;
+  }).join("");
+  ui.modal(`Comunidade ${g.id}`, `
+    <p style="margin:0 0 10px;font-size:13px;color:var(--ink-2)">${g.quantidade_contas} contas · ${internas.length} conexões internas
+      (${fmtBRL(g.volume_interno)}) · ${externas.length} conexão(ões) com outras comunidades (fora do desenho).</p>
+    <div class="anim-palco"><div id="grafoCom" class="anim-grafo" role="img" aria-label="Grafo da comunidade ${g.id}"></div></div>
+    <div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Conta</th><th class="num">Degree</th>
+      <th class="num">Recebido na comunidade</th><th class="num">Enviado na comunidade</th><th>Prioridade</th></tr></thead><tbody>${linhas}</tbody></table></div>`);
+  const cyt = await carregarCytoscape();
+  if(!el("grafoCom")) return;
+  cyComunidade?.destroy();
+  cyComunidade = cyt({container: el("grafoCom"), wheelSensitivity: 0.25, style: estilo(paleta, {rotulos: true}),
+    // dentro da comunidade, a cor mostra a prioridade de risco (todas já são da mesma comunidade)
+    elements: elementos(g.contas.map(cid => estado.porId[cid]), internas, {esquema: esquema === "com" ? "risco" : esquema, paleta})});
+  el("grafoCom").cy = cyComunidade;
+  cyComunidade.layout({...LAYOUT, fit: true, padding: 40, numIter: 800}).run();
 }
 
 const descMatriz = {
@@ -297,25 +305,79 @@ async function matrizes(){
     <p style="font-size:12px;color:var(--ink-3)">${esc(e.observacao)}</p>`;
 }
 
+
+/* ---------- ciclo de vida da tela ---------- */
+function abrirAba(nome){
+  [...el("redeTabs").children].forEach(x => x.classList.toggle("active", x.dataset.tab === nome));
+  ["grafo","padroes","comunidades","matriz"].forEach(t => el("tab-"+t).style.display = t === nome ? "" : "none");
+  if(nome === "matriz") matrizes();
+  if(nome === "grafo") mostrar();
+}
+
+function localizar(id){
+  id = String(id || "").trim().toUpperCase();
+  if(!estado.porId[id]){ ui.toast(`Conta ${esc(id)} não encontrada nesta análise.`, true); return; }
+  ui.closeDrawer(); ui.closeModal();
+  abrirAba("grafo");
+  selecionar(id, true);
+}
+
 export function iniciar(){
-  interacoes();
   el("redeTabs").addEventListener("click", e=>{
-    const b = e.target.closest("button[data-tab]"); if(!b) return;
-    [...el("redeTabs").children].forEach(x=>x.classList.toggle("active", x===b));
-    ["grafo","padroes","comunidades","matriz"].forEach(t =>
-      el("tab-"+t).style.display = t===b.dataset.tab ? "" : "none");
-    if(b.dataset.tab === "matriz") matrizes();
+    const b = e.target.closest("button[data-tab]"); if(b) abrirAba(b.dataset.tab);
   });
   el("matSel").addEventListener("change", matrizes);
-  ouvir("tema", () => desenhar());
-  ouvir("rotulos", rotulos);
+  el("corPor").innerHTML = Object.entries(ESQUEMAS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+  el("corPor").value = esquema; el("paleta").value = paleta;
+  el("corPor").addEventListener("change", e => { esquema = e.target.value; salvarPref(); colorir(); });
+  el("paleta").addEventListener("change", e => { paleta = e.target.value; salvarPref(); cy?.style(estilo(paleta, {rotulos: mostrarRotulos})); colorir(); });
+  el("focoCom").addEventListener("change", e => { focoCom = e.target.value; selecionado = null; realcar();
+    if(cy && focoCom) cy.animate({fit: {eles: cy.nodes().not(".apagado"), padding: 60}}, {duration: 400}); });
+  el("buscaConta").addEventListener("change", e => { if(e.target.value) localizar(e.target.value); });
+  el("buscaConta").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); localizar(e.target.value); } });
+  el("zIn").onclick = () => cy?.zoom({level: cy.zoom() * 1.3, renderedPosition: {x: cy.width() / 2, y: cy.height() / 2}});
+  el("zOut").onclick = () => cy?.zoom({level: cy.zoom() / 1.3, renderedPosition: {x: cy.width() / 2, y: cy.height() / 2}});
+  el("zFit").onclick = () => cy?.animate({fit: {padding: 30}}, {duration: 350});
+  el("zCentro").onclick = () => { if(!cy) return;
+    selecionado ? cy.animate({fit: {eles: cy.$id(selecionado).closedNeighborhood(), padding: 80}}, {duration: 350})
+                : ui.toast("Clique numa conta (ou use “Localizar conta”) para centralizar nela."); };
+  el("zReset").onclick = () => { if(!cy) return; Object.keys(posicoes).forEach(k => delete posicoes[k]);
+    estado.dados.contas.forEach((c, i) => cy.$id(c.id).position(posicaoInicial(c, i, estado.dados.comunidades.length))); organizar(true); };
+  el("page-rede").addEventListener("click", e => {
+    const anim = e.target.closest("[data-animar]");
+    if(anim){ const [tipo, i] = anim.dataset.animar.split(":"); animar(ocorrenciasAtuais[tipo][+i]); return; }
+    const gc = e.target.closest("[data-grafo-com]"); if(gc){ grafoComunidade(gc.dataset.grafoCom); return; }
+    const fc = e.target.closest("[data-focar-com]");
+    if(fc){ el("focoCom").value = fc.dataset.focarCom; abrirAba("grafo"); el("focoCom").dispatchEvent(new Event("change")); }
+  });
+  // "localizar" também funciona a partir do painel lateral e das janelas
+  document.addEventListener("click", e => {
+    const loc = e.target.closest("[data-localizar]");
+    if(loc){ e.preventDefault(); e.stopPropagation(); localizar(loc.dataset.localizar); }
+  }, true);
+  ouvir("tema", () => { if(cy){ cy.style(estilo(paleta, {rotulos: mostrarRotulos})); minimapa = criarMinimapa(cytoscape, cy, el("minimapa")); minimapa.atualizar(); } });
+  ouvir("rotulos", v => { mostrarRotulos = v; cy?.style(estilo(paleta, {rotulos: v})); });
 }
-export function atualizar(){
-  const primeira = !Object.keys(posicoes).length;
-  preparar(); legenda(); estatisticas(); padroes(); comunidades(); matrizes();
-  primeira ? animar(320) : animar(90, 18);
-}
-function rotulos(v){ mostrarRotulos = v; desenhar(); }
 
-export const reclassificar = () => desenhar();
-export const mostrar = () => desenhar();
+export async function atualizar(){
+  legendaEDados();
+  await desenhar();
+}
+function legendaEDados(){
+  el("legenda").innerHTML = legenda(esquema, paleta, estado.dados.comunidades);
+  el("listaContas").innerHTML = estado.dados.contas.map(c => `<option value="${c.id}">`).join("");
+  estatisticas(); padroes(); comunidades(); matrizes();
+}
+
+/* a tela (ou a aba Grafo) ficou visível: o canvas precisa saber o tamanho real */
+export function mostrar(){
+  if(!cy || !grafoVisivel()) return;
+  requestAnimationFrame(() => {
+    cy.resize();
+    if(ajustarAoMostrar){ cy.fit(undefined, 30); ajustarAoMostrar = false; }
+    minimapa.atualizar();
+  });
+}
+export const reclassificar = () => colorir();
+export const filtrar = () => realcar();
+export const casos = () => {};

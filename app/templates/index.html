@@ -169,23 +169,32 @@
         </div>
 
         <div class="tabpane" id="tab-grafo">
-          <div class="filters" style="margin-bottom:10px">
-            <div class="field"><label for="corPor">Colorir nós por</label><select id="corPor"><option value="status">Status</option><option value="com">Comunidade (Louvain)</option></select></div>
+          <div class="filters rede-controles" style="margin-bottom:10px">
+            <div class="field"><label for="buscaConta">Localizar conta</label>
+              <input id="buscaConta" list="listaContas" placeholder="Ex.: C025" autocomplete="off" style="width:130px"><datalist id="listaContas"></datalist></div>
+            <div class="field"><label for="corPor">Colorir por</label><select id="corPor"></select></div>
+            <div class="field"><label for="paleta">Cores</label><select id="paleta">
+              <option value="padrao">Padrão</option><option value="daltonismo">Segura para daltonismo</option></select></div>
             <div class="field"><label for="focoCom">Destacar comunidade</label><select id="focoCom"></select></div>
           </div>
           <div class="graph-shell">
-            <svg id="graph" viewBox="0 0 1000 620" role="img" aria-label="Grafo de transações entre contas"></svg>
+            <div id="graph" class="grafo-cy" role="application" aria-label="Grafo de transações entre contas. Roda do mouse aproxima ou afasta, arrastar o fundo move a visão, clique numa conta para ver as conexões."></div>
+            <div class="grafo-carregando" id="grafoCarregando">Carregando o grafo…</div>
             <div class="graph-tools">
-              <button id="zIn" title="Aproximar">+</button>
-              <button id="zOut" title="Afastar">−</button>
-              <button id="zReset" title="Reorganizar">⟳</button>
+              <button id="zIn" title="Aproximar" aria-label="Aproximar">+</button>
+              <button id="zOut" title="Afastar" aria-label="Afastar">−</button>
+              <button id="zFit" title="Ajustar à tela" aria-label="Ajustar à tela">⤢</button>
+              <button id="zCentro" title="Centralizar na conta selecionada" aria-label="Centralizar na conta selecionada">◎</button>
+              <button id="zReset" title="Reorganizar o desenho" aria-label="Reorganizar o desenho">⟳</button>
             </div>
+            <div class="minimapa" id="minimapa" title="Visão geral: clique ou arraste para navegar" aria-hidden="true"></div>
+            <div class="grafo-rodape"><span id="grafoInfo"></span><span class="grafo-dica">Roda do mouse: zoom · arrastar o fundo: mover · clique: vizinhança · duplo clique: aproximar</span></div>
           </div>
           <div class="grid g2 mt">
             <div class="card"><div class="card-body">
               <div class="legend" id="legenda"></div>
               <p style="font-size:12.5px;color:var(--ink-2);margin:12px 0 0">
-                Cada círculo é uma conta e cada seta é uma conexão dirigida (uma ou mais transferências no mesmo sentido). O tamanho do nó é proporcional ao <strong>degree</strong>. Passe o mouse para ver as métricas, clique para abrir o painel lateral e arraste para reorganizar.</p>
+                Cada nó é uma conta e cada seta é uma conexão dirigida (uma ou mais transferências no mesmo sentido). O tamanho do nó é proporcional ao <strong>degree</strong> e a espessura da seta ao <strong>valor</strong>. <b>Papel</b>: intermediária = intermediação alta ou ponte entre comunidades; repasse = repasse rápido ou cadeia (ver Painel de risco).</p>
             </div></div>
             <div class="card"><div class="card-body" id="netStats"></div></div>
           </div>
@@ -193,7 +202,7 @@
 
         <div class="tabpane" id="tab-padroes" style="display:none">
           <div class="grid g3" id="padroesGrid"></div>
-          <div class="note mt">Os padrões são encontrados por regras simples no backend Python. Encontrar um padrão indica que a conta merece verificação, não que houve irregularidade.</div>
+          <div class="note mt">Os padrões vêm das regras do Painel de risco (backend Python). <b>▶ Animar</b> reproduz as transações reais do padrão, em ordem cronológica. Encontrar um padrão indica que a conta merece verificação, não que houve irregularidade.</div>
         </div>
 
         <div class="tabpane" id="tab-comunidades" style="display:none">

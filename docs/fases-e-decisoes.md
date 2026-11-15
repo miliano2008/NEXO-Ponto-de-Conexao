@@ -7,8 +7,8 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 |---|---|---|
 | **0** | Reorganização e base técnica: pastas, `.env`, migrações, backup, simulação por usuário, cache, desempenho, frontend em módulos, testes | **Concluída e validada** (na `main`) |
 | **1** | Identidade, login e página institucional: login por e-mail (aceitando CPF/CNPJ na transição), Google opcional, landing page com FAQ, sessão encerrada ao trocar a senha | **Concluída e validada** (na `main`) |
-| **2** | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | **Concluída e validada** (pull request para a `main`) |
-| 3 | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | Planejada |
+| **2** | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | **Concluída e validada** (na `main`) |
+| **3** | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | **Concluída. Aguarda validação** (branch `fase-3`) |
 | 4 | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | Planejada |
 | 5 | Relatórios e configurações: exportação em **PDF, Excel, CSV, Word e PowerPoint**, com gráficos de verdade, não capturas de tela | Planejada |
 | 6 | Importação de bases: upload `.xlsx`/`.csv` de até **300 transações**, uma base por empresa, com exclusão. Depende da decisão sobre multiempresa | Planejada |
@@ -46,6 +46,17 @@ O que já ficou pronto para facilitar esses itens:
 - configuração por variáveis de ambiente (`.env`), exigida pelas hospedagens;
 - simulações guardadas no banco, porque hospedagens reiniciam a máquina;
 - migrações numeradas com backup, que tornam segura a troca de chaves do multiempresa.
+
+## Fase 3: o que foi entregue
+| Item planejado | Entrega |
+|---|---|
+| Navegação estilo mapa | Cytoscape.js: roda do mouse para zoom, arrastar o fundo, aproximar, afastar, ajustar à tela, centralizar na conta, reorganizar e **minimapa** clicável. **Localizar conta** com a vizinhança. Clique numa conta para ver as conexões; duplo clique para aproximar |
+| Grafo por comunidade | Botão "Ver grafo da comunidade": só as conexões internas, com a cor pela prioridade de risco e a tabela de recebido e enviado. "Destacar na rede" apaga as outras comunidades |
+| Esquemas de cores com legenda | Status, prioridade de risco, comunidade e papel (intermediária: intermediação ou ponte; repasse: repasse rápido ou cadeia). **Paleta segura para daltonismo** (Okabe–Ito, com o amarelo trocado pelo preto, por contraste) e formas por comunidade. Preferência salva no navegador; vai para o cadastro do usuário na Fase 5 |
+| Animação dos padrões | Interativa, não GIF: as transações reais do padrão, em ordem cronológica, com valor e data na seta e um ponto percorrendo a ligação. Reproduzir, pausar, anterior, próximo, reiniciar e velocidade (0,5×, 1×, 2×). Desenho próprio por tipo: cadeia em linha, circuito em círculo, fan-in e fan-out em estrela, repasse com a entrada à esquerda e as saídas à direita |
+| Desempenho | Biblioteca de cerca de 133 KB compactada, só na tela Rede. 300 contas desenhadas e organizadas em cerca de 1,3 s |
+
+**Observação:** o sigma.js (WebGL), citado no plano para redes de milhares de contas, não foi necessário. Com o limite de 300 transações da Fase 6, o Cytoscape atende com folga.
 
 ## Fase 2: o que foi entregue
 | Item planejado | Entrega |
