@@ -7,7 +7,7 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 |---|---|---|
 | **0** | Reorganização e base técnica: pastas, `.env`, migrações, backup, simulação por usuário, cache, desempenho, frontend em módulos, testes | **Concluída e validada** (na `main`) |
 | **1** | Identidade, login e página institucional: login por e-mail (aceitando CPF/CNPJ na transição), Google opcional, landing page com FAQ, sessão encerrada ao trocar a senha | **Concluída e validada** (na `main`) |
-| **2** | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | **Concluída. Aguarda validação** (branch `fase-2`) |
+| **2** | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | **Concluída e validada** (pull request para a `main`) |
 | 3 | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | Planejada |
 | 4 | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | Planejada |
 | 5 | Relatórios e configurações: exportação em **PDF, Excel, CSV, Word e PowerPoint**, com gráficos de verdade, não capturas de tela | Planejada |
@@ -60,6 +60,8 @@ O que já ficou pronto para facilitar esses itens:
 | Contas em análise | Ordenação por qualquer coluna (crescente ou decrescente), colunas de risco e investigação, filtro por prioridade. O detalhe da conta mostra os indícios e a investigação |
 | Banco | Migração 5: `casos` e `casos_historico` |
 | Desempenho | 300 transações: análise completa com as regras em cerca de 35 ms |
+
+**Validação do grupo (Fase 2):** foram testados o Painel de risco (evidências de C001 e C016, filtro "Circuito recorrente" com os dois ciclos da planilha), o período pelo calendário (agosto) e o registro de investigação.
 
 **Ficaram para as fases seguintes, como no plano:**
 
