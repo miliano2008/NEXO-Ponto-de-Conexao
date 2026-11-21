@@ -22,6 +22,8 @@ def mysql_configurado():
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")   # console antigo do Windows: troca o símbolo em vez de parar
     roteiro = list(TESTES)
     if mysql_configurado():
         roteiro.append("testes.test_mysql")
@@ -35,7 +37,9 @@ def main():
     falhas = []
     for modulo in roteiro:
         inicio = time.perf_counter()
-        r = subprocess.run([sys.executable, "-m", modulo], cwd=RAIZ, capture_output=True, text=True, env=os.environ)
+        # saída em UTF-8: no Windows, a saída capturada usaria cp1252 e quebraria em "→", "—"...
+        r = subprocess.run([sys.executable, "-m", modulo], cwd=RAIZ, capture_output=True,
+                           encoding="utf-8", errors="replace", env={**os.environ, "PYTHONIOENCODING": "utf-8"})
         duracao = time.perf_counter() - inicio
         linhas = [l for l in r.stdout.splitlines() if l.startswith("TESTES OK")]
         if r.returncode == 0:
