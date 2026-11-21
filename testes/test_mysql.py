@@ -18,8 +18,8 @@ if not db.usando_mysql():
     print("Banco MySQL não configurado (DB_HOST vazio); nada a testar.")
     raise SystemExit(0)
 
-r = subprocess.run([sys.executable, "-m", "banco.migrar_mysql", "--recriar"], capture_output=True, text=True,
-                   env=os.environ, cwd=RAIZ)
+r = subprocess.run([sys.executable, "-m", "banco.migrar_mysql", "--recriar"], capture_output=True,
+                   encoding="utf-8", errors="replace", env={**os.environ, "PYTHONIOENCODING": "utf-8"}, cwd=RAIZ)
 print(r.stdout[-400:])
 assert r.returncode == 0, r.stdout + r.stderr
 

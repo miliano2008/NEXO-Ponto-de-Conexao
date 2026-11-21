@@ -47,7 +47,7 @@ def main():
         else:
             falhas.append(modulo)
             print(f"  [FALHA] {modulo:30s} {duracao:5.1f}s")
-            print("\n".join("          " + l for l in (r.stdout + r.stderr).strip().splitlines()[-15:]))
+            print("\n".join("          " + l for l in (r.stdout + r.stderr).strip().splitlines()[-40:]))
     print()
     if falhas:
         print(f"{len(falhas)} conjunto(s) de testes falharam: {', '.join(falhas)}")

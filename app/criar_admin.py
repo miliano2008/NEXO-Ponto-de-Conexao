@@ -1,4 +1,4 @@
-"""Cria (ou promove) um administrador do NEXO.
+r"""Cria (ou promove) um administrador do NEXO.
 
 Executar: scripts\CRIAR_ADMIN.bat  ou  python -m app.criar_admin
 Se o CPF/CNPJ já estiver cadastrado, o usuário é promovido a Administrador e,

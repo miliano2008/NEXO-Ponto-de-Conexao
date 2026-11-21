@@ -43,6 +43,17 @@ threading.Thread(target=http.serve_forever, daemon=True).start()
 BASE = f"http://127.0.0.1:{porta}"
 
 erros = []
+
+
+def esperar_modal_fechar(pg):
+    """Espera a janela (modal) fechar; se não fechar, mostra o que ficou na tela (erro do formulário, aviso)."""
+    try:
+        pg.wait_for_selector("#overlay:not(.open)", state="attached", timeout=30000)
+    except Exception as erro:
+        raise AssertionError(f"A janela não fechou. Título: {pg.inner_text('#modalTitle')!r} · "
+                             f"conteúdo: {pg.inner_text('#modalBody')[:300]!r} · aviso: {pg.inner_text('#toast')!r}") from erro
+
+
 opcoes = {"executable_path": os.environ["NEXO_CHROMIUM"]} if os.environ.get("NEXO_CHROMIUM") else {}
 with sync_playwright() as p:
     navegador = p.chromium.launch(**opcoes)
@@ -98,12 +109,13 @@ with sync_playwright() as p:
 
     # Fase 3 — navegação estilo mapa: localizar conta (vizinhança), ajustar, zoom, minimapa
     assert pg.locator("#minimapa canvas").count() > 0                      # minimapa desenhado
-    pg.fill("#buscaConta", "C025"); pg.press("#buscaConta", "Enter"); pg.wait_for_timeout(700)
-    assert "C025: 7 conta(s) conectada(s)" in pg.inner_text("#grafoInfo")
+    pg.fill("#buscaConta", "C025"); pg.press("#buscaConta", "Enter")
+    pg.wait_for_function("document.getElementById('grafoInfo').innerText.includes('C025: 7 conta(s)')")
+    pg.wait_for_function(f"!{CY}.animated()")                             # espera a aproximação terminar
     assert pg.evaluate(f"{CY}.nodes('.apagado').length") == 40 - 8      # só C025 e os 7 vizinhos acesos
     zoom = pg.evaluate(f"{CY}.zoom()")
-    pg.click("#zFit"); pg.wait_for_timeout(500)
-    assert pg.evaluate(f"{CY}.zoom()") < zoom                              # "ajustar à tela" afasta
+    pg.click("#zFit")
+    pg.wait_for_function(f"{CY}.zoom() < {zoom} && !{CY}.animated()")    # "ajustar à tela" afasta (sem tempo fixo)
     z1 = pg.evaluate(f"{CY}.zoom()"); pg.click("#zIn"); assert pg.evaluate(f"{CY}.zoom()") > z1
     pg.evaluate(f"{CY}.emit('tap')")                                       # clique no fundo: rede inteira
     pg.wait_for_timeout(200)
@@ -180,7 +192,7 @@ with sync_playwright() as p:
     pg.click("#simEnviar"); pg.wait_for_function("document.querySelectorAll('#simLista button[data-remover]').length === 3")
     # salvar como cenário e abrir no histórico
     pg.click("#simSalvar"); pg.fill("#cnNome", "PIX semanal C001 para C030"); pg.click("#cnSalvar")
-    pg.wait_for_selector("#overlay:not(.open)", state="attached"); pg.wait_for_timeout(300)
+    esperar_modal_fechar(pg); pg.wait_for_timeout(300)
     pg.click("#nav button[data-page=historico]"); pg.wait_for_selector(".cenario")
     assert "PIX semanal C001 para C030" in pg.inner_text("#cenariosLista")
     pg.click("[data-ver-cenario]")
@@ -287,7 +299,7 @@ with sync_playwright() as p:
     pg.fill("#msAtual", "Errada123"); pg.fill("#msNova", "Nova2026x"); pg.fill("#msConf", "Nova2026x")
     pg.click("#msSalvar"); pg.wait_for_selector("#msErro:not([hidden])")
     pg.fill("#msAtual", SENHA); pg.click("#msSalvar")
-    pg.wait_for_selector("#overlay:not(.open)", state="attached"); pg.wait_for_timeout(300)
+    esperar_modal_fechar(pg); pg.wait_for_timeout(300)
     assert "Senha alterada" in pg.inner_text("#toast")
 
     # navegação pelo endereço (#) e saída

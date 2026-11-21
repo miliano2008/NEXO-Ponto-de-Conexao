@@ -1,4 +1,4 @@
-"""NEXO — cria o banco no MySQL (Aiven) e exporta os dados do projeto.
+r"""NEXO — cria o banco no MySQL (Aiven) e exporta os dados do projeto.
 
 Executar: scripts\MIGRAR_MYSQL.bat  ou  python -m banco.migrar_mysql   (pode rodar de novo: não duplica)
           python -m banco.migrar_mysql --recriar   (apaga e recarrega contas/transações)
@@ -81,11 +81,15 @@ def migrar():
     print(f"      {len(contas)} contas e {len(transacoes)} transações enviadas.")
 
     passo(4, "Copiando usuários do SQLite local (se houver)...")
+    usuarios = None
     if db.SQLITE.exists():
         local = sqlite3.connect(db.SQLITE)
         local.row_factory = sqlite3.Row
-        usuarios = local.execute("SELECT * FROM usuarios").fetchall()
+        # um nexo.db vazio (criado ao abrir o NEXO no modo local antes de configurar o Aiven) não tem a tabela
+        if local.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'usuarios'").fetchone():
+            usuarios = local.execute("SELECT * FROM usuarios").fetchall()
         local.close()
+    if usuarios is not None:
         colunas = ["documento", "tipo_documento", "nome", "email", "senha_hash", "cargo", "ativo",
                    "tentativas_falhas", "bloqueado_ate", "criado_em", "ultimo_login"]
         # telefone/email_confirmado só existem em bancos locais criados pela versão nova
@@ -102,7 +106,7 @@ def migrar():
         print(f"      {novos} usuário(s) copiado(s), {len(usuarios) - novos} já existia(m) no MySQL.")
         print("      As senhas continuam com hash; ninguém precisa redefinir.")
     else:
-        print("      Nenhum banco/dados/nexo.db local. Crie o administrador depois: scripts\\CRIAR_ADMIN.bat")
+        print("      Nenhum usuário no banco local (banco/dados/nexo.db). Crie o administrador depois: scripts\\CRIAR_ADMIN.bat")
 
     passo(5, "Conferindo os dados no MySQL...")
     with conexao.cursor() as c:
