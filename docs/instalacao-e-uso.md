@@ -90,12 +90,20 @@ Pela linha de comando, sempre a partir da raiz: `.venv\Scripts\python -m app`, `
 ## 6. Cargos
 | Cargo | O que pode |
 |---|---|
-| Administrador | Tudo, inclusive usuários, cargos, convites e os limites das regras por modalidade |
+| Administrador | Tudo, inclusive usuários, cargos, convites, os limites das regras por modalidade e os limites das regras de risco |
 | Analista | Consultar, relatórios, exportar, simulador, configurações e registrar a investigação das contas |
 | Auditor | Consultar (inclusive o histórico das investigações), relatórios, exportar, auditoria |
 | Visualizador | Apenas consultar. É o padrão de quem se cadastra sem convite |
 
 Para dar um cargo a um colega, o administrador gera um **código de convite** em *Usuários e cargos* ou altera o cargo depois do cadastro.
+
+**Preferências** (botão na barra lateral, para todos os cargos): tema, tamanho do texto, fonte, contraste alto, menos animação, cores do grafo e formato preferido do relatório. Ficam salvas no cadastro e valem em qualquer computador.
+
+### Relatórios (versão 0.9)
+- **Relatório da análise:** tela *Relatórios* → escolha PDF, Excel, Word, PowerPoint ou CSV. Usa o período, os filtros e a simulação que estiverem em uso.
+- **Relatório da comparação:** tela *Histórico e comparação* → compare dois períodos ou cenários → botões "Baixar o relatório desta comparação".
+- Os gráficos do Excel, do Word e do PowerPoint são editáveis (botão direito → *Editar dados*). O CSV vem num `.zip`, um arquivo por tabela.
+- Na primeira abertura da versão 0.9, o `iniciar.bat` instala 4 bibliotecas novas (cerca de 15 MB): é preciso internet nessa vez.
 
 ## 7. Problemas comuns
 Rode primeiro o **`scripts\DIAGNOSTICO.bat`**: ele aponta a causa e a correção.

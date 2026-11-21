@@ -1,4 +1,5 @@
 /* NEXO — gráficos em SVG desenhados à mão (sem bibliotecas externas): área, rosca e barras. */
+import {prefs} from "./preferencias.js";
 import {esc, fmtBRL} from "./utilidades.js";
 
 export const charts = {
@@ -52,9 +53,10 @@ export const charts = {
     const max = Math.max(...itens.map(i=>i.valor),1e-9)*1.15;
     const lg = (W-P.l-P.r)/itens.length;
     const mostra = Math.ceil(itens.length/14);
+    const valores = prefs.graficos_valores !== false && itens.length <= 16;   // preferência "Valores nos gráficos"
     const barras = itens.map((it,i)=>{
       const h = (it.valor/max)*(H-P.t-P.b), x=P.l+i*lg+lg*0.2, y=H-P.b-h;
-      return `<rect x="${x}" y="${y}" width="${lg*0.6}" height="${Math.max(h,1)}" rx="2" fill="${it.cor||"var(--blue)"}" opacity=".85"><title>${esc(it.rotulo)}: ${fmt(it.valor)}</title></rect>
+      return `${valores && it.valor ? `<text class="valor-barra" x="${x+lg*0.3}" y="${y-4}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--ink-2)">${esc(eixo(it.valor))}</text>` : ""}<rect x="${x}" y="${y}" width="${lg*0.6}" height="${Math.max(h,1)}" rx="2" fill="${it.cor||"var(--blue)"}" opacity=".85"><title>${esc(it.rotulo)}: ${fmt(it.valor)}</title></rect>
               ${i%mostra===0?`<text x="${x+lg*0.3}" y="${H-10}" text-anchor="middle" font-size="10" fill="var(--ink-3)">${esc(it.rotulo)}</text>`:""}`;
     }).join("");
     const base = [0,.5,1].map(f=>{const yy=H-P.b-f*(H-P.t-P.b);

@@ -1,5 +1,17 @@
 # Histórico de versões
 
+## 0.9 — Fase 5: relatórios e configurações (branch `fase-5`)
+- **Relatórios em PDF, Excel, CSV, Word e PowerPoint**, gerados pelo mesmo conteúdo (`nucleo/relatorio.py`): os números são idênticos em todos os formatos.
+  - **Relatório da análise:** identificação (quem, quando, período, filtros, número e assinatura da análise, versão do motor), indicadores, 6 gráficos, contas priorizadas com a evidência e a regra de origem de cada indício, padrões, comunidades, regras com os limites em vigor e **conclusões montadas por modelos de texto** (nunca afirmam fraude).
+  - **Relatório da comparação** (períodos, simulação atual ou cenários), no botão da tela Histórico e comparação.
+  - **Gráficos de verdade:** nativos no Excel, no Word e no PowerPoint (editáveis em "Editar dados") e vetoriais no PDF.
+  - Excel com uma aba por tabela (números somáveis, filtros); CSV em `.zip` (um arquivo por tabela, `;` e vírgula decimal); PowerPoint 16:9 com anotações do apresentador.
+  - Bibliotecas novas: reportlab, XlsxWriter, python-docx e python-pptx. Só são carregadas quando alguém exporta.
+- **Limites das regras de risco editáveis** em Configurações pelo administrador (14 parâmetros com faixa segura). A análise é recalculada na hora para todos, e a mudança fica na auditoria. "Voltar ao padrão" restaura tudo.
+- **Preferências no cadastro do usuário** (valem em qualquer computador): tema, tamanho do texto, fonte, contraste alto, menos animação, foco bem visível, cores e paleta do grafo, rótulos, valores nos gráficos, limiares do score e formato preferido do relatório. Botão **Preferências** na barra lateral para todos os cargos.
+- **Banco:** migração 7 (`parametros_risco` e `preferencias_usuario`).
+- **Testes:** novo `test_fase5.py` (faixas e permissões dos limites, preferências, os 5 formatos com os mesmos números e o gabarito C025 na comparação); `test_mysql` e o teste no navegador ampliados. São 11 conjuntos.
+
 ## 0.8 — Fase 4: simulador e histórico (branch `fase-4`)
 - **Dados bancários fictícios** por conta: instituição ("Banco Fictício A a D", sem nomes nem códigos de bancos reais), tipo de conta e tipo de chave PIX. São gerados por regras fixas e coerentes com a base: contas ligadas por "Transferência" ficam na mesma instituição.
 - **Regras por modalidade**, cada uma marcada como Regulamentação, Prática de mercado ou Parâmetro do administrador:

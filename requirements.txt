@@ -6,3 +6,8 @@ flask>=3.0,<4           # servidor web e API (traz o Werkzeug: hash de senhas)
 openpyxl>=3.1,<4        # leitura da planilha NEXO_Base_Transacoes.xlsx
 PyMySQL>=1.1,<2         # conexão com o MySQL (Aiven) — 100% Python, sem compilador
 cryptography>=42        # exigida pelo PyMySQL para SSL e autenticação do MySQL 8
+# Relatórios (Fase 5) — só são carregadas quando alguém exporta naquele formato
+reportlab>=4.1,<6       # PDF com gráficos vetoriais
+XlsxWriter>=3.1,<4      # Excel com gráficos nativos (também usada pelo python-pptx)
+python-docx>=1.1,<2     # Word
+python-pptx>=1.0,<2     # PowerPoint (e os gráficos nativos do Word)

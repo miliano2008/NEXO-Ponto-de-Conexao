@@ -1,7 +1,9 @@
-/* NEXO — tela Relatórios: rede, contas, memorial de cálculo, validação matemática e exportação. */
+/* NEXO — tela Relatórios: relatório completo em PDF, Excel, Word, PowerPoint e CSV (Fase 5),
+   rede, contas, memorial de cálculo, validação matemática e o JSON para integração. */
 import {obterMatrizes} from "../nucleo/dados.js";
-import {estado} from "../nucleo/estado.js";
-import {consulta} from "../nucleo/filtros.js";
+import {estado, ouvir} from "../nucleo/estado.js";
+import {baixar, botoes} from "../nucleo/exportar.js";
+import {consulta, descreverPeriodo} from "../nucleo/filtros.js";
 import {ui} from "../nucleo/ui.js";
 import {esc, el, fmtBRL, fmtNum, pill} from "../nucleo/utilidades.js";
 
@@ -45,7 +47,33 @@ const itens = [
   ["Validação Matemática","Conferências automáticas de consistência das matrizes, espectral e Louvain.","Gerado"],
   ["Exportar resultados","JSON completo para integração (Power BI / Relatório A3).","Disponível"]
 ];
+function cartaoCompleto(){
+  const d = estado.dados, sim = d.simulacao.transacoes_simuladas;
+  el("relCompleto").innerHTML = `
+    <div class="card-head"><div><h3>Relatório completo da análise</h3>
+      <p>${esc(descreverPeriodo())} · ${d.simulacao.recorte.transacoes} transações${sim ? ` · inclui ${sim} simulada(s)` : ""}</p></div></div>
+    <div class="card-body">
+      <ol class="rel-conteudo">
+        <li>Identificação: quem gerou, quando, período, filtros, número e assinatura da análise</li>
+        <li>Indicadores gerais e <b>gráficos</b> (prioridade, top 10, modalidades, semanas, indícios)</li>
+        <li>Contas priorizadas com a evidência de cada indício e a regra de origem</li>
+        <li>Padrões, comunidades e as regras de risco com os limites em vigor</li>
+        <li>Conclusões geradas a partir das regras (sem afirmar fraude)</li>
+      </ol>
+      ${botoes('id="relExportar"')}
+      <p class="rel-dica">Os gráficos são nativos de cada formato (editáveis no Excel, Word e PowerPoint; vetoriais no PDF).
+        O Excel e o CSV trazem também todas as contas e transações. Para comparar períodos ou cenários, use
+        <a href="#" data-goto="historico">Histórico e comparação</a>.</p>
+    </div>`;
+}
+
 export function iniciar(){
+  el("relCompleto").addEventListener("click", e => {
+    const b = e.target.closest("button[data-formato]"); if(!b) return;
+    const q = new URLSearchParams(consulta()); q.set("tipo", "analise"); q.set("formato", b.dataset.formato);
+    baixar(`/api/relatorio?${q}`, b);
+  });
+  ouvir("preferencias", () => { if(el("page-relatorios").classList.contains("active")) cartaoCompleto(); });
   el("reportGrid").innerHTML = itens.map(([nome,desc,st],i)=>`
     <div class="card"><div class="card-body">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
@@ -60,3 +88,5 @@ export function iniciar(){
     catch(err){ ui.toast(esc(err.message), true); }
   });
 }
+
+export const atualizar = cartaoCompleto;

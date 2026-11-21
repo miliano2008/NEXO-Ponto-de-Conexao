@@ -10,7 +10,7 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 | **2** | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | **Concluída e validada** (na `main`) |
 | **3** | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | **Concluída e validada** (na `main`) |
 | **4** | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | **Concluída e validada** (na `main`) |
-| 5 | Relatórios e configurações: exportação em **PDF, Excel, CSV, Word e PowerPoint**, com gráficos de verdade, não capturas de tela | Planejada |
+| **5** | Relatórios e configurações: exportação em **PDF, Excel, CSV, Word e PowerPoint**, com gráficos de verdade, não capturas de tela; limites das regras de risco e preferências do usuário | **Concluída. Aguarda validação** (branch `fase-5`) |
 | 6 | Importação de bases: upload `.xlsx`/`.csv` de até **300 transações**, uma base por empresa, com exclusão. Depende da decisão sobre multiempresa | Planejada |
 
 ## Decisões (resposta do grupo: "aceito as recomendações", com exceções)
@@ -46,6 +46,20 @@ O que já ficou pronto para facilitar esses itens:
 - configuração por variáveis de ambiente (`.env`), exigida pelas hospedagens;
 - simulações guardadas no banco, porque hospedagens reiniciam a máquina;
 - migrações numeradas com backup, que tornam segura a troca de chaves do multiempresa.
+
+## Fase 5: o que foi entregue
+| Item planejado | Entrega |
+|---|---|
+| Relatórios profissionais | Um conteúdo único (`nucleo/relatorio.py`) em cinco formatos. **Análise:** identificação, indicadores, 6 gráficos, contas priorizadas com evidências, padrões, comunidades, regras e limites, conclusões e anexo com todas as contas e transações (Excel e CSV). **Comparação:** indicadores A × B, maiores mudanças, conexões novas e removidas e conclusões |
+| Rastreabilidade | O relatório leva o número e a assinatura da análise, a versão do motor e os limites em vigor; cada indício cita a regra de origem pelo identificador (ex.: `fan_in`). Cada exportação fica na auditoria |
+| Conclusões | Modelos de texto preenchidos com os resultados (contas de prioridade alta, indício mais frequente, circuitos, comunidades em destaque, modularidade, simulação). Sempre terminam com "não constituem prova de irregularidade" e nunca usam a palavra fraude |
+| Gráficos de verdade | **Nativos** no Excel, no Word e no PowerPoint (o gráfico é editável e traz a planilha com os dados) e **vetoriais** no PDF (reportlab). Nenhum é captura de tela |
+| Formatos | PDF A4 com capa e rodapé de origem · Excel com uma aba por tabela e números somáveis · CSV em `.zip` (`;`, vírgula decimal, UTF-8) · Word com títulos navegáveis · PowerPoint 16:9 com anotações do apresentador e no máximo 2 slides por tabela |
+| Edição dos limites das regras (Configurações) | 14 parâmetros com nome, unidade, padrão e faixa segura. Só o administrador altera; os outros cargos consultam. A análise é recalculada na hora (os limites entram na assinatura do cache) e a mudança fica na auditoria |
+| Personalização | Tabela `preferencias_usuario`: tema, tamanho do texto, fonte (inclui alta legibilidade), contraste alto, menos animação, foco bem visível, cores e paleta do grafo, rótulos, valores nos gráficos, limiares do score e formato preferido do relatório. Valem em qualquer computador |
+| Desempenho | Bibliotecas só carregadas ao exportar. Relatório completo da base: PDF ~0,3 s, Excel ~0,05 s, Word e PowerPoint ~0,4 s |
+
+**Observação sobre o Power BI:** a integração direta foi retirada pelo grupo; o CSV (ou o Excel) da Fase 5 é o caminho para levar os dados ao Power BI ("Obter dados → Texto/CSV", origem Português (Brasil)).
 
 ## Fase 4: o que foi entregue
 | Item planejado | Entrega |

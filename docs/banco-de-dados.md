@@ -25,6 +25,8 @@ O PyMySQL foi escolhido em vez do `mysql-connector-python` por ser escrito só e
 | `casos` | migração 5 | situação da investigação por conta (única), responsável e datas |
 | `casos_historico` | migração 5 | cada decisão: situação anterior e nova, comentário, usuário e data |
 | `regras_modalidade` | migração 6 | ajustes do administrador nas regras por modalidade: ação, parâmetros (JSON), quem e quando |
+| `parametros_risco` | migração 7 | limites das regras de risco ajustados pelo administrador (só os diferentes do padrão): chave, valor, quem e quando |
+| `preferencias_usuario` | migração 7 | preferências de cada usuário (JSON só com o que difere do padrão), apagadas em cascata com o usuário |
 | `analises` | migração 3 | assinatura (única), base, período, versão do motor, contagens, tempo de cálculo, resultado compactado (zlib), datas de criação e último uso |
 | `versao_esquema` | automática | número, descrição e data de cada migração aplicada |
 
@@ -41,6 +43,7 @@ Cada mudança de estrutura é uma função numerada, aplicada **uma única vez**
 | 4 | Versão da sessão (`usuarios.versao_sessao`) e contas externas (`identidades_externas`), da Fase 1 |
 | 5 | Investigação: `casos` e `casos_historico`, da Fase 2 |
 | 6 | Regras por modalidade (`regras_modalidade`) e histórico de simulações (colunas em `simulacoes`), da Fase 4 |
+| 7 | Limites das regras de risco (`parametros_risco`) e preferências do usuário (`preferencias_usuario`), da Fase 5 |
 
 Regras:
 

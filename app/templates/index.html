@@ -54,7 +54,7 @@
         <div><strong id="userNome">Carregando…</strong><span id="userCargo"></span></div>
       </div>
       <div class="sys-status"><i class="pulse"></i> <span id="sysStatus">Conectando ao backend…</span></div>
-      <div class="side-acoes"><button class="logout" id="btnSenha">Minha senha</button><button class="logout" id="btnSair">Sair</button></div>
+      <div class="side-acoes"><button class="logout" id="btnPrefs">Preferências</button><button class="logout" id="btnSenha">Minha senha</button><button class="logout" id="btnSair">Sair</button></div>
     </div>
   </aside>
 
@@ -128,7 +128,7 @@
           <div class="card"><div class="card-head"><div><h3>Comunidades</h3><p>Destaque: 2 ou mais contas com prioridade moderada ou alta</p></div></div>
             <div class="table-wrap"><table><thead><tr><th class="num">Com.</th><th class="num">Contas</th><th>Com prioridade</th><th class="num">Densidade</th><th class="num">Volume interno</th></tr></thead>
             <tbody id="riscoComBody"></tbody></table></div></div>
-          <div class="card"><div class="card-head"><div><h3>Regras e limites</h3><p>Limites relativos à base: valem para qualquer recorte</p></div></div>
+          <div class="card"><div class="card-head"><div><h3>Regras e limites</h3><p>Limites relativos à base: valem para qualquer recorte. <a href="#" data-goto="config" class="link-cfg">Ver ou ajustar em Configurações</a></p></div></div>
             <div class="table-wrap"><table><thead><tr><th>Regra</th><th>Limite</th><th class="num">Peso</th></tr></thead>
             <tbody id="riscoRegrasBody"></tbody></table></div></div>
         </div>
@@ -352,7 +352,8 @@
 
       <!-- ---------- RELATÓRIOS ---------- -->
       <section class="page" id="page-relatorios">
-        <div class="grid g2" id="reportGrid"></div>
+        <div class="card" id="relCompleto"></div>
+        <div class="grid g2 mt" id="reportGrid"></div>
         <div class="note mt">Os relatórios usam os resultados atuais do backend (inclui transações simuladas e o período selecionado). O JSON completo pode ser baixado para integração com Power BI.</div>
       </section>
 
@@ -418,22 +419,29 @@
       <!-- ---------- CONFIGURAÇÕES ---------- -->
       <section class="page" id="page-config">
         <div class="grid g2">
-          <div class="card"><div class="card-head"><div><h3>Limiares de classificação</h3><p>Ajuste os cortes do Score NEXO e veja a rede reclassificar</p></div></div>
+          <div class="card"><div class="card-head"><div><h3>Limiares de classificação</h3><p>Cortes do Score NEXO: a rede reclassifica na hora</p></div></div>
             <div class="card-body">
-              <label style="font-size:12.5px">Limiar de “em análise”: <b id="thrAOut">45</b></label>
+              <label style="font-size:12.5px" for="thrA">Limiar de “em análise”: <b id="thrAOut">45</b></label>
               <input type="range" id="thrA" min="20" max="80" value="45">
-              <label style="font-size:12.5px;display:block;margin-top:14px">Limiar de “alta relevância”: <b id="thrBOut">70</b></label>
+              <label style="font-size:12.5px;display:block;margin-top:14px" for="thrB">Limiar de “alta relevância”: <b id="thrBOut">70</b></label>
               <input type="range" id="thrB" min="40" max="100" value="70">
-              <p style="font-size:12px;color:var(--ink-3);margin:14px 0 0">A reclassificação é aplicada na interface sobre os scores do backend e não é persistida.</p>
+              <p style="font-size:12px;color:var(--ink-3);margin:14px 0 0">Ficam salvos nas suas preferências. Não mudam o score calculado pelo servidor, só os cortes de status.</p>
               <h4 style="margin:18px 0 8px;font-size:13px">Pesos do score (backend)</h4>
               <dl class="kv" id="pesosInfo" style="font-size:12.5px"></dl>
             </div></div>
-          <div class="card"><div class="card-head"><div><h3>Preferências da interface</h3></div></div>
-            <div class="card-body">
-              <div class="switch"><div><p>Tema escuro</p><span>Acompanha o sistema por padrão</span></div><button class="toggle" id="swTheme"></button></div>
-              <div class="switch"><div><p>Rótulos das contas no grafo</p><span>Exibe o código da conta sob cada nó</span></div><button class="toggle on" id="swLabels"></button></div>
-              <div class="switch"><div><p>Alertas de conta em análise</p><span>Mostra aviso quando uma simulação muda o status de uma conta</span></div><button class="toggle on" id="swAlerts"></button></div>
-            </div></div>
+          <div class="card"><div class="card-head"><div><h3>Preferências</h3><p>Aparência, acessibilidade, grafo e relatórios</p></div></div>
+            <div class="card-body" id="cfgPreferencias"></div></div>
+        </div>
+        <div class="card mt"><div class="card-head"><div><h3>Limites das regras de risco</h3>
+            <p id="cfgRiscoSub">Usados pelo Painel de risco em todas as análises</p></div>
+            <div style="flex:1"></div>
+            <button class="btn ghost sm" id="cfgRiscoPadrao" hidden>Voltar ao padrão</button>
+            <button class="btn sm" id="cfgRiscoSalvar" hidden>Salvar limites</button></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Parâmetro</th><th>Regras</th><th class="num">Valor</th><th>Unidade</th><th class="num">Padrão</th><th>Faixa</th></tr></thead>
+            <tbody id="cfgRisco"></tbody>
+          </table></div>
+          <div class="msg-erro-mini" id="cfgRiscoErro" hidden style="margin:10px 16px"></div>
         </div>
         <div class="card mt"><div class="card-head"><div><h3>Sobre esta versão</h3></div></div>
           <div class="card-body"><dl class="kv" id="sobre"></dl></div></div>

@@ -362,6 +362,38 @@ CREATE TABLE IF NOT EXISTS regras_modalidade (
         _adicionar_coluna(c, mysql, "simulacoes", coluna, tipo_mysql, tipo_sqlite)
 
 
+def m7_configuracoes_e_preferencias(c, mysql):
+    """Fase 5: limites das regras de risco ajustados pelo administrador e preferências de cada
+    usuário (tema, texto, acessibilidade, cores do grafo), que o acompanham em qualquer computador."""
+    if mysql:
+        c.executar_script("""
+CREATE TABLE IF NOT EXISTS parametros_risco (
+    chave VARCHAR(40) PRIMARY KEY,
+    valor VARCHAR(40) NOT NULL,
+    atualizado_por VARCHAR(150) NOT NULL,
+    atualizado_em DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS preferencias_usuario (
+    usuario_id INT PRIMARY KEY,
+    dados TEXT NOT NULL,
+    atualizado_em DATETIME NOT NULL,
+    CONSTRAINT fk_pref_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+    else:
+        c.executar_script("""
+CREATE TABLE IF NOT EXISTS parametros_risco (
+    chave TEXT PRIMARY KEY,
+    valor TEXT NOT NULL,
+    atualizado_por TEXT NOT NULL,
+    atualizado_em TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS preferencias_usuario (
+    usuario_id INTEGER PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
+    dados TEXT NOT NULL,
+    atualizado_em TEXT NOT NULL
+)""")
+
+
 MIGRACOES = [
     (1, "Acesso: usuários, links por e-mail, convites e auditoria", m1_acesso),
     (2, "Simulações por usuário", m2_simulacoes),
@@ -369,6 +401,7 @@ MIGRACOES = [
     (4, "Versão da sessão e contas externas (Google)", m4_sessoes_e_identidades),
     (5, "Investigação: situação e histórico por conta", m5_casos),
     (6, "Regras por modalidade e histórico de simulações", m6_modalidades_e_historico),
+    (7, "Limites das regras de risco e preferências do usuário", m7_configuracoes_e_preferencias),
 ]
 VERSAO_ATUAL = MIGRACOES[-1][0]
 

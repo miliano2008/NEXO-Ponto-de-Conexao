@@ -8,18 +8,18 @@ import {estado, ouvir} from "../nucleo/estado.js";
 import {contasVisiveis, filtrosDeVisualizacaoAtivos} from "../nucleo/filtros.js";
 import {ESQUEMAS, LAYOUT, carregarCytoscape, corDe, criarMinimapa, elementos, estilo, formaDe, legenda,
         papel, posicaoInicial} from "../nucleo/grafo.js";
+import {prefs, salvar, semAnimacao} from "../nucleo/preferencias.js";
 import {ui} from "../nucleo/ui.js";
 import {corCom, el, esc, fmtBRL, fmtNum, pill, pillRisco} from "../nucleo/utilidades.js";
 import {TIPOS, animar, ocorrencias} from "./rede-animacao.js";
 
-/* ---------- preferências (por navegador; a Fase 5 leva para o cadastro do usuário) ---------- */
-const PREF = "nexo.rede";
-function lerPref(){ try{ return JSON.parse(localStorage.getItem(PREF)) || {}; } catch(_){ return {}; } }
-function salvarPref(){ try{ localStorage.setItem(PREF, JSON.stringify({esquema, paleta})); } catch(_){ /* modo privado */ } }
-let {esquema = "status", paleta = "padrao"} = lerPref();
-if(!ESQUEMAS[esquema]) esquema = "status";
+/* ---------- preferências (Fase 5: no cadastro do usuário, em qualquer computador) ---------- */
+let esquema = ESQUEMAS[prefs.grafo_esquema] ? prefs.grafo_esquema : "status";
+let paleta = prefs.grafo_paleta || "padrao";
+const salvarPref = () => salvar({grafo_esquema: esquema, grafo_paleta: paleta});
+const dur = ms => semAnimacao() ? 0 : ms;   // "menos animação": o grafo pula direto para a posição
 
-let cy = null, cytoscape = null, minimapa = null, mostrarRotulos = true;
+let cy = null, cytoscape = null, minimapa = null, mostrarRotulos = prefs.grafo_rotulos !== false;
 let focoCom = "", selecionado = null, ajustarAoMostrar = false, versaoDesenhada = -1;
 const posicoes = {};          // posições guardadas entre análises: a rede não "pula" após uma simulação
 
@@ -106,13 +106,13 @@ function realcar(){
 function selecionar(id, aproximar = false){
   selecionado = id;
   realcar();
-  if(id && aproximar) cy.animate({fit: {eles: cy.$id(id).closedNeighborhood(), padding: 80}}, {duration: 450});
+  if(id && aproximar) cy.animate({fit: {eles: cy.$id(id).closedNeighborhood(), padding: 80}}, {duration: dur(450)});
 }
 
 function eventos(){
   const tip = el("tip");
   cy.on("tap", "node", e => { if(e.target.hasClass("pulso")) return; selecionar(e.target.id()); painel(e.target.id()); });
-  cy.on("dbltap", "node", e => cy.animate({center: {eles: e.target}, zoom: Math.max(cy.zoom() * 1.8, 1.6)}, {duration: 400}));
+  cy.on("dbltap", "node", e => cy.animate({center: {eles: e.target}, zoom: Math.max(cy.zoom() * 1.8, 1.6)}, {duration: dur(400)}));
   cy.on("tap", e => { if(e.target === cy && selecionado){ selecionar(null); } });
   cy.on("mouseover", "node", e => {
     const c = estado.porId[e.target.id()]; if(!c) return;
@@ -332,7 +332,7 @@ export function iniciar(){
   el("corPor").addEventListener("change", e => { esquema = e.target.value; salvarPref(); colorir(); });
   el("paleta").addEventListener("change", e => { paleta = e.target.value; salvarPref(); cy?.style(estilo(paleta, {rotulos: mostrarRotulos})); colorir(); });
   el("focoCom").addEventListener("change", e => { focoCom = e.target.value; selecionado = null; realcar();
-    if(cy && focoCom) cy.animate({fit: {eles: cy.nodes().not(".apagado"), padding: 60}}, {duration: 400}); });
+    if(cy && focoCom) cy.animate({fit: {eles: cy.nodes().not(".apagado"), padding: 60}}, {duration: dur(400)}); });
   el("buscaConta").addEventListener("change", e => { if(e.target.value) localizar(e.target.value); });
   el("buscaConta").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); localizar(e.target.value); } });
   // stop(): um clique durante a animação de "ajustar" não pode ser sobrescrito por ela
@@ -340,9 +340,9 @@ export function iniciar(){
     cy.zoom({level: cy.zoom() * f, renderedPosition: {x: cy.width() / 2, y: cy.height() / 2}}); };
   el("zIn").onclick = () => zoomPor(1.3);
   el("zOut").onclick = () => zoomPor(1 / 1.3);
-  el("zFit").onclick = () => cy?.animate({fit: {padding: 30}}, {duration: 350});
+  el("zFit").onclick = () => cy?.animate({fit: {padding: 30}}, {duration: dur(350)});
   el("zCentro").onclick = () => { if(!cy) return;
-    selecionado ? cy.animate({fit: {eles: cy.$id(selecionado).closedNeighborhood(), padding: 80}}, {duration: 350})
+    selecionado ? cy.animate({fit: {eles: cy.$id(selecionado).closedNeighborhood(), padding: 80}}, {duration: dur(350)})
                 : ui.toast("Clique numa conta (ou use “Localizar conta”) para centralizar nela."); };
   el("zReset").onclick = () => { if(!cy) return; Object.keys(posicoes).forEach(k => delete posicoes[k]);
     estado.dados.contas.forEach((c, i) => cy.$id(c.id).position(posicaoInicial(c, i, estado.dados.comunidades.length))); organizar(true); };
@@ -360,6 +360,14 @@ export function iniciar(){
   }, true);
   ouvir("tema", () => { if(cy){ cy.style(estilo(paleta, {rotulos: mostrarRotulos})); minimapa = criarMinimapa(cytoscape, cy, el("minimapa")); minimapa.atualizar(); } });
   ouvir("rotulos", v => { mostrarRotulos = v; cy?.style(estilo(paleta, {rotulos: v})); });
+  ouvir("preferencias", p => {   // mudou em Configurações ou em outro lugar
+    if(p.grafo_esquema === esquema && p.grafo_paleta === paleta) return;
+    const novaPaleta = p.grafo_paleta !== paleta;
+    esquema = ESQUEMAS[p.grafo_esquema] ? p.grafo_esquema : "status"; paleta = p.grafo_paleta;
+    el("corPor").value = esquema; el("paleta").value = paleta;
+    if(novaPaleta) cy?.style(estilo(paleta, {rotulos: mostrarRotulos}));
+    colorir();
+  });
 }
 
 export async function atualizar(){

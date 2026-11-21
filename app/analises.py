@@ -23,6 +23,27 @@ MAX_EM_MEMORIA = 32
 _trava = threading.Lock()
 _base = {"contas": None, "transacoes": None, "assinatura": None, "lida_em": 0.0}
 _cache = OrderedDict()  # assinatura → (resultado, info)
+_parametros = {"valores": None, "lidos_em": 0.0}
+
+
+def parametros_risco():
+    """Limites efetivos das regras de risco (padrão + ajustes do administrador), relidos como a base."""
+    from nucleo import risco
+    with _trava:
+        if _parametros["valores"] is None or time.monotonic() - _parametros["lidos_em"] >= RECARGA_SEGUNDOS:
+            try:
+                ajustes = {k: v["valor"] for k, v in repositorio.ler_parametros_risco().items()}
+            except Exception:  # noqa: BLE001 — banco fora do ar ou tabela ainda não migrada: segue com o padrão
+                ajustes = None if _parametros["valores"] is None else {}
+            if ajustes is not None or _parametros["valores"] is None:
+                _parametros.update(valores=risco.parametros_efetivos(ajustes), lidos_em=time.monotonic())
+        return dict(_parametros["valores"])
+
+
+def esquecer_parametros():
+    """Depois de o administrador salvar: a próxima análise já usa os limites novos."""
+    with _trava:
+        _parametros.update(valores=None, lidos_em=0.0)
 
 
 def obter_base(forcar=False):
@@ -108,7 +129,12 @@ def calcular(recorte=0, simuladas=()):
     r = normalizar_recorte(recorte)
     contas, base, base_assinatura = obter_base()
     simuladas = list(simuladas)
-    chave = repositorio.assinatura(base_assinatura, simuladas, r, analise.VERSAO_MOTOR)
+    from nucleo.risco import PARAMETROS
+    parametros = parametros_risco()
+    ajustados = {k: v for k, v in parametros.items() if v != PARAMETROS[k]}
+    # limites ajustados entram na assinatura: outro limite, outra análise (com os padrões, a assinatura não muda)
+    partes = (base_assinatura, simuladas, r, analise.VERSAO_MOTOR) + ((ajustados,) if ajustados else ())
+    chave = repositorio.assinatura(*partes)
     with _trava:
         if chave in _cache:
             _cache.move_to_end(chave)
@@ -122,7 +148,7 @@ def calcular(recorte=0, simuladas=()):
     if not transacoes:
         raise ValueError("Nenhuma transação no recorte escolhido. Amplie o período ou os filtros de valor e tipo.")
     inicio_calculo = time.perf_counter()
-    resultado = analise.calcular(contas, transacoes)
+    resultado = analise.calcular(contas, transacoes, parametros)
     duracao_ms = round((time.perf_counter() - inicio_calculo) * 1000)
 
     analise_id = None
@@ -148,4 +174,5 @@ def calcular(recorte=0, simuladas=()):
 def limpar_cache():
     with _trava:
         _cache.clear()
+        _parametros.update(valores=None, lidos_em=0.0)
         _base.update(contas=None, transacoes=None, assinatura=None, lida_em=0.0)

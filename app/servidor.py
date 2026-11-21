@@ -20,7 +20,7 @@ from urllib.parse import quote as url_quote
 from flask import (Flask, Response, jsonify, redirect, render_template, request,
                    session, url_for)
 
-from app import analises, auth, casos, envio_email, google, simulacao
+from app import analises, auth, casos, envio_email, google, preferencias, simulacao
 from banco import conexao as db
 from banco import migracoes, repositorio
 from nucleo import analise, configuracao
@@ -731,6 +731,74 @@ def api_ajustar_regra(regra):
     return jsonify({"regras": simulacao.regras_para_tela()})
 
 
+# ---------------------------------------------------------------- limites das regras de risco (Fase 5)
+
+def parametros_risco_para_tela():
+    from nucleo import risco
+    efetivos, ajustes = analises.parametros_risco(), repositorio.ler_parametros_risco()
+    return [{"chave": k, **info, "valor": efetivos[k], "padrao": risco.PARAMETROS[k],
+             "regras_nomes": [risco.REGRA[r]["nome"] for r in info["regras"]],
+             "ajustado_por": ajustes.get(k, {}).get("atualizado_por"),
+             "ajustado_em": ajustes.get(k, {}).get("atualizado_em")}
+            for k, info in risco.PARAMETROS_INFO.items()]
+
+
+@app.get("/api/parametros-risco")
+@exige("consultar")
+def api_parametros_risco():
+    return jsonify({"parametros": parametros_risco_para_tela()})
+
+
+@app.post("/api/parametros-risco")
+@exige("administrar_regras")
+def api_salvar_parametros_risco():
+    from nucleo import risco
+    d, usuario = corpo(), usuario_atual()
+    if d.get("padrao"):
+        repositorio.apagar_parametros_risco()
+        analises.esquecer_parametros()
+        auth.registrar("parametros_risco", None, f"limites de risco voltaram ao padrão por {usuario['nome']}",
+                       request.remote_addr)
+        return jsonify({"parametros": parametros_risco_para_tela()})
+    valores = d.get("valores")
+    if not isinstance(valores, dict) or not valores:
+        return erro_auth("Envie os limites a alterar.")
+    try:
+        limpos = {k: risco.validar_parametro(k, v) for k, v in valores.items()}
+    except ValueError as erro:
+        return erro_auth(erro)
+    atuais = analises.parametros_risco()
+    mudaram = {k: v for k, v in limpos.items() if v != atuais[k]}
+    repositorio.salvar_parametros_risco(limpos, usuario["nome"])
+    analises.esquecer_parametros()
+    if mudaram:
+        auth.registrar("parametros_risco", None,
+                       (", ".join(f"{k}: {atuais[k]:g} → {v:g}" for k, v in mudaram.items()) + f" por {usuario['nome']}")[:255],
+                       request.remote_addr)
+    return jsonify({"parametros": parametros_risco_para_tela()})
+
+
+# ---------------------------------------------------------------- preferências do usuário (Fase 5)
+
+@app.get("/api/preferencias")
+@exige("consultar")
+def api_preferencias():
+    return jsonify({"preferencias": preferencias.ler(usuario_atual()["id"]), "padrao": preferencias.PADRAO})
+
+
+@app.put("/api/preferencias")
+@exige("consultar")
+def api_salvar_preferencias():
+    d = corpo()
+    try:
+        if d.get("padrao"):
+            repositorio.salvar_preferencias(usuario_atual()["id"], {})
+            return jsonify({"preferencias": dict(preferencias.PADRAO)})
+        return jsonify({"preferencias": preferencias.salvar(usuario_atual()["id"], d.get("preferencias") or {})})
+    except ValueError as erro:
+        return erro_auth(erro)
+
+
 # ---------------------------------------------------------------- histórico e comparação (Fase 4)
 
 @app.get("/api/cenarios")
@@ -793,6 +861,42 @@ def api_comparar():
     (ra, rotulo_a), (rb, rotulo_b) = (simulacao.fonte(usuario, f) for f in fontes)
     return jsonify({"a": {"rotulo": rotulo_a, **ra}, "b": {"rotulo": rotulo_b, **rb},
                     "diferencas": simulacao.comparacao.comparar(ra, rb)})
+
+
+@app.get("/api/relatorio")
+@exige("exportar")
+@com_recorte
+def api_relatorio():
+    """Relatório em PDF, Excel, CSV (zip), Word ou PowerPoint.
+    tipo=analise (recorte atual + simulação do usuário) · tipo=comparacao&a=&b= (fontes como em /api/comparar)."""
+    from datetime import datetime
+
+    from app import exportacao
+    from nucleo import relatorio
+    usuario, formato, tipo = usuario_atual(), request.args.get("formato", "pdf"), request.args.get("tipo", "analise")
+    if formato not in exportacao.FORMATOS:
+        return erro_auth("Formato inválido: use pdf, xlsx, csv, docx ou pptx.")
+    agora = datetime.now()
+    if tipo == "analise":
+        documento = relatorio.relatorio_analise(resultados(usuario, recorte_param()), usuario, agora)
+        descricao = "análise"
+    elif tipo == "comparacao":
+        fontes = [request.args.get("a", "base"), request.args.get("b", "base")]
+        if any(f.startswith(("rascunho", "cenario")) for f in fontes) and not auth.tem_permissao(usuario, "simular"):
+            return jsonify({"erro": "O seu cargo pode comparar períodos, mas não simulações."}), 403
+        (ra, rotulo_a), (rb, rotulo_b) = (simulacao.fonte(usuario, f) for f in fontes)
+        documento = relatorio.relatorio_comparacao(ra, rb, rotulo_a, rotulo_b, simulacao.comparacao.comparar(ra, rb),
+                                                   usuario, agora)
+        descricao = f"comparação {fontes[0]} × {fontes[1]}"
+    else:
+        return erro_auth("Tipo de relatório inválido: use analise ou comparacao.")
+    try:
+        conteudo, mime, nome = exportacao.gerar(documento, formato)
+    except RuntimeError as erro:
+        return erro_auth(erro, 500)
+    auth.registrar("relatorio", None, f"{usuario['nome']}: {descricao} em {exportacao.NOMES[formato]}", request.remote_addr)
+    return Response(conteudo, mimetype=mime, headers={"Content-Disposition": f'attachment; filename="{nome}"',
+                                                      "Cache-Control": "no-store"})
 
 
 @app.get("/api/exportar")

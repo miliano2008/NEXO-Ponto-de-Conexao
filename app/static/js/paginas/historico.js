@@ -5,6 +5,7 @@
 import {api} from "../nucleo/api.js";
 import {carregar} from "../nucleo/dados.js";
 import {estado} from "../nucleo/estado.js";
+import {baixar, botoes} from "../nucleo/exportar.js";
 import {LAYOUT, carregarCytoscape, corDe, estilo, posicaoInicial} from "../nucleo/grafo.js";
 import {irPara} from "../nucleo/roteador.js";
 import {pode} from "../nucleo/sessao.js";
@@ -114,7 +115,7 @@ async function comparar(a, b){
   if(a === b){ ui.toast("Escolha duas análises diferentes para comparar.", true); return; }
   el("cmpIr").disabled = true;
   el("cmpResultado").innerHTML = `<p class="empty">Calculando as duas análises…</p>`;
-  try{ ultima = await api(`/api/comparar?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`); }
+  try{ ultima = await api(`/api/comparar?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`); ultima.fontes = {a, b}; }
   catch(err){ el("cmpResultado").innerHTML = `<div class="note warn mt">${esc(err.message)}</div>`; return; }
   finally{ el("cmpIr").disabled = false; }
   await desenhar(ultima);
@@ -139,6 +140,7 @@ async function desenhar(r){
   const mudou = comparaveis.filter(c => c.delta_score || c.delta_ranking || c.nivel[0] !== c.nivel[1] || c.mudou_comunidade
                                         || c.comunidades_vizinhas[0] !== c.comunidades_vizinhas[1]);
   el("cmpResultado").innerHTML = `
+    <div class="export-barra mt"><span>Baixar o relatório desta comparação</span>${botoes('id="cmpExportar"')}</div>
     <div class="grid g2 mt">
       <div class="card"><div class="card-head"><div><h3>Indicadores</h3><p>${esc(r.a.rotulo)} × ${esc(r.b.rotulo)}</p></div></div>
         <div class="table-wrap"><table><thead><tr><th></th><th class="num">Esquerda</th><th class="num">Direita</th><th class="num">Δ</th></tr></thead>
@@ -224,6 +226,12 @@ export function iniciar(){
   el("histTabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if(b) abrirAba(b.dataset.tab); });
   ["cmpA", "cmpB"].forEach(id => el(id).addEventListener("change", () => alternarDatas(id)));
   el("cmpIr").addEventListener("click", () => comparar(fonteDe("cmpA"), fonteDe("cmpB")));
+  el("cmpResultado").addEventListener("click", e => {   // relatório da comparação (Fase 5)
+    const b = e.target.closest("#cmpExportar button[data-formato]");
+    if(!b || !ultima?.fontes) return;
+    const q = new URLSearchParams({tipo: "comparacao", formato: b.dataset.formato, a: ultima.fontes.a, b: ultima.fontes.b});
+    baixar(`/api/relatorio?${q}`, b);
+  });
   el("cmpExemplo").addEventListener("click", () => {
     el("cmpA").value = "personalizado"; el("cmpAIni").value = "2026-08-01"; el("cmpAFim").value = "2026-08-15";
     el("cmpB").value = "personalizado"; el("cmpBIni").value = "2026-09-01"; el("cmpBFim").value = "2026-09-15";
