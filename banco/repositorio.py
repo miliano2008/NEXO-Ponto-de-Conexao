@@ -226,6 +226,56 @@ def apagar_ajuste_regra(regra):
         c.execute("DELETE FROM regras_modalidade WHERE regra = ?", (regra,))
 
 
+# ---------------------------------------------------------------- limites das regras de risco (Fase 5)
+
+def ler_parametros_risco():
+    """{chave: {valor, atualizado_por, atualizado_em}} ajustados pelo administrador."""
+    with db.conectar() as c:
+        linhas = c.execute("SELECT * FROM parametros_risco").fetchall()
+    return {l["chave"]: {"valor": l["valor"], "atualizado_por": l["atualizado_por"],
+                         "atualizado_em": _texto(l["atualizado_em"])} for l in linhas}
+
+
+def salvar_parametros_risco(valores, por):
+    """Grava vários parâmetros de uma vez ({chave: valor}); os que voltaram ao padrão saem da tabela."""
+    from nucleo.risco import PARAMETROS
+    instante = agora().isoformat()
+    with db.conectar() as c:
+        for chave, valor in valores.items():
+            c.execute("DELETE FROM parametros_risco WHERE chave = ?", (chave,))
+            if valor != PARAMETROS[chave]:
+                c.execute("INSERT INTO parametros_risco (chave, valor, atualizado_por, atualizado_em) VALUES (?, ?, ?, ?)",
+                          (chave, repr(valor), por, instante))
+
+
+def apagar_parametros_risco():
+    """Todos os limites voltam ao padrão."""
+    with db.conectar() as c:
+        return c.execute("DELETE FROM parametros_risco").rowcount
+
+
+# ---------------------------------------------------------------- preferências do usuário (Fase 5)
+
+def ler_preferencias(usuario_id):
+    with db.conectar() as c:
+        linha = c.execute("SELECT dados FROM preferencias_usuario WHERE usuario_id = ?", (usuario_id,)).fetchone()
+    try:
+        return json.loads(linha["dados"]) if linha else {}
+    except ValueError:
+        return {}
+
+
+def salvar_preferencias(usuario_id, dados):
+    texto, instante = json.dumps(dados, ensure_ascii=False, sort_keys=True), agora().isoformat()
+    with db.conectar() as c:
+        if c.execute("SELECT usuario_id FROM preferencias_usuario WHERE usuario_id = ?", (usuario_id,)).fetchone():
+            c.execute("UPDATE preferencias_usuario SET dados = ?, atualizado_em = ? WHERE usuario_id = ?",
+                      (texto, instante, usuario_id))
+        else:
+            c.execute("INSERT INTO preferencias_usuario (usuario_id, dados, atualizado_em) VALUES (?, ?, ?)",
+                      (usuario_id, texto, instante))
+
+
 # ---------------------------------------------------------------- histórico de simulações (Fase 4)
 
 def _compactar(dados):

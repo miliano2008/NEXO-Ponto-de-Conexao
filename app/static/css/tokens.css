@@ -41,3 +41,25 @@
   --amber:#E3A62B; --amber-soft:#2A2312; --red:#E2596C; --red-soft:#2B1419; --green:#4FBF95;
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
 }
+
+/* ============ PREFERÊNCIAS DO USUÁRIO (Fase 5) ============ */
+/* Tamanho do texto: amplia a interface inteira (textos, campos e ícones juntos). */
+:root[data-texto="grande"]{zoom:1.12}
+:root[data-texto="maior"]{zoom:1.25}
+/* Fonte */
+:root[data-fonte="sistema"] body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:root[data-fonte="legivel"] body{font-family:"Atkinson Hyperlegible",Verdana,Tahoma,"DejaVu Sans",sans-serif;letter-spacing:.01em}
+/* Contraste alto: textos secundários e bordas mais escuros (ou mais claros no tema escuro) */
+:root[data-contraste]{--ink:#000; --ink-2:#1C2733; --ink-3:#3A4757; --line:#8796A8; --blue:#0B4A8F; --red:#9E0F24; --green:#0F5C41; --amber:#8A5A00}
+:root[data-contraste][data-theme="dark"]{--ink:#fff; --ink-2:#E2E9F2; --ink-3:#C3CFDD; --line:#6B819B; --blue:#8CC0F5; --red:#FF8A99; --green:#7FE0BA; --amber:#FFC85C}
+@media (prefers-color-scheme: dark){
+  :root[data-contraste]:not([data-theme="light"]){--ink:#fff; --ink-2:#E2E9F2; --ink-3:#C3CFDD; --line:#6B819B; --blue:#8CC0F5; --red:#FF8A99; --green:#7FE0BA; --amber:#FFC85C}
+}
+/* Menos animação: pedido do usuário ou do sistema */
+:root[data-menos-animacao] *, :root[data-menos-animacao] *::before, :root[data-menos-animacao] *::after{
+  animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important}
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important}
+}
+/* Foco bem visível (navegação pelo teclado) */
+:root[data-foco] :focus-visible{outline:3px solid var(--amber) !important; outline-offset:2px !important; box-shadow:0 0 0 6px rgba(217,147,17,.25) !important}

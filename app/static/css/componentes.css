@@ -109,7 +109,7 @@ input[type=range]{accent-color:var(--blue);width:100%}
 .toast.erro{background:var(--red)}
 
 /* permissões: elementos escondidos conforme o cargo */
-body.sem-simular [data-simular], body.sem-exportar a[href^="/api/exportar"]{display:none !important}
+body.sem-simular [data-simular], body.sem-exportar a[href^="/api/exportar"], body.sem-configurar .link-cfg{display:none !important}
 .cargo-select{padding:5px 8px;font-size:12.5px}
 
 /* ---- "Minha senha" (modal) ---- */

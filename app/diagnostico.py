@@ -7,6 +7,7 @@ Com --rapido mostra só avisos e erros.
 """
 
 import importlib
+import importlib.util
 import socket
 import sys
 from importlib.metadata import PackageNotFoundError, version
@@ -58,6 +59,15 @@ def main():
             ok(f"{nome} {version(pacote)}")
         except (ImportError, PackageNotFoundError):
             faltando.append(nome)
+    # bibliotecas dos relatórios: só confere se estão instaladas (importar todas deixaria o início lento)
+    for nome, pacote in (("reportlab", "reportlab"), ("xlsxwriter", "XlsxWriter"), ("docx", "python-docx"),
+                         ("pptx", "python-pptx")):
+        try:
+            if importlib.util.find_spec(nome) is None:
+                raise ImportError
+            ok(f"{pacote} {version(pacote)} (relatórios)")
+        except (ImportError, PackageNotFoundError):
+            faltando.append(pacote)
     if faltando:
         erro(f"Bibliotecas não instaladas: {', '.join(faltando)}.",
              "python -m pip install -r requirements.txt  (dentro do .venv)")

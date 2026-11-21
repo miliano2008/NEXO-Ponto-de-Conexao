@@ -25,5 +25,5 @@ export async function carregarUsuario(){
     b.hidden = perm ? !pode(perm) : false;
   });
   el("navAdmin").hidden = !pode("gerenciar_usuarios") && !pode("ver_auditoria");
-  ["simular","exportar"].forEach(p => document.body.classList.toggle("sem-"+p, !pode(p)));
+  ["simular","exportar","configurar"].forEach(p => document.body.classList.toggle("sem-"+p, !pode(p)));
 }

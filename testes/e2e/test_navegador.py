@@ -43,6 +43,17 @@ threading.Thread(target=http.serve_forever, daemon=True).start()
 BASE = f"http://127.0.0.1:{porta}"
 
 erros = []
+
+
+def esperar_modal_fechar(pg):
+    """Espera a janela (modal) fechar; se não fechar, mostra o que ficou na tela (erro do formulário, aviso)."""
+    try:
+        pg.wait_for_selector("#overlay:not(.open)", state="attached", timeout=30000)
+    except Exception as erro:
+        raise AssertionError(f"A janela não fechou. Título: {pg.inner_text('#modalTitle')!r} · "
+                             f"conteúdo: {pg.inner_text('#modalBody')[:300]!r} · aviso: {pg.inner_text('#toast')!r}") from erro
+
+
 opcoes = {"executable_path": os.environ["NEXO_CHROMIUM"]} if os.environ.get("NEXO_CHROMIUM") else {}
 with sync_playwright() as p:
     navegador = p.chromium.launch(**opcoes)
@@ -98,12 +109,13 @@ with sync_playwright() as p:
 
     # Fase 3 — navegação estilo mapa: localizar conta (vizinhança), ajustar, zoom, minimapa
     assert pg.locator("#minimapa canvas").count() > 0                      # minimapa desenhado
-    pg.fill("#buscaConta", "C025"); pg.press("#buscaConta", "Enter"); pg.wait_for_timeout(700)
-    assert "C025: 7 conta(s) conectada(s)" in pg.inner_text("#grafoInfo")
+    pg.fill("#buscaConta", "C025"); pg.press("#buscaConta", "Enter")
+    pg.wait_for_function("document.getElementById('grafoInfo').innerText.includes('C025: 7 conta(s)')")
+    pg.wait_for_function(f"!{CY}.animated()")                             # espera a aproximação terminar
     assert pg.evaluate(f"{CY}.nodes('.apagado').length") == 40 - 8      # só C025 e os 7 vizinhos acesos
     zoom = pg.evaluate(f"{CY}.zoom()")
-    pg.click("#zFit"); pg.wait_for_timeout(500)
-    assert pg.evaluate(f"{CY}.zoom()") < zoom                              # "ajustar à tela" afasta
+    pg.click("#zFit")
+    pg.wait_for_function(f"{CY}.zoom() < {zoom} && !{CY}.animated()")    # "ajustar à tela" afasta (sem tempo fixo)
     z1 = pg.evaluate(f"{CY}.zoom()"); pg.click("#zIn"); assert pg.evaluate(f"{CY}.zoom()") > z1
     pg.evaluate(f"{CY}.emit('tap')")                                       # clique no fundo: rede inteira
     pg.wait_for_timeout(200)
@@ -180,7 +192,7 @@ with sync_playwright() as p:
     pg.click("#simEnviar"); pg.wait_for_function("document.querySelectorAll('#simLista button[data-remover]').length === 3")
     # salvar como cenário e abrir no histórico
     pg.click("#simSalvar"); pg.fill("#cnNome", "PIX semanal C001 para C030"); pg.click("#cnSalvar")
-    pg.wait_for_selector("#overlay:not(.open)", state="attached"); pg.wait_for_timeout(300)
+    esperar_modal_fechar(pg); pg.wait_for_timeout(300)
     pg.click("#nav button[data-page=historico]"); pg.wait_for_selector(".cenario")
     assert "PIX semanal C001 para C030" in pg.inner_text("#cenariosLista")
     pg.click("[data-ver-cenario]")
@@ -193,6 +205,10 @@ with sync_playwright() as p:
     assert pg.locator("#cmpResultado dd a").first.inner_text() == "C025"          # 1º em "passaram a ligar mais comunidades"
     pg.click("#cmpTabela tr[data-cmp-conta=C025]"); pg.wait_for_timeout(200)
     assert pg.evaluate("document.getElementById('cmpGrafoA').cy.$id('C025').hasClass('selecionado')")
+    # Fase 5: relatório desta comparação em Word
+    with pg.expect_download() as baixado:
+        pg.click("#cmpExportar button[data-formato=docx]")
+    assert baixado.value.suggested_filename.startswith("nexo_comparacao_") and baixado.value.suggested_filename.endswith(".docx")
     pg.click("#nav button[data-page=simulador]"); pg.click("#simRestaurar"); pg.wait_for_timeout(1200)
 
     # período pelo calendário (recalcula) e filtros de visualização (não recalculam)
@@ -235,20 +251,55 @@ with sync_playwright() as p:
     pg.wait_for_selector(".historico-inv li")
     assert "Não iniciada → Encaminhada" in pg.inner_text(".historico-inv")
 
-    # limiares e tema
-    pg.click("#nav button[data-page=config]")
-    pg.locator("#thrA").fill("20"); pg.wait_for_timeout(300)
-    pg.click("#swTheme"); pg.wait_for_timeout(200)
+    # Fase 5 — relatório completo: o formato preferido vem primeiro; cada botão baixa um arquivo
+    pg.click("#nav button[data-page=relatorios]"); pg.wait_for_selector("#relExportar button")
+    assert pg.get_attribute("#relExportar button >> nth=0", "data-formato") == "pdf"
+    for formato, extensao in (("pdf", ".pdf"), ("xlsx", ".xlsx"), ("pptx", ".pptx"), ("csv", ".zip")):
+        with pg.expect_download() as baixado:
+            pg.click(f"#relExportar button[data-formato={formato}]")
+        assert baixado.value.suggested_filename.endswith(extensao), baixado.value.suggested_filename
+        assert os.path.getsize(baixado.value.path()) > 3000
+
+    # Fase 5 — limites das regras de risco (administrador): vale na hora para o Painel de risco
+    pg.on("dialog", lambda d: d.accept())
+    pg.click("#nav button[data-page=config]"); pg.wait_for_selector("#cfgRisco input[data-param=fan_min_contas]")
+    pg.fill("#cfgRisco input[data-param=fan_min_contas]", "40"); pg.click("#cfgRiscoSalvar")
+    pg.wait_for_selector("#cfgRiscoErro:not([hidden])"); assert "de 2 a 30" in pg.inner_text("#cfgRiscoErro")
+    pg.fill("#cfgRisco input[data-param=fan_min_contas]", "3"); pg.click("#cfgRiscoSalvar")
+    pg.wait_for_selector("#cfgRisco tr.ajustado"); pg.wait_for_timeout(800)
+    pg.click("#nav button[data-page=risco]"); pg.wait_for_selector("#riscoRegrasBody tr")
+    assert "≥ 3 origens" in pg.inner_text("#riscoRegrasBody")
+    pg.click("#nav button[data-page=config]"); pg.click("#cfgRiscoPadrao"); pg.wait_for_timeout(1200)
+    assert pg.locator("#cfgRisco tr.ajustado").count() == 0
+
+    # Fase 5 — preferências no cadastro: limiar, tema, texto, contraste e paleta do grafo voltam após recarregar
+    pg.locator("#thrA").fill("20"); pg.locator("#thrA").dispatch_event("change"); pg.wait_for_timeout(300)
+    pg.select_option("#cfgPreferencias select[data-pref=tema]", "escuro")
+    pg.select_option("#cfgPreferencias select[data-pref=texto]", "grande")
+    pg.select_option("#cfgPreferencias select[data-pref=grafo_paleta]", "daltonismo")
+    pg.click("#cfgPreferencias [data-pref-bool=contraste]")
     assert pg.evaluate("document.documentElement.dataset.theme") == "dark"
-    pg.click("#nav button[data-page=dashboard]"); pg.wait_for_timeout(300)
-    assert int(pg.locator("#dashKpis .val").nth(2).inner_text()) > 12   # limiar menor → mais contas em análise
+    pg.wait_for_timeout(900)                                                          # salvamento agrupado (400 ms)
+    pg.reload(); pg.wait_for_selector("#page-config.active #sobre dt")                # volta na mesma tela (#config)
+    assert pg.input_value("#thrA") == "20"
+    assert pg.evaluate("[document.documentElement.dataset.theme, document.documentElement.dataset.texto,"
+                       " document.documentElement.hasAttribute('data-contraste')]") == ["dark", "grande", True]
+    pg.click("#nav button[data-page=dashboard]"); pg.wait_for_selector("#dashKpis .val")
+    assert int(pg.locator("#dashKpis .val").nth(2).inner_text()) > 12   # limiar 20 salvo → mais contas em análise
+    pg.click("#nav button[data-page=rede]"); pg.wait_for_selector("#graph canvas")
+    assert pg.input_value("#paleta") == "daltonismo"
+    pg.click("#btnPrefs"); pg.wait_for_selector("#prefModal [data-pref-padrao]")
+    pg.click("#prefModal [data-pref-padrao]"); pg.wait_for_timeout(600)
+    assert pg.evaluate("document.documentElement.dataset.texto") == "normal" and not pg.evaluate(
+        "document.documentElement.hasAttribute('data-contraste')")
+    pg.click("[data-close=modal] >> nth=0")
 
     # "Minha senha": senha atual errada mostra o erro; a troca mantém esta sessão
     pg.click("#btnSenha"); pg.wait_for_selector("#formSenha")
     pg.fill("#msAtual", "Errada123"); pg.fill("#msNova", "Nova2026x"); pg.fill("#msConf", "Nova2026x")
     pg.click("#msSalvar"); pg.wait_for_selector("#msErro:not([hidden])")
     pg.fill("#msAtual", SENHA); pg.click("#msSalvar")
-    pg.wait_for_selector("#overlay:not(.open)", state="attached"); pg.wait_for_timeout(300)
+    esperar_modal_fechar(pg); pg.wait_for_timeout(300)
     assert "Senha alterada" in pg.inner_text("#toast")
 
     # navegação pelo endereço (#) e saída
@@ -262,4 +313,5 @@ assert not erros, "\n".join(erros)
 print("TESTES OK: navegador — página inicial, login (e-mail e CPF), 13 telas (módulos sob demanda), rede com Cytoscape "
       "(localizar, vizinhança, zoom, minimapa, cores, daltonismo, comunidade, animação de padrão), regras por modalidade, "
       "simulação recorrente, cenários, comparação lado a lado, matrizes, validação, simulador, "
-      "calendário e filtros, painel de risco, ordenação, investigação, limiares, tema, minha senha e navegação.")
+      "calendário e filtros, painel de risco, ordenação, investigação, relatórios (PDF, Excel, Word, PowerPoint, CSV), "
+      "limites das regras de risco, preferências salvas no cadastro (tema, texto, contraste, limiares, paleta), minha senha e navegação.")

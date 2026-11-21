@@ -21,12 +21,28 @@ js/
 │   ├── minha-senha.js janela "Minha senha" (trocar a senha, desconectar outros computadores); baixada só ao clicar
 │   ├── filtros.js     filtros globais em duas camadas: recorte (recalcula) e visualização (não recalcula)
 │   ├── grafo.js       Cytoscape sob demanda, esquemas de cores e paletas, estilo, elementos e minimapa (Fase 3)
+│   ├── preferencias.js preferências do usuário (Fase 5): aplica tema, texto, fonte, contraste, menos animação e foco; salva no banco; formulário
+│   ├── exportar.js    botões de relatório (PDF, Excel, Word, PowerPoint, CSV) e download com mensagem de erro na tela
 │   ├── painel-filtros.js painel "Período e filtros": calendário, atalhos, tipos, faixa de valor e "mostrar somente"
 │   └── roteador.js    navegação por #endereço e carregamento sob demanda das telas
 └── paginas/           uma tela por arquivo
     dashboard · risco · transacoes · rede (+ rede-animacao) · contas · conta · simulador (+ simulador-regras) · historico · relatorios
     arquitetura · config · usuarios · auditoria
 ```
+
+## Preferências e acessibilidade (Fase 5)
+`preferencias.js` traduz as preferências em atributos do `<html>`, e o CSS (`tokens.css`) faz o resto:
+
+| Atributo | Efeito |
+|---|---|
+| `data-theme="light"`/`"dark"` (sem o atributo: igual ao sistema) | tema |
+| `data-texto="grande"`/`"maior"` | amplia a interface inteira (zoom de 112% ou 125%); o grafo continua respondendo ao clique no lugar certo |
+| `data-fonte="sistema"`/`"legivel"` | fonte do sistema ou de alta legibilidade |
+| `data-contraste` | textos e bordas mais fortes, nos dois temas |
+| `data-menos-animacao` | desliga transições; o grafo pula direto para a posição (também vale `prefers-reduced-motion`) |
+| `data-foco` | contorno grosso no item focado pelo teclado |
+
+As telas ouvem o evento `preferencias` (cores e paleta do grafo, limiares, valores nos gráficos).
 
 ## Ciclo de vida de uma tela
 O roteador baixa o módulo **na primeira vez** que a tela é aberta e chama:

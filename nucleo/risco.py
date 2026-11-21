@@ -18,7 +18,8 @@ from datetime import datetime, timedelta
 
 import networkx as nx
 
-# Parâmetros das regras: exibidos no Painel de risco. (A edição pela tela fica para a Fase 5.)
+# Parâmetros PADRÃO das regras: exibidos no Painel de risco. O administrador ajusta em
+# Configurações (Fase 5); os valores efetivos vêm de parametros_efetivos().
 PARAMETROS = {
     "volume_z": 2.5,                 # desvio robusto mínimo do fluxo (mediana/MAD)
     "repasse_horas": 24,             # janela entre receber e reenviar
@@ -35,6 +36,57 @@ PARAMETROS = {
     "valor_percentil": 95,           # transação acima do percentil 95 da base
     "comunidade_min_contas": 2,      # contas com prioridade moderada ou alta na comunidade
 }
+
+# Como cada parâmetro aparece e pode ser ajustado na tela Configurações (faixas seguras).
+# tipo: "int" ou "float"; regras: quais regras usam o parâmetro.
+PARAMETROS_INFO = {
+    "volume_z": {"nome": "Desvio robusto mínimo do fluxo", "tipo": "float", "min": 1.0, "max": 10.0, "unidade": "× MAD", "regras": ["volume"]},
+    "repasse_horas": {"nome": "Janela do repasse", "tipo": "int", "min": 1, "max": 168, "unidade": "horas", "regras": ["repasse"]},
+    "repasse_fracao": {"nome": "Fração reenviada no repasse", "tipo": "float", "min": 0.1, "max": 1.0, "unidade": "do valor recebido (0 a 1)", "regras": ["repasse"]},
+    "cadeia_min_transferencias": {"nome": "Tamanho mínimo da cadeia", "tipo": "int", "min": 2, "max": 10, "unidade": "transferências", "regras": ["cadeia"]},
+    "cadeia_janela_dias": {"nome": "Intervalo máximo na cadeia", "tipo": "int", "min": 1, "max": 60, "unidade": "dias", "regras": ["cadeia"]},
+    "ciclo_max_contas": {"nome": "Tamanho máximo do circuito", "tipo": "int", "min": 3, "max": 8, "unidade": "contas", "regras": ["ciclo"]},
+    "ciclo_min_repeticoes": {"nome": "Repetições de cada ligação do circuito", "tipo": "int", "min": 1, "max": 10, "unidade": "datas", "regras": ["ciclo"]},
+    "fan_min_contas": {"nome": "Contrapartes distintas (fan-in/fan-out)", "tipo": "int", "min": 2, "max": 30, "unidade": "contas", "regras": ["fan_in", "fan_out"]},
+    "fan_proporcao": {"nome": "Proporção entre origens e destinos", "tipo": "float", "min": 1.0, "max": 10.0, "unidade": "×", "regras": ["fan_in", "fan_out"]},
+    "intermediacao_percentil": {"nome": "Percentil da intermediação", "tipo": "int", "min": 50, "max": 99, "unidade": "percentil", "regras": ["intermediacao"]},
+    "concentracao_horas": {"nome": "Janela da concentração no tempo", "tipo": "int", "min": 1, "max": 168, "unidade": "horas", "regras": ["concentracao"]},
+    "concentracao_min": {"nome": "Transações na janela", "tipo": "int", "min": 2, "max": 50, "unidade": "transações", "regras": ["concentracao"]},
+    "valor_percentil": {"nome": "Percentil do valor atípico", "tipo": "int", "min": 50, "max": 99, "unidade": "percentil", "regras": ["valor"]},
+    "comunidade_min_contas": {"nome": "Contas sinalizadas para destacar a comunidade", "tipo": "int", "min": 1, "max": 20, "unidade": "contas", "regras": []},
+}
+
+
+def validar_parametro(chave, valor):
+    """Converte e confere o valor de um parâmetro. ValueError com mensagem clara se estiver fora da faixa."""
+    info = PARAMETROS_INFO.get(chave)
+    if info is None:
+        raise ValueError(f"Parâmetro desconhecido: {chave}.")
+    try:
+        texto = str(valor).strip().replace(",", ".")
+        numero = float(texto)
+        if info["tipo"] == "int":
+            if numero != int(numero):
+                raise ValueError
+            numero = int(numero)
+    except (TypeError, ValueError) as erro:
+        raise ValueError(f"{info['nome']}: informe um número{' inteiro' if info['tipo'] == 'int' else ''}.") from erro
+    if not info["min"] <= numero <= info["max"]:
+        minimo, maximo = (f"{v:g}".replace(".", ",") for v in (info["min"], info["max"]))
+        raise ValueError(f"{info['nome']}: use um valor de {minimo} a {maximo}.")
+    return numero
+
+
+def parametros_efetivos(ajustes=None):
+    """Padrão + ajustes do administrador ({chave: valor}); valores inválidos gravados antes são ignorados."""
+    efetivos = dict(PARAMETROS)
+    for chave, valor in (ajustes or {}).items():
+        try:
+            efetivos[chave] = validar_parametro(chave, valor)
+        except ValueError:
+            continue
+    return efetivos
+
 
 REGRAS = [
     {"id": "volume", "nome": "Volume atípico", "peso": 20,

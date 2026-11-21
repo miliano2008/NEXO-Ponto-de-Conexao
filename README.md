@@ -7,7 +7,7 @@ estrutural**, mostrando tudo num sistema web com login, cargos e um **simulador*
 
 > Relevância estrutural **não é** detecção de fraude. O NEXO apoia a análise humana.
 
-**Versão atual:** 0.8 (Fase 4: simulador com regras por modalidade, histórico de cenários e comparação lado a lado). Base de demonstração: **40 contas, 160 transações**.
+**Versão atual:** 0.9 (Fase 5: relatórios em PDF, Excel, CSV, Word e PowerPoint, limites das regras de risco editáveis e preferências salvas no cadastro). Base de demonstração: **40 contas, 160 transações**.
 
 ---
 
@@ -39,7 +39,7 @@ NEXO-Ponto-de-Conexao/
 ├── nucleo/      Motor matemático (grafos, matrizes, métricas, score) e configuração
 ├── banco/       Conexão MySQL/SQLite, migrações, repositório, backup e dados da base
 ├── app/         Servidor web Flask, login/cargos, e-mail, telas (HTML, CSS e JS em módulos)
-├── testes/      Testes automáticos (motor, login, Fase 0, MySQL e navegador)
+├── testes/      Testes automáticos (motor, login, fases 0 a 5, e-mail, MySQL e navegador)
 ├── scripts/     Atalhos de dois cliques: diagnóstico, configurar, backup, testes…
 ├── docs/        Documentação técnica (arquitetura, banco, API, segurança, fases)
 │
@@ -68,6 +68,7 @@ Cada pasta tem um `README.md` explicando seus arquivos.
 ## Tecnologias
 
 Python 3.10+ · Flask · NetworkX · NumPy · openpyxl · PyMySQL · MySQL (Aiven) ou SQLite local ·
+reportlab, XlsxWriter, python-docx e python-pptx nos relatórios ·
 HTML/CSS/JavaScript (módulos nativos, sem etapa de compilação) · Cytoscape.js no grafo · Playwright nos testes.
 
 ## Regras do grupo

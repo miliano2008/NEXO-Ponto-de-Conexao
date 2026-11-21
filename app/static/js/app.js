@@ -11,6 +11,7 @@ import {carregar} from "./nucleo/dados.js";
 import {estado} from "./nucleo/estado.js";
 import {irPara, rotaAtual} from "./nucleo/roteador.js";
 import {alternar as alternarFiltros, atualizarIndicador} from "./nucleo/painel-filtros.js";
+import {abrirPreferencias, carregarPreferencias} from "./nucleo/preferencias.js";
 import {carregarUsuario} from "./nucleo/sessao.js";
 import {ui} from "./nucleo/ui.js";
 import {el, esc, fmtNum} from "./nucleo/utilidades.js";
@@ -51,10 +52,12 @@ async function init(){
     const {abrirMinhaSenha} = await import("./nucleo/minha-senha.js");   // baixado só quando usado
     abrirMinhaSenha();
   });
+  el("btnPrefs").addEventListener("click", abrirPreferencias);
   el("menuToggle").addEventListener("click", ()=> el("sidebar").classList.toggle("open"));
 
   try{
     await carregarUsuario();
+    await carregarPreferencias();   // tema, texto, acessibilidade e limiares antes de desenhar
     await carregar();
     atualizarIndicador();
     await rotaAtual();

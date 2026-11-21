@@ -13,6 +13,7 @@ from decimal import Decimal, InvalidOperation
 import networkx as nx
 import numpy as np
 
+from nucleo.risco import PARAMETROS as PARAMETROS_RISCO
 from nucleo.risco import avaliar as avaliar_risco
 
 # Muda quando a matemática muda: resultados guardados de versões antigas são recalculados.
@@ -265,7 +266,7 @@ def detectar_padroes(grafo, ranking):
     return casos
 
 
-def calcular(contas_origem, transacoes):
+def calcular(contas_origem, transacoes, parametros_risco=None):
     """Executa todas as etapas em memória, sem ler nem gravar arquivos.
 
     Usado por python -m nucleo e pelo simulador web (app/servidor.py). As listas recebidas
@@ -281,7 +282,7 @@ def calcular(contas_origem, transacoes):
     ranking = score_e_ranking(contas_origem, metricas, espectral)
     por_id = {c["id"]: c for c in ranking}
     padroes = detectar_padroes(grafo, ranking)
-    risco = avaliar_risco(ranking, transacoes)
+    risco = avaliar_risco(ranking, transacoes, parametros_risco or PARAMETROS_RISCO)
     for conta in ranking:
         r = risco["contas"][conta["id"]]
         conta["risco"], conta["nivel_risco"] = r["pontos"], r["nivel"]

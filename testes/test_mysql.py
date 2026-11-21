@@ -18,8 +18,8 @@ if not db.usando_mysql():
     print("Banco MySQL não configurado (DB_HOST vazio); nada a testar.")
     raise SystemExit(0)
 
-r = subprocess.run([sys.executable, "-m", "banco.migrar_mysql", "--recriar"], capture_output=True, text=True,
-                   env=os.environ, cwd=RAIZ)
+r = subprocess.run([sys.executable, "-m", "banco.migrar_mysql", "--recriar"], capture_output=True,
+                   encoding="utf-8", errors="replace", env={**os.environ, "PYTHONIOENCODING": "utf-8"}, cwd=RAIZ)
 print(r.stdout[-400:])
 assert r.returncode == 0, r.stdout + r.stderr
 
@@ -77,10 +77,19 @@ try:
     assert c.post("/api/transacoes", headers=H, json={"de": "C001", "para": "C030", "valor": "1000",
                                                       "data": "2026-09-15", "hora": "10:30"}).status_code == 201
     assert c.post("/api/simulacao/restaurar", headers=H).status_code == 200
+    # Fase 5 no MySQL: preferências (com chave estrangeira para usuarios) e limites das regras de risco
+    r = c.put("/api/preferencias", headers=H, json={"preferencias": {"tema": "escuro", "limiar_analise": 50}})
+    assert r.status_code == 200 and repositorio.ler_preferencias(uid) == {"tema": "escuro", "limiar_analise": 50}
+    assert c.get("/api/preferencias").get_json()["preferencias"]["tema"] == "escuro"
+    repositorio.salvar_parametros_risco({"fan_min_contas": 3}, "teste")
+    assert repositorio.ler_parametros_risco()["fan_min_contas"]["valor"] == "3"
+    assert repositorio.apagar_parametros_risco() == 1
+    r = c.get("/api/relatorio?tipo=analise&formato=xlsx")
+    assert r.status_code == 200 and r.data[:2] == b"PK"
     eventos = {e["evento"] for e in auth.listar_auditoria()}
     assert {"cadastro", "email_confirmado", "login_email_pendente", "login_falhou", "recuperacao_solicitada",
             "senha_redefinida", "convite_criado", "login"} <= eventos
-    print("TESTES OK: MySQL — migração, dados idênticos ao CSV, login, cadastro com confirmação, recuperação, convites, cargos e auditoria.")
+    print("TESTES OK: MySQL — migração, dados idênticos ao CSV, login, cadastro com confirmação, recuperação, convites, cargos, preferências, limites de risco, relatório e auditoria.")
 finally:
     conexao = db.conectar_mysql(com_banco=False)
     with conexao.cursor() as cur:

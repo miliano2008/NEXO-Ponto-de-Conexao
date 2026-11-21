@@ -73,7 +73,13 @@ Só funciona com `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env`; sem eles
 | `POST /api/cenarios/<id>/restaurar` | simular | Substitui a simulação em andamento pelas transações do cenário |
 | `DELETE /api/cenarios/<id>` | simular | Exclui o cenário |
 | `GET /api/comparar?a=&b=` | consultar | Comparação lado a lado. Fontes: `base`, `recorte:AAAA-MM-DD:AAAA-MM-DD`, `rascunho`, `cenario:ID`, `cenario:ID:base`. Simulações e cenários exigem `simular` |
+| `GET /api/relatorio?tipo=analise&formato=...&<recorte>` | exportar | Relatório da análise atual (recorte + simulação do usuário). `formato`: `pdf`, `xlsx`, `csv` (zip), `docx` ou `pptx`. Auditoria `relatorio` |
+| `GET /api/relatorio?tipo=comparacao&a=&b=&formato=...` | exportar | Relatório da comparação; fontes como em `/api/comparar` (simulações e cenários exigem `simular`) |
 | `GET /api/exportar?...` | exportar | Baixa o JSON completo, com as matrizes, no mesmo recorte |
+| `GET /api/parametros-risco` | consultar | Limites das regras de risco: nome, unidade, regras que usam, valor em vigor, padrão, faixa e quem ajustou |
+| `POST /api/parametros-risco` | administrar_regras | `{valores: {chave: valor}}` (aceita vírgula decimal) ou `{padrao: true}`. Fora da faixa: `400`. A análise é recalculada com os novos limites. Auditoria `parametros_risco` |
+| `GET /api/preferencias` | consultar | Preferências do usuário logado e os valores padrão |
+| `PUT /api/preferencias` | consultar | `{preferencias: {...}}` (parcial; só valores conhecidos) ou `{padrao: true}` |
 | `GET /api/casos` | consultar | Situação da investigação de cada conta com registro, e a lista de situações |
 | `GET /api/casos/<conta>` | consultar | Situação atual e histórico (quem, quando, de → para, comentário) |
 | `POST /api/casos/<conta>` | investigar | `situacao` (`em_analise`, `investigada`, `sem_indicio`, `encaminhada`) e `comentario` obrigatório (mínimo de 5 caracteres). Vai para a auditoria |
@@ -90,7 +96,7 @@ Só funciona com `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env`; sem eles
 | simular | ✓ | ✓ | — | — |
 | configurar | ✓ | ✓ | — | — |
 | investigar (mudar a situação da investigação) | ✓ | ✓ | — | — |
-| administrar_regras (regras por modalidade) | ✓ | — | — | — |
+| administrar_regras (regras por modalidade e limites das regras de risco) | ✓ | — | — | — |
 | ver_auditoria | ✓ | — | ✓ | — |
 | gerenciar_usuarios | ✓ | — | — | — |
 
