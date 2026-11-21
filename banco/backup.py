@@ -69,7 +69,17 @@ def backup_mysql():
 
 def backup_local():
     if not db.SQLITE.exists():
-        raise FileNotFoundError("Não há banco local (banco/dados/nexo.db) para copiar.")
+        from nucleo import configuracao
+        if configuracao.origem() is None:
+            # caso mais comum: pasta nova (git clone ou ZIP) sem o .env do grupo
+            raise FileNotFoundError(
+                "Nenhuma configuração do banco do grupo foi encontrada nesta pasta (.env ou config.ini), "
+                "então o NEXO está no modo local, e ainda não há banco local para copiar.\n"
+                "  Para fazer o backup do Aiven: copie o .env (ou o config.ini) para a raiz do projeto, "
+                "ao lado do iniciar.bat, e o ca.pem para banco\\dados\\. Depois rode o BACKUP.bat de novo.\n"
+                "  Confira com scripts\\DIAGNOSTICO.bat. Sem o arquivo, rode scripts\\CONFIGURAR.bat.")
+        raise FileNotFoundError("Não há banco local (banco/dados/nexo.db) para copiar: o NEXO ainda não foi "
+                                "aberto nesta pasta no modo local.")
     PASTA_BACKUPS.mkdir(parents=True, exist_ok=True)
     destino = PASTA_BACKUPS / f"nexo_{datetime.now():%Y%m%d_%H%M%S}.db"
     shutil.copy2(db.SQLITE, destino)
