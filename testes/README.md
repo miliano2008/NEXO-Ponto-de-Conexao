@@ -12,6 +12,7 @@ scripts\TESTAR.bat        (ou: python -m testes.executar)
 | `test_fase1.py` | Página institucional, login por e-mail, sessões encerradas ao trocar a senha e "Entrar com Google" (simulado) | SQLite temporário |
 | `test_fase2.py` | Gabarito da planilha, regras de risco, recorte pela API, investigação e desempenho com 300 transações | SQLite temporário |
 | `test_fase3.py` | Biblioteca do grafo (integridade, licença, sob demanda), dados dos padrões e desempenho do desenho | SQLite temporário |
+| `test_fase4.py` | Dados bancários, regras por modalidade, simulação recorrente, histórico de cenários e comparação (gabarito C025) | SQLite temporário |
 | `test_email.py` | Envio de e-mail com um servidor SMTP falso, que imita o Gmail (nada sai para a internet) | SQLite temporário |
 | `test_mysql.py` | Tudo no MySQL real (só roda se o MySQL estiver configurado) | banco temporário `nexo_teste`, apagado no final |
 | `e2e/test_navegador.py` | O sistema inteiro num Chromium, tela por tela (exige `requirements-dev.txt`) | SQLite temporário |

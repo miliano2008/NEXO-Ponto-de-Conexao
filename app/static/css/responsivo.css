@@ -33,3 +33,11 @@
   .grafo-dica{display:none}
   .anim-grafo{height:280px}
 }
+
+/* Fase 4: comparação no celular */
+@media (max-width:760px){
+  .comparar-fontes{grid-template-columns:1fr}
+  .comparar-fontes .vs{padding:0;text-align:center}
+  .grafos-lado{grid-template-columns:1fr}
+  .grafo-lado .grafo-cmp{height:320px}
+}

@@ -14,5 +14,6 @@ Os slides e relatórios da apresentação final entram aqui. A partir da Fase 5,
 4. **Painel de risco**: abrir C001 (fan-in) e C016; clicar em "Circuito recorrente" e mostrar os dois ciclos do gabarito.
 5. **Período e filtros**: escolher agosto e mostrar como as prioridades mudam. Registrar a investigação de uma conta.
 6. Conta C025: composição do score e indícios.
-7. Simulador: inserir uma transação grande (digite só números, ex.: 4500000 = R$ 45.000,00) e mostrar o impacto no ranking e no risco.
-8. Relatórios: validação matemática.
+7. **Simulador**: tentar uma TED num sábado (bloqueada, com o motivo e a origem da regra); depois um PIX repetido 3 vezes, a cada 7 dias (digite o valor só com números, ex.: 4500000 = R$ 45.000,00). Salvar como cenário.
+8. **Histórico e comparação**: "Ver execução" do cenário e o **exemplo da planilha** (período A × B), mostrando C025 virar ponte entre três comunidades.
+9. Relatórios: validação matemática.

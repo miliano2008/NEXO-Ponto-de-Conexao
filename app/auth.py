@@ -48,6 +48,7 @@ PERMISSOES = {
     "simular":            {"administrador", "analista"},
     "configurar":         {"administrador", "analista"},
     "investigar":         {"administrador", "analista"},   # mudar a situação da investigação
+    "administrar_regras": {"administrador"},                # limites e ações das regras por modalidade
     "ver_auditoria":      {"administrador", "auditor"},
     "gerenciar_usuarios": {"administrador"},
 }

@@ -332,12 +332,43 @@ CREATE TABLE IF NOT EXISTS casos_historico (
 CREATE INDEX IF NOT EXISTS ix_historico_caso ON casos_historico (caso_id)""")
 
 
+# ---------------------------------------------------------------- 6. modalidades e histórico
+
+def m6_modalidades_e_historico(c, mysql):
+    """Fase 4: ajustes do administrador nas regras por modalidade e o histórico de simulações
+    (cada cenário salvo guarda as próprias transações, o recorte e os resultados daquela execução)."""
+    if mysql:
+        c.executar_script("""
+CREATE TABLE IF NOT EXISTS regras_modalidade (
+    regra VARCHAR(40) PRIMARY KEY,
+    acao VARCHAR(12) NOT NULL,
+    parametros TEXT NOT NULL,
+    atualizado_por VARCHAR(150) NOT NULL,
+    atualizado_em DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+    else:
+        c.executar_script("""
+CREATE TABLE IF NOT EXISTS regras_modalidade (
+    regra TEXT PRIMARY KEY,
+    acao TEXT NOT NULL,
+    parametros TEXT NOT NULL,
+    atualizado_por TEXT NOT NULL,
+    atualizado_em TEXT NOT NULL
+)""")
+    for coluna, tipo_mysql, tipo_sqlite in (
+            ("nome", "VARCHAR(80) NULL", "TEXT"), ("descricao", "VARCHAR(500) NULL", "TEXT"),
+            ("salvo_em", "DATETIME NULL", "TEXT"), ("recorte", "TEXT NULL", "TEXT"), ("resumo", "TEXT NULL", "TEXT"),
+            ("resultado", "MEDIUMBLOB NULL", "BLOB"), ("resultado_base", "MEDIUMBLOB NULL", "BLOB")):
+        _adicionar_coluna(c, mysql, "simulacoes", coluna, tipo_mysql, tipo_sqlite)
+
+
 MIGRACOES = [
     (1, "Acesso: usuários, links por e-mail, convites e auditoria", m1_acesso),
     (2, "Simulações por usuário", m2_simulacoes),
     (3, "Análises guardadas e rastreáveis", m3_analises),
     (4, "Versão da sessão e contas externas (Google)", m4_sessoes_e_identidades),
     (5, "Investigação: situação e histórico por conta", m5_casos),
+    (6, "Regras por modalidade e histórico de simulações", m6_modalidades_e_historico),
 ]
 VERSAO_ATUAL = MIGRACOES[-1][0]
 

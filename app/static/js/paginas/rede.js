@@ -335,8 +335,11 @@ export function iniciar(){
     if(cy && focoCom) cy.animate({fit: {eles: cy.nodes().not(".apagado"), padding: 60}}, {duration: 400}); });
   el("buscaConta").addEventListener("change", e => { if(e.target.value) localizar(e.target.value); });
   el("buscaConta").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); localizar(e.target.value); } });
-  el("zIn").onclick = () => cy?.zoom({level: cy.zoom() * 1.3, renderedPosition: {x: cy.width() / 2, y: cy.height() / 2}});
-  el("zOut").onclick = () => cy?.zoom({level: cy.zoom() / 1.3, renderedPosition: {x: cy.width() / 2, y: cy.height() / 2}});
+  // stop(): um clique durante a animação de "ajustar" não pode ser sobrescrito por ela
+  const zoomPor = f => { if(!cy) return; cy.stop(true, true);
+    cy.zoom({level: cy.zoom() * f, renderedPosition: {x: cy.width() / 2, y: cy.height() / 2}}); };
+  el("zIn").onclick = () => zoomPor(1.3);
+  el("zOut").onclick = () => zoomPor(1 / 1.3);
   el("zFit").onclick = () => cy?.animate({fit: {padding: 30}}, {duration: 350});
   el("zCentro").onclick = () => { if(!cy) return;
     selecionado ? cy.animate({fit: {eles: cy.$id(selecionado).closedNeighborhood(), padding: 80}}, {duration: 350})

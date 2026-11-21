@@ -129,6 +129,23 @@ def adicionar_simulada(usuario_id, linha):
         c.execute("UPDATE simulacoes SET atualizado_em = ? WHERE id = ?", (agora().isoformat(), sid))
 
 
+def adicionar_simuladas(usuario_id, linhas):
+    """Grava várias transações já validadas de uma vez (simulação recorrente): tudo ou nada."""
+    with db.conectar() as c:
+        sid = _rascunho(c, usuario_id, criar=True)
+        total = c.execute("SELECT COUNT(*) AS n FROM simulacao_transacoes WHERE simulacao_id = ?",
+                          (sid,)).fetchone()["n"]
+        if total + len(linhas) > LIMITE_SIMULADAS:
+            raise ValueError(f"Limite de {LIMITE_SIMULADAS} transações simuladas: já há {total} e a simulação "
+                             f"criaria mais {len(linhas)}. Reduza as repetições ou restaure a base.")
+        for linha in linhas:
+            c.execute("INSERT INTO simulacao_transacoes (simulacao_id, id_transacao, conta_origem, conta_destino, "
+                      "valor, data, hora, tipo_transacao, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                      (sid, linha["id_transacao"], linha["conta_origem"], linha["conta_destino"], linha["valor"],
+                       linha["data"], linha["hora"], linha["tipo_transacao"], agora().isoformat()))
+        c.execute("UPDATE simulacoes SET atualizado_em = ? WHERE id = ?", (agora().isoformat(), sid))
+
+
 def remover_simulada(usuario_id, id_transacao):
     with db.conectar() as c:
         sid = _rascunho(c, usuario_id, criar=False)
@@ -179,3 +196,113 @@ def limpar_analises_antigas(dias=30):
     limite = (agora() - timedelta(days=dias)).isoformat()
     with db.conectar() as c:
         return c.execute("DELETE FROM analises WHERE ultimo_uso < ?", (limite,)).rowcount
+
+
+# ---------------------------------------------------------------- regras por modalidade (Fase 4)
+
+def ler_ajustes_regras():
+    """{regra: {acao, parametros, atualizado_por, atualizado_em}} gravados pelo administrador."""
+    with db.conectar() as c:
+        linhas = c.execute("SELECT * FROM regras_modalidade").fetchall()
+    return {l["regra"]: {"acao": l["acao"], "parametros": json.loads(l["parametros"] or "{}"),
+                         "atualizado_por": l["atualizado_por"], "atualizado_em": _texto(l["atualizado_em"])}
+            for l in linhas}
+
+
+def salvar_ajuste_regra(regra, acao, parametros, por):
+    dados = (acao, json.dumps(parametros, ensure_ascii=False), por, agora().isoformat())
+    with db.conectar() as c:
+        if c.execute("SELECT regra FROM regras_modalidade WHERE regra = ?", (regra,)).fetchone():
+            c.execute("UPDATE regras_modalidade SET acao = ?, parametros = ?, atualizado_por = ?, atualizado_em = ? "
+                      "WHERE regra = ?", (*dados, regra))
+        else:
+            c.execute("INSERT INTO regras_modalidade (acao, parametros, atualizado_por, atualizado_em, regra) "
+                      "VALUES (?, ?, ?, ?, ?)", (*dados, regra))
+
+
+def apagar_ajuste_regra(regra):
+    """Volta a regra ao padrão."""
+    with db.conectar() as c:
+        c.execute("DELETE FROM regras_modalidade WHERE regra = ?", (regra,))
+
+
+# ---------------------------------------------------------------- histórico de simulações (Fase 4)
+
+def _compactar(dados):
+    return zlib.compress(json.dumps(dados, ensure_ascii=False, allow_nan=False).encode("utf-8"), 6)
+
+
+def _descompactar(bruto):
+    return json.loads(zlib.decompress(bytes(bruto)).decode("utf-8")) if bruto else None
+
+
+def salvar_cenario(usuario_id, nome, descricao, transacoes, recorte, resumo, resultado, resultado_base):
+    """Guarda a execução da simulação como cenário: transações, recorte e os DOIS resultados
+    daquela execução (com e sem a simulação). O cenário nunca é recalculado depois: o grafo do
+    histórico é sempre o daquele momento, mesmo que a base mude."""
+    instante = agora().isoformat()
+    with db.conectar() as c:
+        sid = c.execute(
+            "INSERT INTO simulacoes (usuario_id, situacao, criado_em, atualizado_em, nome, descricao, salvo_em, "
+            "recorte, resumo, resultado, resultado_base) VALUES (?, 'salva', ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (usuario_id, instante, instante, nome, descricao, instante, json.dumps(recorte, ensure_ascii=False),
+             json.dumps(resumo, ensure_ascii=False), _compactar(resultado), _compactar(resultado_base))).lastrowid
+        for linha in transacoes:
+            c.execute("INSERT INTO simulacao_transacoes (simulacao_id, id_transacao, conta_origem, conta_destino, "
+                      "valor, data, hora, tipo_transacao, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                      (sid, linha["id_transacao"], linha["conta_origem"], linha["conta_destino"], linha["valor"],
+                       linha["data"], linha["hora"], linha["tipo_transacao"], instante))
+    return sid
+
+
+def listar_cenarios(usuario_id):
+    with db.conectar() as c:
+        linhas = c.execute("SELECT s.id, s.nome, s.descricao, s.salvo_em, s.recorte, s.resumo, "
+                           "(SELECT COUNT(*) FROM simulacao_transacoes t WHERE t.simulacao_id = s.id) AS qtd "
+                           "FROM simulacoes s WHERE s.usuario_id = ? AND s.situacao = 'salva' ORDER BY s.id DESC",
+                           (usuario_id,)).fetchall()
+    return [{"id": l["id"], "nome": l["nome"], "descricao": l["descricao"] or "", "salvo_em": _texto(l["salvo_em"]),
+             "recorte": json.loads(l["recorte"] or "{}"), "resumo": json.loads(l["resumo"] or "{}"),
+             "transacoes": l["qtd"]} for l in linhas]
+
+
+def obter_cenario(usuario_id, cenario_id, com_resultados=True):
+    """Cenário do próprio usuário (None se não existe ou é de outra pessoa)."""
+    with db.conectar() as c:
+        linha = c.execute("SELECT * FROM simulacoes WHERE id = ? AND usuario_id = ? AND situacao = 'salva'",
+                          (cenario_id, usuario_id)).fetchone()
+        if linha is None:
+            return None
+        transacoes = c.execute("SELECT id_transacao, conta_origem, conta_destino, valor, data, hora, tipo_transacao "
+                               "FROM simulacao_transacoes WHERE simulacao_id = ? ORDER BY id", (cenario_id,)).fetchall()
+    cenario = {"id": linha["id"], "nome": linha["nome"], "descricao": linha["descricao"] or "",
+               "salvo_em": _texto(linha["salvo_em"]), "recorte": json.loads(linha["recorte"] or "{}"),
+               "resumo": json.loads(linha["resumo"] or "{}"),
+               "transacoes": [{"id_transacao": l["id_transacao"], "conta_origem": l["conta_origem"],
+                               "conta_destino": l["conta_destino"], "valor": _texto(l["valor"]), "data": _texto(l["data"]),
+                               "hora": _hora(l["hora"]), "tipo_transacao": l["tipo_transacao"]} for l in transacoes]}
+    if com_resultados:
+        cenario["resultado"] = _descompactar(linha["resultado"])
+        cenario["resultado_base"] = _descompactar(linha["resultado_base"])
+    return cenario
+
+
+def excluir_cenario(usuario_id, cenario_id):
+    with db.conectar() as c:
+        if not c.execute("SELECT id FROM simulacoes WHERE id = ? AND usuario_id = ? AND situacao = 'salva'",
+                         (cenario_id, usuario_id)).fetchone():
+            return False
+        c.execute("DELETE FROM simulacao_transacoes WHERE simulacao_id = ?", (cenario_id,))
+        c.execute("DELETE FROM simulacoes WHERE id = ?", (cenario_id,))
+    return True
+
+
+def restaurar_cenario(usuario_id, cenario_id):
+    """Copia as transações do cenário para a simulação em andamento (substitui o que estava lá)."""
+    cenario = obter_cenario(usuario_id, cenario_id, com_resultados=False)
+    if cenario is None:
+        return None
+    limpar_simulacao(usuario_id)
+    if cenario["transacoes"]:
+        adicionar_simuladas(usuario_id, cenario["transacoes"])
+    return cenario
