@@ -9,7 +9,7 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 | **1** | Identidade, login e página institucional: login por e-mail (aceitando CPF/CNPJ na transição), Google opcional, landing page com FAQ, sessão encerrada ao trocar a senha | **Concluída e validada** (na `main`) |
 | **2** | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | **Concluída e validada** (na `main`) |
 | **3** | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | **Concluída e validada** (na `main`) |
-| **4** | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | **Concluída. Aguarda validação** (branch `fase-4`) |
+| **4** | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | **Concluída e validada** (na `main`) |
 | 5 | Relatórios e configurações: exportação em **PDF, Excel, CSV, Word e PowerPoint**, com gráficos de verdade, não capturas de tela | Planejada |
 | 6 | Importação de bases: upload `.xlsx`/`.csv` de até **300 transações**, uma base por empresa, com exclusão. Depende da decisão sobre multiempresa | Planejada |
 
