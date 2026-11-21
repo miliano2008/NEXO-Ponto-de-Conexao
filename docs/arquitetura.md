@@ -56,7 +56,7 @@ Variáveis só para desenvolvimento e testes:
 |---|---|
 | `NEXO_BANCO=local` | Ignora o MySQL e usa CSV + SQLite. Os testes usam esse modo para nunca tocar no banco do grupo |
 | `NEXO_MYSQL_BANCO` | Troca o nome do banco. O teste de MySQL usa `nexo_teste` |
-| `NEXO_PORTA` | Porta inicial do servidor (padrão 5000). Se estiver ocupada, usa a próxima livre |
+| `NEXO_PORTA` | Porta inicial do servidor (padrão 5000). Se estiver ocupada ou reservada pelo Windows, usa a próxima livre e abre o navegador nela |
 | `NEXO_CHROMIUM` | Caminho de um Chrome/Chromium para o teste de navegador |
 
 Não usamos `python-dotenv`: o leitor do `.env` tem cerca de 20 linhas, aceita arquivos salvos com BOM pelo Bloco de Notas e não exige instalar mais nada.

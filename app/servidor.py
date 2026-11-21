@@ -805,18 +805,50 @@ def api_exportar():
                     headers={"Content-Disposition": "attachment; filename=resultados_nexo.json"})
 
 
+def _porta_livre(inicial):
+    """Primeira porta em que o servidor realmente consegue escutar, a partir de `inicial`.
+
+    Testa com bind (e não só com connect): no Windows, o Hyper-V/WSL/Docker às vezes reserva a
+    porta 5000; ela parece livre, mas o servidor não consegue usá-la."""
+    import socket
+    for porta in range(inicial, inicial + 20):
+        with socket.socket() as s:
+            try:
+                s.bind(("127.0.0.1", porta))
+                return porta
+            except OSError:
+                continue
+    return None
+
+
+def _abrir_navegador_quando_pronto(url, porta):
+    """Abre o navegador só depois que o servidor aceitar conexões (no máximo 60 s)."""
+    import socket
+    import time
+    import webbrowser
+    for _ in range(120):
+        with socket.socket() as s:
+            if s.connect_ex(("127.0.0.1", porta)) == 0:
+                webbrowser.open(url)
+                return
+        time.sleep(0.5)
+
+
 def executar():
     """Inicia o servidor local, na primeira porta livre a partir da 5000."""
     import os
-    import socket
     if auth.contar_administradores_ativos() == 0:
         print("Nenhum administrador cadastrado. Crie um com: scripts\\CRIAR_ADMIN.bat")
-    porta = int(os.environ.get("NEXO_PORTA", 5000))
-    # porta ocupada (outro NEXO aberto, AirPlay no macOS): usa a próxima livre
-    while porta < 5020:
-        with socket.socket() as s:
-            if s.connect_ex(("127.0.0.1", porta)) != 0:
-                break
-        porta += 1
-    print(f"NEXO em http://127.0.0.1:{porta}  (Ctrl+C para parar)")
-    app.run(debug=False, port=porta, threaded=True)
+    inicial = int(os.environ.get("NEXO_PORTA", 5000))
+    porta = _porta_livre(inicial)
+    if porta is None:
+        print(f"[ERRO] Nenhuma porta livre entre {inicial} e {inicial + 19}. "
+              "Feche outros NEXO abertos ou defina NEXO_PORTA com outra porta (ex.: 8080).")
+        raise SystemExit(1)
+    url = f"http://127.0.0.1:{porta}"
+    if porta != inicial:
+        print(f"A porta {inicial} está ocupada ou bloqueada pelo Windows; usando a {porta}.")
+    print(f"NEXO em {url}  (Ctrl+C para parar)")
+    if os.environ.get("NEXO_ABRIR_NAVEGADOR") == "1":
+        threading.Thread(target=_abrir_navegador_quando_pronto, args=(url, porta), daemon=True).start()
+    app.run(debug=False, host="127.0.0.1", port=porta, threaded=True)

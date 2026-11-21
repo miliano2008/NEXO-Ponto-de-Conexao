@@ -37,7 +37,6 @@ if ! .venv/bin/python -c "from app import auth; import sys; auth.iniciar_banco()
   .venv/bin/python -m app.criar_admin
 fi
 
-# Abre o navegador alguns segundos depois do servidor subir
-( sleep 5; (command -v xdg-open >/dev/null && xdg-open http://127.0.0.1:5000) || open http://127.0.0.1:5000 ) >/dev/null 2>&1 &
+# O próprio NEXO abre o navegador quando o servidor estiver pronto, na porta certa
 echo "Para encerrar o NEXO, pressione Ctrl+C."
-.venv/bin/python -m app
+NEXO_ABRIR_NAVEGADOR=1 .venv/bin/python -m app
