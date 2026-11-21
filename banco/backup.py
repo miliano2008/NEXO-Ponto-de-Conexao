@@ -78,8 +78,15 @@ def backup_local():
                 "  Para fazer o backup do Aiven: copie o .env (ou o config.ini) para a raiz do projeto, "
                 "ao lado do iniciar.bat, e o ca.pem para banco\\dados\\. Depois rode o BACKUP.bat de novo.\n"
                 "  Confira com scripts\\DIAGNOSTICO.bat. Sem o arquivo, rode scripts\\CONFIGURAR.bat.")
-        raise FileNotFoundError("Não há banco local (banco/dados/nexo.db) para copiar: o NEXO ainda não foi "
-                                "aberto nesta pasta no modo local.")
+        # há um .env/config.ini, mas sem o endereço do Aiven: o NEXO cai no modo local
+        raise FileNotFoundError(
+            f"O arquivo de configuração {configuracao.origem()} foi encontrado, mas está SEM o endereço do banco "
+            "do grupo (DB_HOST no .env, ou 'host' na seção [mysql] do config.ini). Por isso o NEXO está no modo local, "
+            "e ainda não há banco local para copiar.\n"
+            "  Causas comuns: o .env foi copiado do .env.example (que vem vazio), a linha DB_HOST está vazia ou "
+            "começa com #, ou o CONFIGURAR foi concluído sem a parte do Aiven.\n"
+            "  Como resolver: abra o arquivo no Bloco de Notas e preencha DB_HOST, DB_PORT e DB_PASSWORD com os dados "
+            "do Aiven, ou rode scripts\\CONFIGURAR.bat. Confira com scripts\\DIAGNOSTICO.bat e rode o BACKUP.bat de novo.")
     PASTA_BACKUPS.mkdir(parents=True, exist_ok=True)
     destino = PASTA_BACKUPS / f"nexo_{datetime.now():%Y%m%d_%H%M%S}.db"
     shutil.copy2(db.SQLITE, destino)
