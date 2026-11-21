@@ -58,7 +58,7 @@ button{font-family:inherit}
 .topbar h2{margin:0; font-size:19px; font-weight:600; letter-spacing:-.01em}
 .topbar .period{color:var(--ink-3); font-size:12.5px; margin-top:1px}
 .topbar .spacer{flex:1}
-select, input[type=text], input[type=search], input[type=number]{
+select, input[type=text], input[type=search], input[type=number], input:not([type]), input[type=date], input[type=time]{
   font-family:inherit; font-size:13px; color:var(--ink); background:var(--surface);
   border:1px solid var(--line); border-radius:8px; padding:8px 10px; min-width:0;
 }

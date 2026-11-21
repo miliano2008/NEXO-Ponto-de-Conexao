@@ -28,7 +28,8 @@ _cache = OrderedDict()  # assinatura → (resultado, info)
 def obter_base(forcar=False):
     """(contas, transacoes, assinatura) da base atual."""
     with _trava:
-        vencida = time.monotonic() - _base["lida_em"] > RECARGA_SEGUNDOS
+        # ">=": no Windows o relógio anda em passos de ~16 ms, e com RECARGA_SEGUNDOS = 0 a diferença pode dar 0
+        vencida = time.monotonic() - _base["lida_em"] >= RECARGA_SEGUNDOS
         if forcar or _base["contas"] is None or vencida:
             try:
                 contas, transacoes = repositorio.carregar_dados()

@@ -19,11 +19,12 @@ O PyMySQL foi escolhido em vez do `mysql-connector-python` por ser escrito só e
 | `tokens_recuperacao` | migração 1 | hash SHA-256 dos links enviados por e-mail (`tipo`: senha ou email), validade, uso único |
 | `convites` | migração 1 | hash do código, cargo, usos e limite, validade, revogado |
 | `auditoria` | migração 1 | eventos de acesso: login, falhas, cadastro, recuperação, mudanças de cargo |
-| `simulacoes` | migração 2 | um rascunho por usuário (usuario_id → usuarios, apagado em cascata) |
+| `simulacoes` | migração 2 | um rascunho por usuário (usuario_id → usuarios, apagado em cascata). Desde a migração 6, também os **cenários salvos** (`situacao = 'salva'`): nome, descrição, data, recorte, resumo e os dois resultados compactados (zlib) daquela execução |
 | `simulacao_transacoes` | migração 2 | transações simuladas, com (simulacao_id, id_transacao) único, valor > 0 e origem ≠ destino |
 | `identidades_externas` | migração 4 | contas externas vinculadas a um usuário: provedor (`google`; Microsoft no futuro), identificador da conta no provedor (`sujeito`), e-mail, datas. (provedor, sujeito) é único |
 | `casos` | migração 5 | situação da investigação por conta (única), responsável e datas |
 | `casos_historico` | migração 5 | cada decisão: situação anterior e nova, comentário, usuário e data |
+| `regras_modalidade` | migração 6 | ajustes do administrador nas regras por modalidade: ação, parâmetros (JSON), quem e quando |
 | `analises` | migração 3 | assinatura (única), base, período, versão do motor, contagens, tempo de cálculo, resultado compactado (zlib), datas de criação e último uso |
 | `versao_esquema` | automática | número, descrição e data de cada migração aplicada |
 
@@ -39,6 +40,7 @@ Cada mudança de estrutura é uma função numerada, aplicada **uma única vez**
 | 3 | Análises guardadas e rastreáveis |
 | 4 | Versão da sessão (`usuarios.versao_sessao`) e contas externas (`identidades_externas`), da Fase 1 |
 | 5 | Investigação: `casos` e `casos_historico`, da Fase 2 |
+| 6 | Regras por modalidade (`regras_modalidade`) e histórico de simulações (colunas em `simulacoes`), da Fase 4 |
 
 Regras:
 

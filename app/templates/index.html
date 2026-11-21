@@ -39,6 +39,7 @@
       <button data-page="contas">🔎 Contas em análise</button>
       <div class="nav-label">Simulação</div>
       <button data-page="simulador">🧪 Simulador</button>
+      <button data-page="historico">🗂️ Histórico e comparação</button>
       <div class="nav-label">Documentação</div>
       <button data-page="relatorios">📄 Relatórios</button>
       <button data-page="arquitetura">🧩 Arquitetura</button>
@@ -277,10 +278,14 @@
                 <div class="field"><label for="simValor">Valor (R$)</label><input id="simValor" inputmode="numeric" required placeholder="0,00" autocomplete="off"></div>
                 <div class="field"><label for="simData">Data</label><input type="date" id="simData" required></div>
                 <div class="field"><label for="simHora">Hora</label><input type="time" id="simHora" required value="12:00"></div>
-                <div class="field"><label for="simTipo">Tipo</label><select id="simTipo"></select></div>
+                <div class="field"><label for="simTipo">Modalidade</label><select id="simTipo"></select></div>
+                <div class="field"><label for="simVezes">Quantas vezes</label><input type="number" id="simVezes" min="1" max="30" value="1" inputmode="numeric"></div>
+                <div class="field"><label for="simIntervalo">A cada (dias)</label><input type="number" id="simIntervalo" min="1" max="90" value="7" inputmode="numeric" disabled></div>
+                <div class="sim-previa" id="simPrevia" aria-live="polite"></div>
                 <div class="field" style="grid-column:1/-1;flex-direction:row;gap:10px;flex-wrap:wrap">
                   <button class="btn" type="submit" id="simEnviar">Simular transação</button>
                   <button class="btn ghost" type="button" id="simAleatoria">Preencher aleatória</button>
+                  <button class="btn ghost" type="button" id="simSalvar">💾 Salvar como cenário</button>
                   <button class="btn ghost" type="button" id="simRestaurar">Restaurar base original</button>
                 </div>
               </form>
@@ -302,13 +307,47 @@
         </div>
 
         <div class="card mt">
-          <div class="card-head"><div><h3>Transações simuladas</h3><p>Mantidas em memória no servidor; os CSVs originais não são alterados</p></div></div>
+          <div class="card-head"><div><h3>Transações simuladas</h3><p>Guardadas para o seu usuário no servidor; a base oficial não é alterada</p></div></div>
           <div class="table-wrap"><table>
             <thead><tr><th>ID</th><th>Data / hora</th><th>Origem</th><th>Destino</th><th class="num">Valor</th><th>Tipo</th><th></th></tr></thead>
             <tbody id="simLista"></tbody>
           </table></div>
         </div>
+        <div class="card mt">
+          <div class="card-head"><div><h3>Regras por modalidade</h3><p>Valem para as transações simuladas. A coluna "Na base" só informa: a base é fictícia e foi gerada sem calendário bancário.</p></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Modalidade</th><th>Regra</th><th>Origem</th><th>Ação</th><th>Limites</th><th class="num">Na base</th><th></th></tr></thead>
+            <tbody id="simRegras"></tbody></table></div>
+        </div>
         <div class="note warn mt">Como o score usa normalização min-max entre as contas, uma transação grande pode <strong>reduzir</strong> o score de outras contas: o máximo da rede muda e todas são reescaladas.</div>
+      </section>
+
+      <!-- ---------- HISTÓRICO E COMPARAÇÃO (Fase 4) ---------- -->
+      <section class="page" id="page-historico">
+        <div class="tabs" id="histTabs">
+          <button data-tab="cenarios" class="active">Cenários salvos</button>
+          <button data-tab="comparar">Comparar lado a lado</button>
+        </div>
+        <div class="tabpane" id="tab-cenarios">
+          <div class="note" style="margin-bottom:16px">Cada cenário guarda as transações simuladas, o recorte e o <b>resultado daquela execução</b> (com e sem a simulação). O grafo de um cenário é sempre o daquele momento, mesmo que a base mude depois. Para criar um, use <b>💾 Salvar como cenário</b> no Simulador.</div>
+          <div class="cenarios" id="cenariosLista"></div>
+        </div>
+        <div class="tabpane" id="tab-comparar" style="display:none">
+          <div class="card"><div class="card-body">
+            <div class="comparar-fontes">
+              <label>Esquerda (antes)<select id="cmpA"></select>
+                <span class="datas" id="cmpADatas" hidden><input type="date" id="cmpAIni" aria-label="Data inicial da esquerda"><input type="date" id="cmpAFim" aria-label="Data final da esquerda"></span></label>
+              <span class="vs">×</span>
+              <label>Direita (depois)<select id="cmpB"></select>
+                <span class="datas" id="cmpBDatas" hidden><input type="date" id="cmpBIni" aria-label="Data inicial da direita"><input type="date" id="cmpBFim" aria-label="Data final da direita"></span></label>
+              <button class="btn" id="cmpIr">Comparar</button>
+            </div>
+            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn ghost sm" id="cmpExemplo">Exemplo da planilha: Período A (01–15/08) × Período B (01–15/09)</button>
+            </div>
+          </div></div>
+          <div id="cmpResultado"></div>
+        </div>
       </section>
 
       <!-- ---------- RELATÓRIOS ---------- -->

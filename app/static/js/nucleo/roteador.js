@@ -14,7 +14,7 @@ import {el} from "./utilidades.js";
 
 const TITULOS = {
   dashboard:"Visão geral", risco:"Painel de risco", transacoes:"Transações", rede:"Rede de transações",
-  contas:"Contas em análise", conta:"Detalhes da conta", simulador:"Simulador de transações",
+  contas:"Contas em análise", conta:"Detalhes da conta", simulador:"Simulador de transações", historico:"Histórico e comparação",
   relatorios:"Relatórios", arquitetura:"Arquitetura do sistema", config:"Configurações",
   usuarios:"Usuários e cargos", auditoria:"Auditoria de acessos"
 };
@@ -27,6 +27,7 @@ const MODULOS = {
   contas:      () => import("../paginas/contas.js"),
   conta:       () => import("../paginas/conta.js"),
   simulador:   () => import("../paginas/simulador.js"),
+  historico:   () => import("../paginas/historico.js"),
   relatorios:  () => import("../paginas/relatorios.js"),
   arquitetura: () => import("../paginas/arquitetura.js"),
   config:      () => import("../paginas/config.js"),

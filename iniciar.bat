@@ -17,8 +17,8 @@ REM Aplica migracoes pendentes e confere se existe administrador
   ".venv\Scripts\python.exe" -m app.criar_admin
 )
 
-REM Abre o navegador alguns segundos depois do servidor subir
-start "" cmd /c "timeout /t 5 >nul & start http://127.0.0.1:5000"
+REM O proprio NEXO abre o navegador quando o servidor estiver pronto, na porta certa
+set NEXO_ABRIR_NAVEGADOR=1
 echo.
 echo Para encerrar o NEXO, feche esta janela ou pressione Ctrl+C.
 ".venv\Scripts\python.exe" -m app

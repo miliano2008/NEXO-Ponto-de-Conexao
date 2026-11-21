@@ -1,5 +1,21 @@
 # Histórico de versões
 
+## 0.8 — Fase 4: simulador e histórico (branch `fase-4`)
+- **Dados bancários fictícios** por conta: instituição ("Banco Fictício A a D", sem nomes nem códigos de bancos reais), tipo de conta e tipo de chave PIX. São gerados por regras fixas e coerentes com a base: contas ligadas por "Transferência" ficam na mesma instituição.
+- **Regras por modalidade**, cada uma marcada como Regulamentação, Prática de mercado ou Parâmetro do administrador:
+  - PIX 24 horas (informativa);
+  - limite noturno do PIX para pessoa física;
+  - TED só em dias úteis e dentro do horário;
+  - transferência só na mesma instituição.
+
+  A ação de cada uma (bloquear, alertar ou desligada) e os limites são ajustáveis pelo administrador, com auditoria. A conferência informativa da base vem junto.
+- **Simulador:** repetição "a cada N dias" (até 30 vezes); prévia ao vivo com as instituições, as datas e o resultado de cada regra; bloqueio respeitado no servidor; máscara de R$.
+- **Histórico de simulações:** "Salvar como cenário" guarda as transações, o recorte e os **dois resultados daquela execução** (com e sem a simulação). O cenário não muda depois. Dá para ver, restaurar no simulador e excluir.
+- **Comparação lado a lado** (base, meses, datas, simulação atual e cenários): indicadores, destaques, **dois grafos nas mesmas posições** (conexões novas e removidas) e a tabela de mudanças por conta. O exemplo da planilha mostra C025 passando de 1 para 3 comunidades vizinhas e do 8º para o 1º lugar.
+- **Banco:** migração 6 (`regras_modalidade` e colunas do histórico em `simulacoes`).
+- **Testes:** novo `test_fase4.py`; teste no navegador ampliado. São 10 conjuntos.
+- **Correções:** os botões de zoom da Rede interrompem a animação de "ajustar"; os campos de valor, data e hora recebem o mesmo estilo dos demais.
+
 ## 0.7 — Fase 3: rede de transações (branch `fase-3`)
 - **Grafo com Cytoscape.js** (3.34.4, licença MIT, copiado em `app/static/vendor/` e baixado só pela tela Rede).
   - **Navegação estilo mapa:** roda do mouse para zoom, arrastar o fundo para mover, botões de aproximar, afastar, ajustar à tela, centralizar na conta e reorganizar, e **minimapa** clicável.

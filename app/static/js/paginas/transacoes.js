@@ -60,6 +60,8 @@ function detalhe(id){
       <dt>Tipo</dt><dd>${esc(t.tipo)}</dd>
       <dt>Status</dt><dd>${pill(t.status)}</dd>
       <dt>Comunidades</dt><dd>${estado.porId[t.de].com} → ${estado.porId[t.para].com}</dd>
+      ${estado.dados.bancario ? `<dt>Instituições</dt><dd>${esc(estado.dados.bancario[t.de].instituicao)} → ${esc(estado.dados.bancario[t.para].instituicao)}
+        <span class="chip">${estado.dados.bancario[t.de].instituicao === estado.dados.bancario[t.para].instituicao ? "mesma instituição" : "entre instituições"}</span></dd>` : ""}
       ${t.atipica ? `<dt>Valor</dt><dd><span class="chip">atípico</span> acima do percentil 95 dos valores do recorte</dd>` : ""}
     </dl>
     <p style="font-size:12px;color:var(--ink-3)">O status da transação herda a maior classificação das duas contas; não indica irregularidade da operação.</p>

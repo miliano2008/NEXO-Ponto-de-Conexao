@@ -8,8 +8,8 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 | **0** | Reorganização e base técnica: pastas, `.env`, migrações, backup, simulação por usuário, cache, desempenho, frontend em módulos, testes | **Concluída e validada** (na `main`) |
 | **1** | Identidade, login e página institucional: login por e-mail (aceitando CPF/CNPJ na transição), Google opcional, landing page com FAQ, sessão encerrada ao trocar a senha | **Concluída e validada** (na `main`) |
 | **2** | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | **Concluída e validada** (na `main`) |
-| **3** | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | **Concluída e validada** (pull request para a `main`) |
-| 4 | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | Planejada |
+| **3** | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | **Concluída e validada** (na `main`) |
+| **4** | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | **Concluída e validada** (na `main`) |
 | 5 | Relatórios e configurações: exportação em **PDF, Excel, CSV, Word e PowerPoint**, com gráficos de verdade, não capturas de tela | Planejada |
 | 6 | Importação de bases: upload `.xlsx`/`.csv` de até **300 transações**, uma base por empresa, com exclusão. Depende da decisão sobre multiempresa | Planejada |
 
@@ -46,6 +46,20 @@ O que já ficou pronto para facilitar esses itens:
 - configuração por variáveis de ambiente (`.env`), exigida pelas hospedagens;
 - simulações guardadas no banco, porque hospedagens reiniciam a máquina;
 - migrações numeradas com backup, que tornam segura a troca de chaves do multiempresa.
+
+## Fase 4: o que foi entregue
+| Item planejado | Entrega |
+|---|---|
+| Regras por modalidade | 5 regras em `nucleo/bancario.py`, cada uma com origem (**Regulamentação**, **Prática de mercado (configurável)** ou **Parâmetro do administrador**), ação (bloquear, alertar, desligada), limites e fonte. Ajuste só pelo administrador, com auditoria (tabela `regras_modalidade`). Valem para as transações simuladas; na base, a coluna "Na base" só informa (11 TEDs em fim de semana, 7 fora do horário, 3 PIX noturnos de pessoa física acima do limite) |
+| Calendário com data, hora, intervalo e frequência | Simulação recorrente: a mesma transação repetida "a cada N dias" (até 30 vezes, intervalo de 1 a 90 dias), cada repetição com o próprio identificador |
+| Histórico de simulações | Cenários salvos com as transações, o recorte e os dois resultados da execução. **O grafo do histórico é sempre o daquela execução**, nunca o grafo atual com dados antigos |
+| Grafo de cada execução e comparação lado a lado | "Ver execução" (base daquele momento × cenário) e comparação livre entre base, meses, datas, simulação atual e cenários. Os dois grafos ficam nas mesmas posições (layout sobre a união das conexões); a comparação mostra conexões novas e removidas, mudanças de comunidade medidas pelo grupo (não pelo número), indicadores, destaques e tabela por conta |
+| Dados bancários fictícios (4.5) | Instituição fictícia, tipo de conta e tipo de chave PIX, sem números. Aparecem no detalhe da conta, da transação e na prévia do simulador |
+| Exportação | Fica para a **Fase 5**, que reúne todos os formatos (PDF, Excel, CSV, Word, PowerPoint) num motor único |
+
+**Atenção às fontes das regras:** os textos de regulamentação citam o Banco Central, mas **confirmem a norma vigente antes de citar no trabalho**. Os limites do PIX noturno, por exemplo, foram definidos em 2021 e podem mudar. Na tela, cada regra mostra a fonte usada.
+
+**Gabarito (planilha, "Comparação entre períodos"):** C025 passa de 1 para 3 comunidades vizinhas (comunidades 1, 6 e 7) e do 8º para o 1º lugar no ranking, do período A (01–15/08) para o B (01–15/09). Conferido em `testes/test_fase4.py` e no teste no navegador.
 
 ## Fase 3: o que foi entregue
 | Item planejado | Entrega |

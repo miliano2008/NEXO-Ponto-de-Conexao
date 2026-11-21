@@ -1,6 +1,6 @@
 """Roda todos os testes do NEXO: scripts\\TESTAR.bat  ou  python -m testes.executar
 
-- test_nucleo, test_login, test_fase0, test_fase1, test_fase2, test_fase3 e test_email: sempre (CSV + SQLite temporários).
+- test_nucleo, test_login, test_fase0, test_fase1, test_fase2, test_fase3, test_fase4 e test_email: sempre (CSV + SQLite temporários).
 - test_mysql: só se o MySQL estiver configurado; usa um banco TEMPORÁRIO (nexo_teste)
   e o apaga no final — o banco do grupo não é alterado.
 - e2e/test_navegador: só se o Playwright estiver instalado (requirements-dev.txt).
@@ -13,7 +13,7 @@ import time
 
 from nucleo.configuracao import RAIZ
 
-TESTES = ["testes.test_nucleo", "testes.test_login", "testes.test_fase0", "testes.test_fase1", "testes.test_fase2", "testes.test_fase3", "testes.test_email"]
+TESTES = ["testes.test_nucleo", "testes.test_login", "testes.test_fase0", "testes.test_fase1", "testes.test_fase2", "testes.test_fase3", "testes.test_fase4", "testes.test_email"]
 
 
 def mysql_configurado():
@@ -22,6 +22,8 @@ def mysql_configurado():
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")   # console antigo do Windows: troca o símbolo em vez de parar
     roteiro = list(TESTES)
     if mysql_configurado():
         roteiro.append("testes.test_mysql")
@@ -35,7 +37,9 @@ def main():
     falhas = []
     for modulo in roteiro:
         inicio = time.perf_counter()
-        r = subprocess.run([sys.executable, "-m", modulo], cwd=RAIZ, capture_output=True, text=True, env=os.environ)
+        # saída em UTF-8: no Windows, a saída capturada usaria cp1252 e quebraria em "→", "—"...
+        r = subprocess.run([sys.executable, "-m", modulo], cwd=RAIZ, capture_output=True,
+                           encoding="utf-8", errors="replace", env={**os.environ, "PYTHONIOENCODING": "utf-8"})
         duracao = time.perf_counter() - inicio
         linhas = [l for l in r.stdout.splitlines() if l.startswith("TESTES OK")]
         if r.returncode == 0:

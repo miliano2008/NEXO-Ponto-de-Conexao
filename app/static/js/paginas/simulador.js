@@ -7,6 +7,7 @@ import {consulta} from "../nucleo/filtros.js";
 import {irPara} from "../nucleo/roteador.js";
 import {ui} from "../nucleo/ui.js";
 import {el, esc, fmtBRL, fmtData, fmtNum, lerBRL, mascararCampoBRL, pill, valorParaCampo} from "../nucleo/utilidades.js";
+import {agendarPrevia, carregarRegras, editarRegra, salvarCenario} from "./simulador-regras.js";
 
 let verTodas = false;
 
@@ -60,12 +61,18 @@ function renderImpacto(){
     : `<tr><td colspan="8" class="empty">Nenhuma conta mudou de score, status ou comunidade.</td></tr>`) + mais;
 }
 
+/* corpo do pedido a partir do formulário (também usado pela prévia das regras) */
+function lerFormulario(){
+  const valor = lerBRL(el("simValor").value), vezes = Math.max(1, +el("simVezes").value || 1);
+  return {de:el("simDe").value, para:el("simPara").value, valor: valor ? valor.toFixed(2) : "",
+          data:el("simData").value, hora:el("simHora").value, tipo:el("simTipo").value,
+          repetir: vezes > 1 ? {vezes, a_cada_dias: +el("simIntervalo").value || 0} : null};
+}
+
 async function enviar(e){
   e.preventDefault();
-  const valor = lerBRL(el("simValor").value);
-  if(!valor){ ui.toast("Informe um valor maior que zero.", true); el("simValor").focus(); return; }
-  const corpo = {de:el("simDe").value, para:el("simPara").value, valor:valor.toFixed(2),
-                 data:el("simData").value, hora:el("simHora").value, tipo:el("simTipo").value};
+  const corpo = lerFormulario();
+  if(!corpo.valor){ ui.toast("Informe um valor maior que zero.", true); el("simValor").focus(); return; }
   if(corpo.de===corpo.para){ ui.toast("Origem e destino precisam ser contas diferentes.", true); return; }
   el("simEnviar").disabled = true;
   try{
@@ -74,7 +81,10 @@ async function enviar(e){
     estado.destaque = new Set([corpo.de, corpo.para]);
     await carregar();
     const mudaram = r.impacto.filter(i=>i.antes.status!==i.depois.status);
-    ui.toast(`Transação ${r.transacao.id_transacao} simulada · ${r.impacto.length} conta(s) com score alterado` +
+    const quais = r.transacoes.length > 1 ? `${r.transacoes.length} transações simuladas (${r.transacoes[0]} a ${r.transacoes.at(-1)})`
+                                          : `Transação ${r.transacao.id_transacao} simulada`;
+    ui.toast(`${quais} · ${r.impacto.length} conta(s) com score alterado` +
+      (r.alertas.length ? `<br>⚠ ${r.alertas.length} alerta(s) das regras: ${esc(r.alertas[0].mensagem)}` : "") +
       (el("swAlerts").classList.contains("on") && mudaram.length
         ? `<br>⚠ Mudança de status: ${mudaram.map(i=>`${i.id} (${i.antes.status} → ${i.depois.status})`).join(", ")}` : ""));
   } catch(err){ ui.toast(esc(err.message), true); }
@@ -88,9 +98,11 @@ function aleatoria(){
   el("simDe").value = de; el("simPara").value = para;
   el("simValor").value = valorParaCampo(500 + Math.random()*29500);
   el("simData").value = estado.dados.simulacao.data_referencia;
+  el("simVezes").value = 1; el("simIntervalo").disabled = true;
   el("simHora").value = `${String(Math.floor(Math.random()*24)).padStart(2,"0")}:${String(Math.floor(Math.random()*60)).padStart(2,"0")}`;
   const tipos = estado.dados.simulacao.tipos_transacao;
   el("simTipo").value = tipos[Math.floor(Math.random()*tipos.length)];
+  agendarPrevia(lerFormulario);
 }
 
 async function remover(id){
@@ -119,8 +131,18 @@ export function iniciar(){
   el("simLista").addEventListener("click", e=>{
     const b = e.target.closest("[data-remover]"); if(b) remover(b.dataset.remover);
   });
+  // Fase 4: repetição, prévia das regras, cenário e quadro das regras
+  el("simVezes").addEventListener("input", () => { el("simIntervalo").disabled = (+el("simVezes").value || 1) <= 1; });
+  ["simDe","simPara","simValor","simData","simHora","simTipo","simVezes","simIntervalo"].forEach(id =>
+    ["input","change"].forEach(ev => el(id).addEventListener(ev, () => agendarPrevia(lerFormulario))));
+  el("simSalvar").addEventListener("click", () => salvarCenario());
+  el("simRegras").addEventListener("click", e => { const b = e.target.closest("[data-editar-regra]"); if(b) editarRegra(b.dataset.editarRegra); });
+  carregarRegras();
 }
 
 export const atualizar = render;
 // vindo de "Simular transação a partir desta conta": já escolhe a origem
-export function mostrar(contaOrigem){ if(contaOrigem && estado.porId[contaOrigem]) el("simDe").value = contaOrigem; }
+export function mostrar(contaOrigem){
+  if(contaOrigem && estado.porId[contaOrigem]) el("simDe").value = contaOrigem;
+  agendarPrevia(lerFormulario);
+}

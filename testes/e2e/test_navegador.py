@@ -75,7 +75,7 @@ with sync_playwright() as p:
     assert [x.inner_text() for x in pg.locator("#dashKpis .val").all()] == ["160", "40", "12", "9"]
 
     # todas as telas carregam (cada uma é um módulo baixado sob demanda)
-    esperado = {"risco": "#riscoBody tr", "transacoes": "#txBody tr", "rede": "#graph canvas", "contas": "#contasBody tr",
+    esperado = {"risco": "#riscoBody tr", "historico": "#cmpA option", "transacoes": "#txBody tr", "rede": "#graph canvas", "contas": "#contasBody tr",
                 "simulador": "#simDe option", "relatorios": "#reportGrid .card", "arquitetura": "#archFlow .flow-box",
                 "config": "#sobre dt", "usuarios": "#usrBody tr", "auditoria": "#audBody tr", "dashboard": "#dashTop tr"}
     for pagina, seletor in esperado.items():
@@ -165,6 +165,36 @@ with sync_playwright() as p:
     pg.click("#nav button[data-page=dashboard]"); pg.wait_for_timeout(500)
     assert pg.locator("#dashKpis .val").first.inner_text() == "160"
 
+    # Fase 4 — regras por modalidade na prévia: TED num sábado às 18h fica bloqueada
+    pg.click("#nav button[data-page=simulador]"); pg.wait_for_selector("#simRegras tr")
+    assert pg.locator("#simRegras tr").count() == 5 and "Regulamentação" in pg.inner_text("#simRegras")
+    pg.select_option("#simDe", "C001"); pg.select_option("#simPara", "C030"); pg.fill("#simValor", "4500000")
+    pg.fill("#simData", "2026-09-12"); pg.fill("#simHora", "18:00"); pg.select_option("#simTipo", "TED")
+    pg.wait_for_selector("#simPrevia .previa-regras li.bloqueio")
+    assert pg.is_disabled("#simEnviar") and "sábado" in pg.inner_text("#simPrevia")
+    assert "Banco Fictício" in pg.inner_text("#simPrevia")
+    # simulação recorrente: PIX 3 vezes, a cada 7 dias
+    pg.select_option("#simTipo", "PIX"); pg.fill("#simHora", "12:00"); pg.fill("#simVezes", "3"); pg.fill("#simIntervalo", "7")
+    pg.wait_for_function("document.querySelector('#simPrevia .previa-datas') && !document.getElementById('simEnviar').disabled")
+    assert "3 transações: 12/09, 19/09, 26/09" in pg.inner_text("#simPrevia")
+    pg.click("#simEnviar"); pg.wait_for_function("document.querySelectorAll('#simLista button[data-remover]').length === 3")
+    # salvar como cenário e abrir no histórico
+    pg.click("#simSalvar"); pg.fill("#cnNome", "PIX semanal C001 para C030"); pg.click("#cnSalvar")
+    pg.wait_for_selector("#overlay:not(.open)", state="attached"); pg.wait_for_timeout(300)
+    pg.click("#nav button[data-page=historico]"); pg.wait_for_selector(".cenario")
+    assert "PIX semanal C001 para C030" in pg.inner_text("#cenariosLista")
+    pg.click("[data-ver-cenario]")
+    pg.wait_for_function("document.getElementById('cmpGrafoB') && document.getElementById('cmpGrafoB').cy && document.getElementById('cmpGrafoB').cy.nodes().length === 40")
+    assert pg.evaluate("document.getElementById('cmpGrafoB').cy.edges('.nova').length") >= 1   # a conexão simulada é nova
+    # comparação do exemplo da planilha: C025 vira ponte entre três comunidades no período B
+    pg.click("#cmpExemplo"); pg.wait_for_selector("#cmpTabela tr[data-cmp-conta=C025]")
+    linha = pg.inner_text("#cmpTabela tr[data-cmp-conta=C025]")
+    assert "#8 → #1" in linha and "1 → 3" in linha, linha
+    assert pg.locator("#cmpResultado dd a").first.inner_text() == "C025"          # 1º em "passaram a ligar mais comunidades"
+    pg.click("#cmpTabela tr[data-cmp-conta=C025]"); pg.wait_for_timeout(200)
+    assert pg.evaluate("document.getElementById('cmpGrafoA').cy.$id('C025').hasClass('selecionado')")
+    pg.click("#nav button[data-page=simulador]"); pg.click("#simRestaurar"); pg.wait_for_timeout(1200)
+
     # período pelo calendário (recalcula) e filtros de visualização (não recalculam)
     pg.click("#btnFiltros"); pg.wait_for_selector("#formFiltros")
     pg.click("button[data-atalho='7']"); pg.click("#fAplicar"); pg.wait_for_timeout(1500)
@@ -229,6 +259,7 @@ with sync_playwright() as p:
 
 http.shutdown()
 assert not erros, "\n".join(erros)
-print("TESTES OK: navegador — página inicial, login (e-mail e CPF), 12 telas (módulos sob demanda), rede com Cytoscape "
-      "(localizar, vizinhança, zoom, minimapa, cores, daltonismo, comunidade, animação de padrão), matrizes, validação, simulador, "
+print("TESTES OK: navegador — página inicial, login (e-mail e CPF), 13 telas (módulos sob demanda), rede com Cytoscape "
+      "(localizar, vizinhança, zoom, minimapa, cores, daltonismo, comunidade, animação de padrão), regras por modalidade, "
+      "simulação recorrente, cenários, comparação lado a lado, matrizes, validação, simulador, "
       "calendário e filtros, painel de risco, ordenação, investigação, limiares, tema, minha senha e navegação.")

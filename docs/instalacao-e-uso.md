@@ -90,7 +90,7 @@ Pela linha de comando, sempre a partir da raiz: `.venv\Scripts\python -m app`, `
 ## 6. Cargos
 | Cargo | O que pode |
 |---|---|
-| Administrador | Tudo, inclusive usuários, cargos e convites |
+| Administrador | Tudo, inclusive usuários, cargos, convites e os limites das regras por modalidade |
 | Analista | Consultar, relatórios, exportar, simulador, configurações e registrar a investigação das contas |
 | Auditor | Consultar (inclusive o histórico das investigações), relatórios, exportar, auditoria |
 | Visualizador | Apenas consultar. É o padrão de quem se cadastra sem convite |

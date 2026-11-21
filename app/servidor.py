@@ -20,7 +20,7 @@ from urllib.parse import quote as url_quote
 from flask import (Flask, Response, jsonify, redirect, render_template, request,
                    session, url_for)
 
-from app import analises, auth, casos, envio_email, google
+from app import analises, auth, casos, envio_email, google, simulacao
 from banco import conexao as db
 from banco import migracoes, repositorio
 from nucleo import analise, configuracao
@@ -92,6 +92,7 @@ def resultados(usuario, recorte=0, com_matrizes=False):
     dados = {k: v for k, v in calculado.items() if com_matrizes or k != "matrizes"}
     dados["transacoes"] = [{**t, "simulada": t["id"] in ids_simulados} for t in calculado["transacoes"]]
     dados["analise"] = {k: info[k] for k in ("id", "assinatura", "versao_motor", "duracao_ms", "origem")}
+    dados["bancario"] = simulacao.dados_bancarios()   # instituição fictícia, tipo de conta e chave PIX
     dados["simulacao"] = {
         "periodo_dias": info["recorte"]["dias"], "data_referencia": info["data_referencia"],
         "recorte": info["recorte"], "datas_base": info["datas_base"],
@@ -582,6 +583,36 @@ def api_matrizes():
     return jsonify({"matrizes": dados["matrizes"], "analise": dados["analise"]})
 
 
+def transacao_do_corpo(d, simuladas):
+    return {
+        "id_transacao": repositorio.proximo_id_simulado(simuladas),
+        "conta_origem": str(d.get("de", "")).strip().upper(),
+        "conta_destino": str(d.get("para", "")).strip().upper(),
+        "valor": str(d.get("valor", "")).replace(",", "."),
+        "data": str(d.get("data", "")),
+        "hora": str(d.get("hora", "")),
+        "tipo_transacao": str(d.get("tipo", "PIX")).strip() or "PIX",
+    }
+
+
+@app.post("/api/transacoes/validar")
+@exige("simular")
+def api_validar_transacao():
+    """Prévia: as datas das repetições e o que cada regra da modalidade diz, sem gravar nada."""
+    d = corpo()
+    try:
+        linhas = simulacao.expandir(transacao_do_corpo(d, []), d.get("repetir"))
+    except ValueError as erro:
+        return jsonify({"erro": str(erro)}), 400
+    verificacoes, bloqueios, alertas = simulacao.verificar(linhas)
+    bancos = simulacao.dados_bancarios()
+    de, para = linhas[0]["conta_origem"], linhas[0]["conta_destino"]
+    return jsonify({"transacoes": verificacoes, "bloqueios": bloqueios, "alertas": alertas,
+                    "origem": bancos.get(de), "destino": bancos.get(para),
+                    "mesma_instituicao": bool(bancos.get(de) and bancos.get(para)
+                                              and bancos[de]["instituicao"] == bancos[para]["instituicao"])})
+
+
 @app.post("/api/transacoes")
 @exige("simular")
 def api_nova_transacao():
@@ -590,19 +621,23 @@ def api_nova_transacao():
     with trava:
         simuladas = repositorio.listar_simuladas(usuario["id"])
         antes = resumo_contas(resultados(usuario))
-        nova = {
-            "id_transacao": repositorio.proximo_id_simulado(simuladas),
-            "conta_origem": str(d.get("de", "")).strip().upper(),
-            "conta_destino": str(d.get("para", "")).strip().upper(),
-            "valor": str(d.get("valor", "")).replace(",", "."),
-            "data": str(d.get("data", "")),
-            "hora": str(d.get("hora", "")),
-            "tipo_transacao": str(d.get("tipo", "PIX")).strip() or "PIX",
-        }
+        try:
+            novas = simulacao.expandir(transacao_do_corpo(d, simuladas), d.get("repetir"))
+        except ValueError as erro:
+            return jsonify({"erro": str(erro)}), 400
+        ids = []
+        for nova in novas:   # cada repetição recebe o próprio identificador (S0001, S0002...)
+            nova["id_transacao"] = repositorio.proximo_id_simulado(simuladas + [{"id_transacao": i} for i in ids])
+            ids.append(nova["id_transacao"])
+        verificacoes, bloqueios, alertas = simulacao.verificar(novas)
+        if bloqueios:
+            motivos = sorted({v["mensagem"] for r in verificacoes for v in r["verificacoes"] if v["resultado"] == "bloqueio"})
+            return jsonify({"erro": "Bloqueada pelas regras da modalidade: " + " ".join(motivos[:3]),
+                            "verificacoes": verificacoes}), 400
         try:
             # valida e calcula ANTES de gravar: uma transação inválida não entra na simulação
-            calculado, _ = analises.calcular(0, simuladas + [nova])
-            repositorio.adicionar_simulada(usuario["id"], nova)
+            calculado, _ = analises.calcular(0, simuladas + novas)
+            repositorio.adicionar_simuladas(usuario["id"], novas)
         except ValueError as erro:
             return jsonify({"erro": str(erro)}), 400
         depois = resumo_contas(calculado)
@@ -614,7 +649,9 @@ def api_nova_transacao():
             impacto.append({"id": id_conta, "antes": velho, "depois": novo,
                             "delta_score": round(novo["score"] - velho["score"], 2)})
     impacto.sort(key=lambda x: -abs(x["delta_score"]))
-    return jsonify({"transacao": nova, "impacto": impacto}), 201
+    return jsonify({"transacao": novas[0], "transacoes": [n["id_transacao"] for n in novas],
+                    "alertas": [v for r in verificacoes for v in r["verificacoes"] if v["resultado"] == "alerta"],
+                    "impacto": impacto}), 201
 
 
 @app.delete("/api/transacoes/<tid>")
@@ -659,6 +696,105 @@ def api_atualizar_caso(conta):
     return jsonify(caso)
 
 
+# ---------------------------------------------------------------- modalidades (Fase 4)
+
+@app.get("/api/modalidades")
+@exige("consultar")
+def api_modalidades():
+    return jsonify({"regras": simulacao.regras_para_tela(), "origens": simulacao.bancario.ORIGENS,
+                    "acoes": simulacao.bancario.ACOES, "instituicoes": simulacao.bancario.INSTITUICOES})
+
+
+@app.post("/api/modalidades/<regra>")
+@exige("administrar_regras")
+def api_ajustar_regra(regra):
+    d, usuario = corpo(), usuario_atual()
+    if regra not in simulacao.bancario.REGRAS_PADRAO:
+        return erro_auth("Regra inexistente.", 404)
+    if d.get("padrao"):
+        repositorio.apagar_ajuste_regra(regra)
+        auth.registrar("regra_modalidade", None, f"{regra}: voltou ao padrão por {usuario['nome']}", request.remote_addr)
+        return jsonify({"regras": simulacao.regras_para_tela()})
+    acao = d.get("acao")
+    if acao not in simulacao.bancario.ACOES:
+        return erro_auth("Ação inválida: use bloquear, alertar ou desligada.")
+    if regra == "pix_24h" and acao == "bloquear":
+        return erro_auth("Esta regra é informativa: não pode bloquear.")
+    try:
+        parametros = simulacao.bancario.validar_parametros(regra, d.get("parametros") or {})
+    except ValueError as erro:
+        return erro_auth(erro)
+    atual = simulacao.regras()[regra]["parametros"]
+    repositorio.salvar_ajuste_regra(regra, acao, {**atual, **parametros}, usuario["nome"])
+    auth.registrar("regra_modalidade", None, f"{regra}: {acao} {parametros or ''} por {usuario['nome']}"[:255],
+                   request.remote_addr)
+    return jsonify({"regras": simulacao.regras_para_tela()})
+
+
+# ---------------------------------------------------------------- histórico e comparação (Fase 4)
+
+@app.get("/api/cenarios")
+@exige("simular")
+def api_cenarios():
+    return jsonify({"cenarios": repositorio.listar_cenarios(usuario_atual()["id"])})
+
+
+@app.post("/api/cenarios")
+@exige("simular")
+def api_salvar_cenario():
+    d = corpo()
+    try:
+        cid = simulacao.salvar_cenario(usuario_atual(), d.get("nome"), d.get("descricao"), d.get("recorte") or 0)
+    except ValueError as erro:
+        return erro_auth(erro)
+    auth.registrar("cenario_salvo", None, f"cenário {cid} por {usuario_atual()['nome']}", request.remote_addr)
+    return jsonify({"id": cid, "cenarios": repositorio.listar_cenarios(usuario_atual()["id"])}), 201
+
+
+@app.get("/api/cenarios/<int:cid>")
+@exige("simular")
+def api_cenario(cid):
+    cenario = repositorio.obter_cenario(usuario_atual()["id"], cid)
+    if cenario is None:
+        return erro_auth("Cenário não encontrado.", 404)
+    cenario["comparacao"] = simulacao.comparacao.comparar(cenario["resultado_base"], cenario["resultado"])
+    return jsonify(cenario)
+
+
+@app.post("/api/cenarios/<int:cid>/restaurar")
+@exige("simular")
+def api_restaurar_cenario(cid):
+    try:
+        cenario = repositorio.restaurar_cenario(usuario_atual()["id"], cid)
+    except ValueError as erro:
+        return erro_auth(erro)
+    if cenario is None:
+        return erro_auth("Cenário não encontrado.", 404)
+    return jsonify({"ok": True, "transacoes": len(cenario["transacoes"])})
+
+
+@app.delete("/api/cenarios/<int:cid>")
+@exige("simular")
+def api_excluir_cenario(cid):
+    if not repositorio.excluir_cenario(usuario_atual()["id"], cid):
+        return erro_auth("Cenário não encontrado.", 404)
+    return jsonify({"ok": True})
+
+
+@app.get("/api/comparar")
+@exige("consultar")
+@com_recorte
+def api_comparar():
+    """Comparação lado a lado. a/b: base · recorte:INI:FIM · rascunho · cenario:ID · cenario:ID:base."""
+    usuario = usuario_atual()
+    fontes = [request.args.get("a", "base"), request.args.get("b", "base")]
+    if any(f.startswith(("rascunho", "cenario")) for f in fontes) and not auth.tem_permissao(usuario, "simular"):
+        return jsonify({"erro": "O seu cargo pode comparar períodos, mas não simulações."}), 403
+    (ra, rotulo_a), (rb, rotulo_b) = (simulacao.fonte(usuario, f) for f in fontes)
+    return jsonify({"a": {"rotulo": rotulo_a, **ra}, "b": {"rotulo": rotulo_b, **rb},
+                    "diferencas": simulacao.comparacao.comparar(ra, rb)})
+
+
 @app.get("/api/exportar")
 @exige("exportar")
 @com_recorte
@@ -669,18 +805,50 @@ def api_exportar():
                     headers={"Content-Disposition": "attachment; filename=resultados_nexo.json"})
 
 
+def _porta_livre(inicial):
+    """Primeira porta em que o servidor realmente consegue escutar, a partir de `inicial`.
+
+    Testa com bind (e não só com connect): no Windows, o Hyper-V/WSL/Docker às vezes reserva a
+    porta 5000; ela parece livre, mas o servidor não consegue usá-la."""
+    import socket
+    for porta in range(inicial, inicial + 20):
+        with socket.socket() as s:
+            try:
+                s.bind(("127.0.0.1", porta))
+                return porta
+            except OSError:
+                continue
+    return None
+
+
+def _abrir_navegador_quando_pronto(url, porta):
+    """Abre o navegador só depois que o servidor aceitar conexões (no máximo 60 s)."""
+    import socket
+    import time
+    import webbrowser
+    for _ in range(120):
+        with socket.socket() as s:
+            if s.connect_ex(("127.0.0.1", porta)) == 0:
+                webbrowser.open(url)
+                return
+        time.sleep(0.5)
+
+
 def executar():
     """Inicia o servidor local, na primeira porta livre a partir da 5000."""
     import os
-    import socket
     if auth.contar_administradores_ativos() == 0:
         print("Nenhum administrador cadastrado. Crie um com: scripts\\CRIAR_ADMIN.bat")
-    porta = int(os.environ.get("NEXO_PORTA", 5000))
-    # porta ocupada (outro NEXO aberto, AirPlay no macOS): usa a próxima livre
-    while porta < 5020:
-        with socket.socket() as s:
-            if s.connect_ex(("127.0.0.1", porta)) != 0:
-                break
-        porta += 1
-    print(f"NEXO em http://127.0.0.1:{porta}  (Ctrl+C para parar)")
-    app.run(debug=False, port=porta, threaded=True)
+    inicial = int(os.environ.get("NEXO_PORTA", 5000))
+    porta = _porta_livre(inicial)
+    if porta is None:
+        print(f"[ERRO] Nenhuma porta livre entre {inicial} e {inicial + 19}. "
+              "Feche outros NEXO abertos ou defina NEXO_PORTA com outra porta (ex.: 8080).")
+        raise SystemExit(1)
+    url = f"http://127.0.0.1:{porta}"
+    if porta != inicial:
+        print(f"A porta {inicial} está ocupada ou bloqueada pelo Windows; usando a {porta}.")
+    print(f"NEXO em {url}  (Ctrl+C para parar)")
+    if os.environ.get("NEXO_ABRIR_NAVEGADOR") == "1":
+        threading.Thread(target=_abrir_navegador_quando_pronto, args=(url, porta), daemon=True).start()
+    app.run(debug=False, host="127.0.0.1", port=porta, threaded=True)

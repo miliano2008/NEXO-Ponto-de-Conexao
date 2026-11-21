@@ -39,6 +39,9 @@ function render(id){
         <div style="font-size:12px;color:var(--ink-3)">Conta · ranking #${c.ranking} de ${d.contas.length}</div>
         <h2 style="margin:2px 0 6px;font-size:26px;letter-spacing:-.02em">${c.id}</h2>
         <div>${pill(c.status)} <span style="font-size:12.5px;color:var(--ink-3);margin-left:8px">${esc(c.titular)} · aberta em ${fmtData(c.data_abertura)} · comunidade ${c.com}</span></div>
+        ${d.bancario?.[id] ? `<div class="dados-bancarios" title="Dados bancários fictícios, gerados por regras fixas">
+          <span class="chip">🏦 ${esc(d.bancario[id].instituicao)}</span><span class="chip">${esc(d.bancario[id].tipo_conta)}</span>
+          <span class="chip">Chave PIX: ${esc(d.bancario[id].chave_pix)}</span></div>` : ""}
       </div>
       <div style="flex:1"></div>
       <button class="btn ghost" data-goto="contas">Voltar ao ranking</button>

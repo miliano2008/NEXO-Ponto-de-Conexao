@@ -33,6 +33,8 @@ def erro(msg, como):
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")   # console/saída em cp1252 no Windows: não quebra em "→"
     if not RAPIDO:
         print("NEXO — diagnóstico do ambiente\n")
 

@@ -62,9 +62,17 @@ Só funciona com `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env`; sem eles
 |---|---|---|
 | `GET /api/resultados?...` | consultar | Análise completa **sem** as matrizes n×n, já com o bloco `risco` (indícios, regras, comunidades). Recorte opcional (recalcula a rede): `dias=N` (últimos N dias), **ou** `inicio`/`fim` (AAAA-MM-DD; dia específico = mesmo valor), `tipos=PIX,TED`, `valor_min`, `valor_max`. Recorte inválido ou sem transações: `400` com a mensagem. Inclui a simulação do usuário |
 | `GET /api/matrizes?...` | consultar | Matrizes A, W, D, L e versões simétricas. Carregada só quando a aba Matrizes é aberta |
-| `POST /api/transacoes` | simular | `{de, para, valor, data, hora, tipo}`. Valida, grava na simulação **do usuário** e devolve `{transacao, impacto}` (score, status e comunidade antes e depois) |
+| `POST /api/transacoes/validar` | simular | Prévia sem gravar: `{de, para, valor, data, hora, tipo, repetir: {vezes, a_cada_dias}}` → datas das repetições, verificações de cada regra, instituições e se é a mesma |
+| `POST /api/transacoes` | simular | `{de, para, valor, data, hora, tipo, repetir?}`. Expande as repetições, aplica as regras da modalidade (bloqueio: `400` com as verificações, nada é gravado), valida no motor, grava na simulação **do usuário** e devolve `{transacao, transacoes, alertas, impacto}` |
 | `DELETE /api/transacoes/<id>` | simular | Remove uma transação simulada (`S0001`…). A base oficial é protegida: `404` |
 | `POST /api/simulacao/restaurar` | simular | Apaga todas as transações simuladas do usuário |
+| `GET /api/modalidades` | consultar | Regras por modalidade: origem, ação, limites, fonte, quem ajustou e quantas transações da base ficariam fora (informativo) |
+| `POST /api/modalidades/<regra>` | administrar_regras | `{acao, parametros}` ou `{padrao: true}`. Auditoria `regra_modalidade` |
+| `GET` / `POST /api/cenarios` | simular | Lista os cenários do usuário / salva o rascunho como cenário `{nome, descricao, recorte}` |
+| `GET /api/cenarios/<id>` | simular | Cenário com as transações, os dois resultados e a comparação entre eles. Só do dono (`404` para os outros) |
+| `POST /api/cenarios/<id>/restaurar` | simular | Substitui a simulação em andamento pelas transações do cenário |
+| `DELETE /api/cenarios/<id>` | simular | Exclui o cenário |
+| `GET /api/comparar?a=&b=` | consultar | Comparação lado a lado. Fontes: `base`, `recorte:AAAA-MM-DD:AAAA-MM-DD`, `rascunho`, `cenario:ID`, `cenario:ID:base`. Simulações e cenários exigem `simular` |
 | `GET /api/exportar?...` | exportar | Baixa o JSON completo, com as matrizes, no mesmo recorte |
 | `GET /api/casos` | consultar | Situação da investigação de cada conta com registro, e a lista de situações |
 | `GET /api/casos/<conta>` | consultar | Situação atual e histórico (quem, quando, de → para, comentário) |
@@ -82,6 +90,7 @@ Só funciona com `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env`; sem eles
 | simular | ✓ | ✓ | — | — |
 | configurar | ✓ | ✓ | — | — |
 | investigar (mudar a situação da investigação) | ✓ | ✓ | — | — |
+| administrar_regras (regras por modalidade) | ✓ | — | — | — |
 | ver_auditoria | ✓ | — | ✓ | — |
 | gerenciar_usuarios | ✓ | — | — | — |
 
