@@ -92,3 +92,10 @@ Cada usuário tem **a própria** simulação (tabelas `simulacoes` e `simulacao_
 | Pior caso previsto para a Fase 6 (300 transações) | — | ≤ 145 ms, 55 KB compactado |
 
 Os arquivos estáticos são **revalidados** a cada carga: o navegador pergunta se mudaram e recebe `304` se não. Assim não é preciso Ctrl+F5 depois de atualizar o código.
+
+## Desempenho das fases seguintes
+| Fase | Medida | Resultado |
+|---|---|---|
+| 2 | Análise completa com as 10 regras de risco, 300 transações e 120 contas | ~35 ms no servidor |
+| 3 | Biblioteca do grafo (Cytoscape.js), só na tela Rede | ~133 KB compactada, baixada uma vez e reaproveitada pelo navegador |
+| 3 | Desenhar e organizar 300 contas no navegador | ~1,3 s (layout de forças incluído) |

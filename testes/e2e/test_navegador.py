@@ -75,13 +75,15 @@ with sync_playwright() as p:
     assert [x.inner_text() for x in pg.locator("#dashKpis .val").all()] == ["160", "40", "12", "9"]
 
     # todas as telas carregam (cada uma é um módulo baixado sob demanda)
-    esperado = {"risco": "#riscoBody tr", "transacoes": "#txBody tr", "rede": "#graph .node", "contas": "#contasBody tr",
+    esperado = {"risco": "#riscoBody tr", "transacoes": "#txBody tr", "rede": "#graph canvas", "contas": "#contasBody tr",
                 "simulador": "#simDe option", "relatorios": "#reportGrid .card", "arquitetura": "#archFlow .flow-box",
                 "config": "#sobre dt", "usuarios": "#usrBody tr", "auditoria": "#audBody tr", "dashboard": "#dashTop tr"}
     for pagina, seletor in esperado.items():
         pg.click(f"#nav button[data-page={pagina}]")
         pg.wait_for_selector(f"#page-{pagina}.active {seletor}", state="attached", timeout=10000)
-    assert pg.locator("#graph .node").count() == 40
+    CY = "document.getElementById('graph').cy"
+    pg.wait_for_function(f"{CY} && {CY}.nodes().length === 40")
+    assert pg.evaluate(f"{CY}.edges().length") == 103                     # conexões dirigidas distintas
 
     # rede: abas, matrizes sob demanda e painel da conta
     pg.click("#nav button[data-page=rede]")
@@ -92,8 +94,55 @@ with sync_playwright() as p:
     assert "simétrica" in pg.inner_text("#matTitulo")
     assert "confere" in pg.inner_text("#espectralInfo")
     pg.click("#redeTabs button[data-tab=grafo]")
-    pg.wait_for_timeout(1500)
-    pg.click("#graph .node[data-id=C025]"); pg.wait_for_selector("#drawer.open")
+    pg.wait_for_timeout(500)
+
+    # Fase 3 — navegação estilo mapa: localizar conta (vizinhança), ajustar, zoom, minimapa
+    assert pg.locator("#minimapa canvas").count() > 0                      # minimapa desenhado
+    pg.fill("#buscaConta", "C025"); pg.press("#buscaConta", "Enter"); pg.wait_for_timeout(700)
+    assert "C025: 7 conta(s) conectada(s)" in pg.inner_text("#grafoInfo")
+    assert pg.evaluate(f"{CY}.nodes('.apagado').length") == 40 - 8      # só C025 e os 7 vizinhos acesos
+    zoom = pg.evaluate(f"{CY}.zoom()")
+    pg.click("#zFit"); pg.wait_for_timeout(500)
+    assert pg.evaluate(f"{CY}.zoom()") < zoom                              # "ajustar à tela" afasta
+    z1 = pg.evaluate(f"{CY}.zoom()"); pg.click("#zIn"); assert pg.evaluate(f"{CY}.zoom()") > z1
+    pg.evaluate(f"{CY}.emit('tap')")                                       # clique no fundo: rede inteira
+    pg.wait_for_timeout(200)
+    assert pg.evaluate(f"{CY}.nodes('.apagado').length") == 0
+    # esquemas de cores: risco muda a cor; daltonismo + comunidade muda a forma do nó
+    cor = pg.evaluate(f"{CY}.$id('C001').data('cor')")
+    pg.select_option("#corPor", "risco"); assert pg.evaluate(f"{CY}.$id('C016').data('cor')") == "#C2263C"
+    pg.select_option("#corPor", "com"); pg.select_option("#paleta", "daltonismo")
+    assert pg.evaluate(f"{CY}.$id('C006').data('forma')") != pg.evaluate(f"{CY}.$id('C001').data('forma')")
+    assert "Comunidade 9" in pg.inner_text("#legenda")
+    pg.select_option("#corPor", "status"); pg.select_option("#paleta", "padrao")
+    assert pg.evaluate(f"{CY}.$id('C001').data('cor')") == cor
+    # destacar comunidade apaga as outras
+    pg.select_option("#focoCom", "4"); pg.wait_for_timeout(500)
+    assert pg.evaluate(f"{CY}.nodes().not('.apagado').map(n => n.id()).sort().join()") == "C016,C017,C018,C019,C020"
+    pg.select_option("#focoCom", ""); pg.wait_for_timeout(200)
+
+    # Fase 3 — animação de um padrão do gabarito (circuito C026 → C030) com controles
+    pg.click("#redeTabs button[data-tab=padroes]")
+    assert pg.locator("[data-animar^='ciclo:']").count() >= 2 and pg.locator("[data-animar^='fan_in:']").count() >= 1
+    pg.locator("#padroesGrid li", has_text="C026 → C027 → C028 → C029 → C030").locator("[data-animar]").click()
+    pg.wait_for_function("document.getElementById('animGrafo') && document.getElementById('animGrafo').cy")
+    assert pg.evaluate("document.getElementById('animGrafo').cy.nodes().not('.pulso').length") == 5
+    pg.wait_for_function("document.getElementById('animPasso').textContent.startsWith('Transação 2 de 10')", timeout=8000)
+    pg.click("#animPlay")                                                  # pausa
+    passo = pg.inner_text("#animPasso"); pg.click("#animProximo")
+    assert pg.inner_text("#animPasso") != passo and pg.locator("#animLista li.on").count() == 1
+    assert pg.evaluate("document.getElementById('animGrafo').cy.edges('.ativa').length") == 1
+    pg.click("#animInicio"); assert pg.inner_text("#animPasso").startswith("0 de 10")
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+
+    # Fase 3 — grafo individual da comunidade
+    pg.click("#redeTabs button[data-tab=comunidades]"); pg.click("[data-grafo-com='4']")
+    pg.wait_for_function("document.getElementById('grafoCom') && document.getElementById('grafoCom').cy")
+    assert pg.evaluate("document.getElementById('grafoCom').cy.nodes().length") == 5
+    assert pg.evaluate("document.getElementById('grafoCom').cy.edges().length") == 14   # só as conexões internas
+    pg.keyboard.press("Escape"); pg.click("#redeTabs button[data-tab=grafo]"); pg.wait_for_timeout(300)
+
+    pg.evaluate(f"{CY}.$id('C025').emit('tap')"); pg.wait_for_selector("#drawer.open")
     pg.click("#drawer [data-conta=C025]"); pg.wait_for_selector("#page-conta.active #contaHist svg")
     assert "C025" in pg.inner_text("#contaDetalhe h2")
 
@@ -180,5 +229,6 @@ with sync_playwright() as p:
 
 http.shutdown()
 assert not erros, "\n".join(erros)
-print("TESTES OK: navegador — página inicial, login (e-mail e CPF), 12 telas (módulos sob demanda), rede, matrizes, validação, simulador, "
+print("TESTES OK: navegador — página inicial, login (e-mail e CPF), 12 telas (módulos sob demanda), rede com Cytoscape "
+      "(localizar, vizinhança, zoom, minimapa, cores, daltonismo, comunidade, animação de padrão), matrizes, validação, simulador, "
       "calendário e filtros, painel de risco, ordenação, investigação, limiares, tema, minha senha e navegação.")

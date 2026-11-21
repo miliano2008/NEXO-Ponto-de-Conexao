@@ -15,6 +15,7 @@
 | `criar_admin.py` | Cria ou promove um administrador. `scripts\CRIAR_ADMIN.bat` |
 | `templates/` | `inicio.html` (página institucional, `/`), `index.html` (sistema, `/app`) e `login.html` (login, cadastro, esqueci a senha, redefinir) |
 | `static/css/` | `tokens`, `base`, `componentes`, `paginas`, `responsivo`, `login` e `inicio` |
+| `static/vendor/` | Bibliotecas de terceiros copiadas sem alteração (hoje: Cytoscape.js). Ver o README da pasta |
 | `static/js/` | `app.js` (entrada), `login.js`, `nucleo/` (serviços compartilhados) e `paginas/` (uma tela por arquivo, carregada sob demanda) |
 
 Rotas e permissões: [docs/api.md](../docs/api.md) · Módulos JavaScript: [docs/frontend.md](../docs/frontend.md) · Segurança: [docs/seguranca.md](../docs/seguranca.md).

@@ -7,7 +7,7 @@ estrutural**, mostrando tudo num sistema web com login, cargos e um **simulador*
 
 > Relevância estrutural **não é** detecção de fraude. O NEXO apoia a análise humana.
 
-**Versão atual:** 0.6 (Fase 2: análise e inteligência: painel de risco, filtros e investigação). Base de demonstração: **40 contas, 160 transações**.
+**Versão atual:** 0.7 (Fase 3: rede de transações com navegação estilo mapa e animação dos padrões). Base de demonstração: **40 contas, 160 transações**.
 
 ---
 
@@ -68,7 +68,7 @@ Cada pasta tem um `README.md` explicando seus arquivos.
 ## Tecnologias
 
 Python 3.10+ · Flask · NetworkX · NumPy · openpyxl · PyMySQL · MySQL (Aiven) ou SQLite local ·
-HTML/CSS/JavaScript (módulos nativos, sem etapa de compilação) · Playwright nos testes.
+HTML/CSS/JavaScript (módulos nativos, sem etapa de compilação) · Cytoscape.js no grafo · Playwright nos testes.
 
 ## Regras do grupo
 
