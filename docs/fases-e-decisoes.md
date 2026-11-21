@@ -10,7 +10,7 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 | **2** | Análise e inteligência: dashboard de risco com regras explicáveis, filtros dinâmicos, calendário, campo de valor em R$, status da investigação | **Concluída e validada** (na `main`) |
 | **3** | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | **Concluída e validada** (na `main`) |
 | **4** | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | **Concluída e validada** (na `main`) |
-| **5** | Relatórios e configurações: exportação em **PDF, Excel, CSV, Word e PowerPoint**, com gráficos de verdade, não capturas de tela; limites das regras de risco e preferências do usuário | **Concluída. Aguarda validação** (branch `fase-5`) |
+| **5** | Relatórios e configurações: exportação em **PDF, Excel, CSV, Word e PowerPoint**, com gráficos de verdade, não capturas de tela; limites das regras de risco e preferências do usuário | **Concluída e validada** (na `main`) |
 | 6 | Importação de bases: upload `.xlsx`/`.csv` de até **300 transações**, uma base por empresa, com exclusão. Depende da decisão sobre multiempresa | Planejada |
 
 ## Decisões (resposta do grupo: "aceito as recomendações", com exceções)
@@ -58,6 +58,8 @@ O que já ficou pronto para facilitar esses itens:
 | Edição dos limites das regras (Configurações) | 14 parâmetros com nome, unidade, padrão e faixa segura. Só o administrador altera; os outros cargos consultam. A análise é recalculada na hora (os limites entram na assinatura do cache) e a mudança fica na auditoria |
 | Personalização | Tabela `preferencias_usuario`: tema, tamanho do texto, fonte (inclui alta legibilidade), contraste alto, menos animação, foco bem visível, cores e paleta do grafo, rótulos, valores nos gráficos, limiares do score e formato preferido do relatório. Valem em qualquer computador |
 | Desempenho | Bibliotecas só carregadas ao exportar. Relatório completo da base: PDF ~0,3 s, Excel ~0,05 s, Word e PowerPoint ~0,4 s |
+
+**Validação do grupo (Fase 5):** foram testados os relatórios da análise e da comparação nos cinco formatos (gráficos editáveis no Excel e no Word), os limites das regras de risco (erro de faixa, ajuste visto no Painel de risco, volta ao padrão), as preferências salvas no cadastro e o `scripts\TESTAR.bat` no Windows com o banco do grupo configurado.
 
 **Observação sobre o Power BI:** a integração direta foi retirada pelo grupo; o CSV (ou o Excel) da Fase 5 é o caminho para levar os dados ao Power BI ("Obter dados → Texto/CSV", origem Português (Brasil)).
 
