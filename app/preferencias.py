@@ -18,6 +18,7 @@ OPCOES = {
     "grafo_paleta": ("padrao", ("padrao", "daltonismo")),
     "grafo_rotulos": (True, bool),
     "graficos_valores": (True, bool),
+    "alertas_status": (True, bool),
     "limiar_analise": (45, (20, 80)),
     "limiar_alta": (70, (40, 100)),
     "relatorio_formato": ("pdf", ("pdf", "xlsx", "docx", "pptx", "csv")),

@@ -172,6 +172,9 @@ with sync_playwright() as p:
     pg.select_option("#simDe", "C001"); pg.select_option("#simPara", "C030"); pg.fill("#simValor", "4500000")
     assert pg.input_value("#simValor") == "45.000,00"                        # máscara de R$: só números
     pg.click("#simEnviar"); pg.wait_for_selector("#simLista button[data-remover]")
+    pg.wait_for_function("document.getElementById('toast').classList.contains('on')")
+    aviso = pg.inner_text("#toast")                                          # o aviso de sucesso aparece, e não um erro
+    assert "simulada" in aviso and "conta(s) com score alterado" in aviso, aviso
     assert pg.locator("#simImpacto tr").count() > 2
     pg.click("#nav button[data-page=dashboard]"); pg.wait_for_timeout(500)
     assert pg.locator("#dashKpis .val").first.inner_text() == "161"

@@ -1,5 +1,9 @@
 # Histórico de versões
 
+## 1.0.1 — correção (branch `correcao-simulador`)
+- **Simulador:** depois de simular, aparecia "Cannot read properties of null (reading 'classList')" no lugar do aviso de sucesso (a transação era gravada). O código ainda procurava a chave "Alertas de conta em análise", retirada de Configurações na Fase 5. Ela voltou como preferência do usuário: **Alertas de mudança de status** (ligada por padrão).
+- **Testes:** o teste no navegador confere o aviso depois de simular; uma varredura confirmou que nenhuma outra tela procura elementos que não existem mais.
+
 ## 1.0 — Fase 6: importação de bases (branch `fase-6`)
 - **Importação simples** (tela *Importar base*, só o administrador): o NEXO trabalha com **uma base por vez**, e importar um arquivo substitui a base para todos.
   1. **Enviar** um `.xlsx` (aba de transações e, opcionalmente, de contas; abas como "Leia-me" são ignoradas) ou um `.csv` (`;`, `,`, tab ou `|`; UTF-8 ou Windows-1252).

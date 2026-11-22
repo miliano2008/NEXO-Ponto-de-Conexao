@@ -5,6 +5,7 @@ import {carregar} from "../nucleo/dados.js";
 import {estado} from "../nucleo/estado.js";
 import {consulta} from "../nucleo/filtros.js";
 import {irPara} from "../nucleo/roteador.js";
+import {prefs} from "../nucleo/preferencias.js";
 import {ui} from "../nucleo/ui.js";
 import {el, esc, fmtBRL, fmtData, fmtNum, lerBRL, mascararCampoBRL, pill, valorParaCampo} from "../nucleo/utilidades.js";
 import {agendarPrevia, carregarRegras, editarRegra, salvarCenario} from "./simulador-regras.js";
@@ -85,7 +86,7 @@ async function enviar(e){
                                           : `Transação ${r.transacao.id_transacao} simulada`;
     ui.toast(`${quais} · ${r.impacto.length} conta(s) com score alterado` +
       (r.alertas.length ? `<br>⚠ ${r.alertas.length} alerta(s) das regras: ${esc(r.alertas[0].mensagem)}` : "") +
-      (el("swAlerts").classList.contains("on") && mudaram.length
+      (prefs.alertas_status !== false && mudaram.length   // preferência "Alertas de mudança de status"
         ? `<br>⚠ Mudança de status: ${mudaram.map(i=>`${i.id} (${i.antes.status} → ${i.depois.status})`).join(", ")}` : ""));
   } catch(err){ ui.toast(esc(err.message), true); }
   finally{ el("simEnviar").disabled = false; }
