@@ -79,6 +79,7 @@ const CHAVES = [
   ["foco_reforcado", "Foco bem visível", "Contorno grosso no item selecionado pelo teclado (Tab)"],
   ["grafo_rotulos", "Rótulos das contas no grafo", "Mostra o código da conta sob cada nó"],
   ["graficos_valores", "Valores nos gráficos", "Escreve o valor em cima de cada barra"],
+  ["alertas_status", "Alertas de mudança de status", "Avisa quando uma simulação muda o status de uma conta"],
 ];
 
 const seletor = (chave, rotulo) => `<label>${rotulo}<select data-pref="${chave}">${OPCOES[chave]
