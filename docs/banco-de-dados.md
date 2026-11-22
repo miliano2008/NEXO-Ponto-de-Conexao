@@ -4,7 +4,7 @@
 | Modo | Quando | Dados de análise | Usuários, simulações e análises |
 |---|---|---|---|
 | **MySQL (Aiven)** | `DB_HOST` preenchido no `.env` | tabelas `contas` e `transacoes` | tabelas no mesmo banco |
-| **Local** | sem `DB_HOST`, ou `NEXO_BANCO=local` | `banco/dados/contas.csv` e `transacoes.csv` | `banco/dados/nexo.db` (SQLite) |
+| **Local** | sem `DB_HOST`, ou `NEXO_BANCO=local` | a base importada (tabelas `contas` e `transacoes` do `nexo.db`) ou, se não houver, `banco/dados/contas.csv` e `transacoes.csv` | `banco/dados/nexo.db` (SQLite) |
 
 A conexão com o MySQL usa SSL com o certificado `banco/dados/ca.pem` e a biblioteca **PyMySQL**.
 
@@ -27,6 +27,8 @@ O PyMySQL foi escolhido em vez do `mysql-connector-python` por ser escrito só e
 | `regras_modalidade` | migração 6 | ajustes do administrador nas regras por modalidade: ação, parâmetros (JSON), quem e quando |
 | `parametros_risco` | migração 7 | limites das regras de risco ajustados pelo administrador (só os diferentes do padrão): chave, valor, quem e quando |
 | `preferencias_usuario` | migração 7 | preferências de cada usuário (JSON só com o que difere do padrão), apagadas em cascata com o usuário |
+| `importacoes` | migração 8 | histórico das trocas de base: nome, origem (arquivo ou demonstração), arquivo e hash, contas, transações, período, mascarada, quem, quando, backup e situação (`ativa` ou `substituida`) |
+| `mapeamentos` | migração 8 | mapeamento de colunas salvo por "layout" de arquivo (hash dos nomes das colunas), reaproveitado na próxima importação |
 | `analises` | migração 3 | assinatura (única), base, período, versão do motor, contagens, tempo de cálculo, resultado compactado (zlib), datas de criação e último uso |
 | `versao_esquema` | automática | número, descrição e data de cada migração aplicada |
 
@@ -44,6 +46,7 @@ Cada mudança de estrutura é uma função numerada, aplicada **uma única vez**
 | 5 | Investigação: `casos` e `casos_historico`, da Fase 2 |
 | 6 | Regras por modalidade (`regras_modalidade`) e histórico de simulações (colunas em `simulacoes`), da Fase 4 |
 | 7 | Limites das regras de risco (`parametros_risco`) e preferências do usuário (`preferencias_usuario`), da Fase 5 |
+| 8 | Importação de bases (Fase 6): no MySQL, códigos de conta e de transação com até 40 caracteres (a chave estrangeira é recriada sem perder dados); no modo local, as tabelas `contas` e `transacoes` (vazias = usa os CSVs de demonstração); `importacoes` e `mapeamentos` |
 
 Regras:
 
@@ -79,5 +82,10 @@ O script apaga e recria cada tabela antes de inserir os dados. Teste feito na Fa
 - Mudanças feitas direto no MySQL aparecem no sistema em até 60 segundos, sem reiniciar.
 - Análises guardadas sem uso há mais de 30 dias são apagadas automaticamente ao iniciar.
 
-## Multiempresa (adiado)
-O plano de organizações e bases por empresa (item 0.3) foi **adiado** por decisão do grupo. A base atual continua única. Veja [fases-e-decisoes.md](fases-e-decisoes.md).
+## Troca da base (Fase 6, importação simples)
+`repositorio.substituir_base` faz tudo **numa única transação**: apaga as simulações, os cenários, as análises guardadas e as investigações da base antiga, troca `contas` e `transacoes` (INSERT em lotes de 200 linhas, para não pagar uma ida e volta ao Aiven por linha) e registra a troca em `importacoes`. Se algo falhar, nada muda. Antes, o servidor faz o **backup automático** (`banco/backup.py`); sem backup, não troca.
+
+O `MIGRAR_MYSQL` não reenvia os CSVs de demonstração quando a base em uso foi importada (misturaria as duas). Para voltar à demonstração, use a tela *Importar base*.
+
+## Multiempresa (não adotado)
+O grupo escolheu a **importação simples** (uma base por vez). O plano de organizações e bases por empresa (item 0.3) continua documentado em [fases-e-decisoes.md](fases-e-decisoes.md) caso o sistema venha a ser hospedado para várias empresas.

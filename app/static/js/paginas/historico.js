@@ -251,5 +251,7 @@ export function iniciar(){
     abrirAba("comparar");
   }
 }
-export function atualizar(){ preencherFontes(); }
-export function mostrar(){ carregarCenarios(); preencherFontes(); }
+// o exemplo da planilha (agosto × setembro de 2026) só existe na base de demonstração (Fase 6)
+const exemploDisponivel = () => { el("cmpExemplo").hidden = estado.dados.base?.origem === "arquivo"; };
+export function atualizar(){ preencherFontes(); exemploDisponivel(); }
+export function mostrar(){ carregarCenarios(); preencherFontes(); exemploDisponivel(); }

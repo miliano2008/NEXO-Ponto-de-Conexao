@@ -18,7 +18,7 @@ function render(){
   el("simDe").innerHTML = opcoes; el("simPara").innerHTML = opcoes;
   el("simTipo").innerHTML = sim.tipos_transacao.map(t=>`<option>${esc(t)}</option>`).join("");
   if(de) el("simDe").value = de;
-  el("simPara").value = para || "C002";
+  el("simPara").value = para || d.contas.map(c => c.id).sort()[1] || "";   // qualquer base (Fase 6)
   if(tipo) el("simTipo").value = tipo;
   if(!el("simData").value) el("simData").value = sim.data_referencia;
 
@@ -116,7 +116,8 @@ async function remover(id){
 async function restaurar(){
   await api("/api/simulacao/restaurar", {method:"POST"});
   estado.ultimoImpacto = null; estado.destaque = new Set(); el("simData").value = "";
-  await carregar(); ui.toast("Base original restaurada (40 contas, 160 transações).");
+  await carregar();
+  ui.toast(`Simulação desfeita: de volta à base (${estado.dados.dashboard.total_contas} contas, ${estado.dados.simulacao.total_base_original} transações).`);
 }
 
 export function iniciar(){

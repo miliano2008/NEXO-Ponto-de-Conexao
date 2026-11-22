@@ -394,6 +394,100 @@ CREATE TABLE IF NOT EXISTS preferencias_usuario (
 )""")
 
 
+def _tabela_existe(c, mysql, tabela):
+    if mysql:
+        return c.execute("SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() "
+                         "AND table_name = ?", (tabela,)).fetchone()["n"] > 0
+    return c.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (tabela,)).fetchone() is not None
+
+
+def m8_importacao_de_bases(c, mysql):
+    """Fase 6 (importação simples): códigos de conta e de transação com até 40 caracteres no MySQL,
+    a base também em tabelas no modo local (sem elas, o modo local usa os CSVs de demonstração),
+    o histórico das importações e os mapeamentos de colunas salvos para reaproveitar."""
+    if mysql:
+        if _tabela_existe(c, True, "transacoes"):
+            # a chave estrangeira precisa sair para os dois lados mudarem de tamanho juntos (sem perder dados)
+            existentes = {l["CONSTRAINT_NAME"] for l in c.execute(
+                "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() "
+                "AND TABLE_NAME = 'transacoes' AND CONSTRAINT_TYPE = 'FOREIGN KEY'").fetchall()}
+            for fk in ("fk_tx_origem", "fk_tx_destino"):
+                if fk in existentes:
+                    c.execute(f"ALTER TABLE transacoes DROP FOREIGN KEY {fk}")
+            c.execute("ALTER TABLE contas MODIFY id_conta VARCHAR(40) NOT NULL, MODIFY tipo_titular VARCHAR(40) NOT NULL")
+            c.execute("ALTER TABLE transacoes MODIFY id_transacao VARCHAR(40) NOT NULL, "
+                      "MODIFY conta_origem VARCHAR(40) NOT NULL, MODIFY conta_destino VARCHAR(40) NOT NULL, "
+                      "MODIFY tipo_transacao VARCHAR(30) NOT NULL")
+            c.execute("ALTER TABLE transacoes ADD CONSTRAINT fk_tx_origem FOREIGN KEY (conta_origem) REFERENCES contas(id_conta), "
+                      "ADD CONSTRAINT fk_tx_destino FOREIGN KEY (conta_destino) REFERENCES contas(id_conta)")
+        c.execute("ALTER TABLE simulacao_transacoes MODIFY conta_origem VARCHAR(40) NOT NULL, "
+                  "MODIFY conta_destino VARCHAR(40) NOT NULL, MODIFY tipo_transacao VARCHAR(30) NOT NULL")
+        c.execute("ALTER TABLE casos MODIFY conta_id VARCHAR(40) NOT NULL")
+        c.executar_script("""
+CREATE TABLE IF NOT EXISTS importacoes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(120) NOT NULL,
+    origem VARCHAR(20) NOT NULL,
+    arquivo VARCHAR(255) NULL,
+    hash_arquivo CHAR(64) NULL,
+    contas INT NOT NULL,
+    transacoes INT NOT NULL,
+    periodo_inicio DATE NULL,
+    periodo_fim DATE NULL,
+    mascarada TINYINT(1) NOT NULL DEFAULT 0,
+    situacao VARCHAR(12) NOT NULL,
+    importado_por VARCHAR(150) NOT NULL,
+    importado_em DATETIME NOT NULL,
+    backup VARCHAR(255) NULL,
+    INDEX ix_importacao_situacao (situacao)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS mapeamentos (
+    assinatura CHAR(64) PRIMARY KEY,
+    mapeamento TEXT NOT NULL,
+    atualizado_por VARCHAR(150) NOT NULL,
+    atualizado_em DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""")
+    else:
+        c.executar_script("""
+CREATE TABLE IF NOT EXISTS contas (
+    id_conta TEXT PRIMARY KEY,
+    tipo_titular TEXT NOT NULL,
+    data_abertura TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS transacoes (
+    id_transacao TEXT PRIMARY KEY,
+    conta_origem TEXT NOT NULL REFERENCES contas(id_conta),
+    conta_destino TEXT NOT NULL REFERENCES contas(id_conta),
+    valor TEXT NOT NULL,
+    data TEXT NOT NULL,
+    hora TEXT NOT NULL,
+    tipo_transacao TEXT NOT NULL,
+    CHECK (conta_origem <> conta_destino)
+);
+CREATE TABLE IF NOT EXISTS importacoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    origem TEXT NOT NULL,
+    arquivo TEXT,
+    hash_arquivo TEXT,
+    contas INTEGER NOT NULL,
+    transacoes INTEGER NOT NULL,
+    periodo_inicio TEXT,
+    periodo_fim TEXT,
+    mascarada INTEGER NOT NULL DEFAULT 0,
+    situacao TEXT NOT NULL,
+    importado_por TEXT NOT NULL,
+    importado_em TEXT NOT NULL,
+    backup TEXT
+);
+CREATE TABLE IF NOT EXISTS mapeamentos (
+    assinatura TEXT PRIMARY KEY,
+    mapeamento TEXT NOT NULL,
+    atualizado_por TEXT NOT NULL,
+    atualizado_em TEXT NOT NULL
+)""")
+
+
 MIGRACOES = [
     (1, "Acesso: usuários, links por e-mail, convites e auditoria", m1_acesso),
     (2, "Simulações por usuário", m2_simulacoes),
@@ -402,6 +496,7 @@ MIGRACOES = [
     (5, "Investigação: situação e histórico por conta", m5_casos),
     (6, "Regras por modalidade e histórico de simulações", m6_modalidades_e_historico),
     (7, "Limites das regras de risco e preferências do usuário", m7_configuracoes_e_preferencias),
+    (8, "Importação de bases: códigos maiores, histórico e mapeamentos", m8_importacao_de_bases),
 ]
 VERSAO_ATUAL = MIGRACOES[-1][0]
 

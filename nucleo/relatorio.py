@@ -184,6 +184,7 @@ def relatorio_analise(dados, usuario, gerado_em):
         ("Relatório", "Análise da rede de transações"),
         ("Gerado em", gerado_em.strftime("%d/%m/%Y %H:%M")),
         ("Gerado por", f"{usuario['nome']} ({usuario['cargo_nome']})"),
+        ("Base", (dados.get("base") or {}).get("nome", "Base de demonstração")),
         ("Período e filtros", _descrever_recorte(rec)),
         ("Transações simuladas", str(sim["transacoes_simuladas"]) if sim["transacoes_simuladas"] else "nenhuma (só a base)"),
         ("Análise", f"nº {info['id']}" if info.get("id") else "não guardada (inclui simulação)"),

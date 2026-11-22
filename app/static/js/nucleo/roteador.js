@@ -16,7 +16,7 @@ const TITULOS = {
   dashboard:"Visão geral", risco:"Painel de risco", transacoes:"Transações", rede:"Rede de transações",
   contas:"Contas em análise", conta:"Detalhes da conta", simulador:"Simulador de transações", historico:"Histórico e comparação",
   relatorios:"Relatórios", arquitetura:"Arquitetura do sistema", config:"Configurações",
-  usuarios:"Usuários e cargos", auditoria:"Auditoria de acessos"
+  usuarios:"Usuários e cargos", auditoria:"Auditoria de acessos", importacao:"Importar base"
 };
 
 const MODULOS = {
@@ -33,6 +33,7 @@ const MODULOS = {
   config:      () => import("../paginas/config.js"),
   usuarios:    () => import("../paginas/usuarios.js"),
   auditoria:   () => import("../paginas/auditoria.js"),
+  importacao:  () => import("../paginas/importacao.js"),
 };
 
 const carregados = {};   // nome → módulo já iniciado

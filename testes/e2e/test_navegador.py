@@ -18,9 +18,11 @@ from pathlib import Path
 
 os.environ["NEXO_BANCO"] = "local"
 
+from banco import backup  # noqa: E402
 from banco import conexao as db  # noqa: E402
 
 db.SQLITE = Path(tempfile.mkdtemp()) / "e2e.db"
+backup.PASTA_BACKUPS = db.SQLITE.parent / "backups"   # backups da importação ficam na pasta temporária
 
 from playwright.sync_api import sync_playwright  # noqa: E402
 from werkzeug.serving import make_server  # noqa: E402
@@ -88,7 +90,7 @@ with sync_playwright() as p:
     # todas as telas carregam (cada uma é um módulo baixado sob demanda)
     esperado = {"risco": "#riscoBody tr", "historico": "#cmpA option", "transacoes": "#txBody tr", "rede": "#graph canvas", "contas": "#contasBody tr",
                 "simulador": "#simDe option", "relatorios": "#reportGrid .card", "arquitetura": "#archFlow .flow-box",
-                "config": "#sobre dt", "usuarios": "#usrBody tr", "auditoria": "#audBody tr", "dashboard": "#dashTop tr"}
+                "config": "#sobre dt", "usuarios": "#usrBody tr", "auditoria": "#audBody tr", "importacao": "#impBase dt", "dashboard": "#dashTop tr"}
     for pagina, seletor in esperado.items():
         pg.click(f"#nav button[data-page={pagina}]")
         pg.wait_for_selector(f"#page-{pagina}.active {seletor}", state="attached", timeout=10000)
@@ -294,6 +296,31 @@ with sync_playwright() as p:
         "document.documentElement.hasAttribute('data-contraste')")
     pg.click("[data-close=modal] >> nth=0")
 
+    # Fase 6 — importação simples: arquivo com erro (linha apontada), arquivo bom, troca e volta à demonstração
+    pasta = Path(tempfile.mkdtemp())
+    pessoas = ["Ana", "Bruno", "Carla", "Davi", "Eva"]
+    linhas = ["Pagador;Favorecido;Valor (R$);Data;Hora;Meio"] + [
+        f"{pessoas[i % 5]};{pessoas[(i + 1 + i % 3) % 5]};{100 + i},50;{1 + i % 28:02d}/10/2026;10:{i % 60:02d};pix" for i in range(30)]
+    (pasta / "ruim.csv").write_text("\n".join(linhas + ["Ana;Bruno;abc;05/10/2026;10:00;pix"]), encoding="utf-8")
+    (pasta / "bom.csv").write_text("\n".join(linhas), encoding="utf-8")
+    pg.click("#nav button[data-page=importacao]"); pg.wait_for_selector("#impBase dt")
+    pg.set_input_files("#impArquivo", str(pasta / "ruim.csv")); pg.wait_for_selector("#impPrevia tr")
+    assert "Linha 32" in pg.inner_text("#impResumo") and pg.is_disabled("#impEnviar")
+    assert pg.input_value("#impMapa select[data-campo=conta_origem]") == "0"        # "Pagador" reconhecido
+    pg.set_input_files("#impArquivo", str(pasta / "bom.csv")); pg.wait_for_selector(".imp-ok")
+    pg.fill("#impNome", "Empresa de teste"); pg.check("#impAceite"); pg.fill("#impConfirmacao", "SUBSTITUIR")
+    pg.click("#impEnviar"); pg.wait_for_function("document.getElementById('baseLabel').innerText.includes('Empresa de teste')")
+    pg.wait_for_function("document.getElementById('impHistorico').innerText.includes('Em uso')")
+    assert "5 contas" in pg.inner_text("#baseLabel"), pg.inner_text("#baseLabel")
+    pg.click("#nav button[data-page=dashboard]"); pg.wait_for_timeout(600)
+    assert pg.locator("#dashKpis .val").first.inner_text() == "30"
+    pg.click("#nav button[data-page=historico]"); assert pg.locator("#cmpExemplo").is_hidden()   # exemplo só na demonstração
+    pg.click("#nav button[data-page=importacao]"); pg.click("#impDemo"); pg.fill("#demoConfirmacao", "SUBSTITUIR")
+    pg.click("#formDemo button[type=submit]"); esperar_modal_fechar(pg)
+    pg.wait_for_function("!document.getElementById('baseLabel').innerText.includes('Empresa de teste')")
+    pg.click("#nav button[data-page=dashboard]"); pg.wait_for_timeout(600)
+    assert pg.locator("#dashKpis .val").first.inner_text() == "160"
+
     # "Minha senha": senha atual errada mostra o erro; a troca mantém esta sessão
     pg.click("#btnSenha"); pg.wait_for_selector("#formSenha")
     pg.fill("#msAtual", "Errada123"); pg.fill("#msNova", "Nova2026x"); pg.fill("#msConf", "Nova2026x")
@@ -310,8 +337,9 @@ with sync_playwright() as p:
 
 http.shutdown()
 assert not erros, "\n".join(erros)
-print("TESTES OK: navegador — página inicial, login (e-mail e CPF), 13 telas (módulos sob demanda), rede com Cytoscape "
+print("TESTES OK: navegador — página inicial, login (e-mail e CPF), 14 telas (módulos sob demanda), rede com Cytoscape "
       "(localizar, vizinhança, zoom, minimapa, cores, daltonismo, comunidade, animação de padrão), regras por modalidade, "
       "simulação recorrente, cenários, comparação lado a lado, matrizes, validação, simulador, "
       "calendário e filtros, painel de risco, ordenação, investigação, relatórios (PDF, Excel, Word, PowerPoint, CSV), "
-      "limites das regras de risco, preferências salvas no cadastro (tema, texto, contraste, limiares, paleta), minha senha e navegação.")
+      "limites das regras de risco, preferências salvas no cadastro (tema, texto, contraste, limiares, paleta), "
+      "importação de base (erro por linha, troca e volta à demonstração), minha senha e navegação.")

@@ -20,7 +20,8 @@ def _nome_aba(nome, usados):
 
 def gerar(documento):
     memoria = io.BytesIO()
-    wb = xlsxwriter.Workbook(memoria, {"in_memory": True, "strings_to_numbers": False})
+    # strings_to_formulas=False: um texto da base importada que comece com "=" fica texto, nunca fórmula
+    wb = xlsxwriter.Workbook(memoria, {"in_memory": True, "strings_to_numbers": False, "strings_to_formulas": False})
     wb.set_properties({"title": documento["titulo"], "subject": documento["subtitulo"], "author": "NEXO",
                        "comments": documento["aviso"]})
     f = {

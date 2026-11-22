@@ -1,5 +1,21 @@
 # Histórico de versões
 
+## 1.0 — Fase 6: importação de bases (branch `fase-6`)
+- **Importação simples** (tela *Importar base*, só o administrador): o NEXO trabalha com **uma base por vez**, e importar um arquivo substitui a base para todos.
+  1. **Enviar** um `.xlsx` (aba de transações e, opcionalmente, de contas; abas como "Leia-me" são ignoradas) ou um `.csv` (`;`, `,`, tab ou `|`; UTF-8 ou Windows-1252).
+  2. **Conferir as colunas:** o NEXO sugere a correspondência pelos nomes (ex.: "Pagador" → conta de origem) e o administrador ajusta. O mapeamento fica salvo para o próximo arquivo com as mesmas colunas.
+  3. **Prévia** das primeiras 50 linhas, com o **erro de cada linha** (valor que não é número, data inexistente, origem igual ao destino, código repetido…) e avisos.
+  4. **Substituir:** nome da base, aceite de uso dos dados e a palavra SUBSTITUIR. Antes da troca, **backup automático**; a troca é feita **numa única transação** (tudo ou nada).
+- Aceita valores como `1.234,56` e `R$ 1.234,56`, datas `01/08/2026` e do Excel, horas `14h05`, modalidades e titulares escritos de vários jeitos. Sem aba de contas, as contas saem das transações.
+- **Limites (D6):** 300 transações, 300 contas e 2 MB.
+- **LGPD:** opção "Mascarar códigos" (contas viram C001…, transações T0001…, sem guardar a correspondência) e aceite obrigatório.
+- **O que a troca apaga (D8):** simulações, cenários, investigações e análises guardadas da base antiga. Ficam usuários, preferências, limites das regras e a auditoria.
+- **Voltar à base de demonstração** com um clique (também com backup e confirmação). Planilha **modelo** para baixar.
+- O nome da base aparece no cabeçalho, em Configurações e na identificação dos relatórios. Histórico das trocas com quem, quando e o backup.
+- **Banco:** migração 8 (códigos de até 40 caracteres no MySQL, tabelas da base também no modo local, `importacoes` e `mapeamentos`). O `MIGRAR_MYSQL` não mistura mais a demonstração com uma base importada.
+- **Correção:** dois backups no mesmo segundo não se sobrescrevem mais.
+- **Testes:** novo `test_fase6.py`; `test_mysql` e o teste no navegador ampliados. São 12 conjuntos.
+
 ## 0.9 — Fase 5: relatórios e configurações (branch `fase-5`)
 - **Relatórios em PDF, Excel, CSV, Word e PowerPoint**, gerados pelo mesmo conteúdo (`nucleo/relatorio.py`): os números são idênticos em todos os formatos.
   - **Relatório da análise:** identificação (quem, quando, período, filtros, número e assinatura da análise, versão do motor), indicadores, 6 gráficos, contas priorizadas com a evidência e a regra de origem de cada indício, padrões, comunidades, regras com os limites em vigor e **conclusões montadas por modelos de texto** (nunca afirmam fraude).

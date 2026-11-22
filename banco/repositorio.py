@@ -49,22 +49,119 @@ def _texto(valor):
     return str(valor)
 
 
-def carregar_mysql():
-    """Lê as tabelas contas/transacoes do MySQL no mesmo formato dos CSVs."""
+def _ler_tabelas():
+    """(contas, linhas) das tabelas contas/transacoes, no formato dos CSVs. Listas vazias se não houver base."""
     with db.conectar() as c:
         contas = c.execute("SELECT id_conta, tipo_titular, data_abertura FROM contas ORDER BY id_conta").fetchall()
         linhas = c.execute("SELECT id_transacao, conta_origem, conta_destino, valor, data, hora, tipo_transacao "
                            "FROM transacoes ORDER BY id_transacao").fetchall()
+    contas = [{**dict(c), "data_abertura": _texto(c["data_abertura"])} for c in contas]
+    linhas = [{**dict(t), "valor": _texto(t["valor"]), "data": _texto(t["data"]), "hora": _hora(t["hora"])} for t in linhas]
+    return contas, linhas
+
+
+def carregar_mysql():
+    """Lê as tabelas contas/transacoes do MySQL no mesmo formato dos CSVs."""
+    contas, linhas = _ler_tabelas()
     if not contas:
         raise ValueError("As tabelas do MySQL estão vazias. Rode: scripts\\MIGRAR_MYSQL.bat")
-    contas = [{**c, "data_abertura": _texto(c["data_abertura"])} for c in contas]
-    linhas = [{**t, "valor": _texto(t["valor"]), "data": _texto(t["data"]), "hora": _hora(t["hora"])} for t in linhas]
     return analise.validar_dados(contas, linhas)
 
 
+def carregar_local():
+    """Modo local: a base importada (tabelas do SQLite) ou, se não houver, os CSVs de demonstração."""
+    try:
+        contas, linhas = _ler_tabelas()
+    except Exception:  # noqa: BLE001 — tabelas ainda não criadas (migração 8 pendente)
+        contas = []
+    return analise.validar_dados(contas, linhas) if contas else carregar_csv()
+
+
 def carregar_dados():
-    """Base validada: MySQL se configurado, senão os CSVs de banco/dados/."""
-    return carregar_mysql() if db.usando_mysql() else carregar_csv()
+    """Base validada: MySQL se configurado; senão a base importada no SQLite ou os CSVs de banco/dados/."""
+    return carregar_mysql() if db.usando_mysql() else carregar_local()
+
+
+# ---------------------------------------------------------------- importação de bases (Fase 6)
+
+def _inserir_em_lotes(c, tabela, colunas, linhas, lote=200):
+    """INSERT com várias linhas por comando: no Aiven, uma linha por comando custaria uma ida e volta cada."""
+    for i in range(0, len(linhas), lote):
+        bloco = linhas[i:i + lote]
+        marcas = ", ".join("(" + ", ".join("?" * len(colunas)) + ")" for _ in bloco)
+        c.execute(f"INSERT INTO {tabela} ({', '.join(colunas)}) VALUES {marcas}", [v for l in bloco for v in l])
+
+
+def contar_derivados():
+    """O que a troca de base apaga (D8): simulações, cenários, análises guardadas e investigações."""
+    with db.conectar() as c:
+        def n(sql):
+            return c.execute(sql).fetchone()["n"]
+        return {"rascunhos": n("SELECT COUNT(*) AS n FROM simulacoes WHERE situacao = 'rascunho'"),
+                "cenarios": n("SELECT COUNT(*) AS n FROM simulacoes WHERE situacao = 'salva'"),
+                "transacoes_simuladas": n("SELECT COUNT(*) AS n FROM simulacao_transacoes"),
+                "analises": n("SELECT COUNT(*) AS n FROM analises"),
+                "investigacoes": n("SELECT COUNT(*) AS n FROM casos")}
+
+
+def substituir_base(contas, transacoes, registro):
+    """Troca a base inteira numa ÚNICA transação (tudo ou nada).
+
+    contas/transacoes: já validadas por nucleo.analise.validar_dados. Apaga também o que foi calculado
+    sobre a base antiga (D8): simulações e cenários, análises guardadas e investigações. Usuários,
+    preferências, limites das regras e auditoria ficam. `registro`: nome, origem, arquivo, hash,
+    mascarada, importado_por, backup. Retorna o id da importação."""
+    datas = sorted(t["data"] for t in transacoes)
+    with db.conectar() as c:
+        for tabela in ("simulacao_transacoes", "simulacoes", "analises", "casos_historico", "casos", "transacoes", "contas"):
+            c.execute(f"DELETE FROM {tabela}")
+        _inserir_em_lotes(c, "contas", ("id_conta", "tipo_titular", "data_abertura"),
+                          [(x["id_conta"], x["tipo_titular"], x["data_abertura"]) for x in contas])
+        _inserir_em_lotes(c, "transacoes", ("id_transacao", "conta_origem", "conta_destino", "valor", "data", "hora",
+                                            "tipo_transacao"),
+                          [(t["id"], t["de"], t["para"], f"{t['centavos'] / 100:.2f}", t["data"], t["hora"], t["tipo"])
+                           for t in transacoes])
+        c.execute("UPDATE importacoes SET situacao = 'substituida' WHERE situacao = 'ativa'")
+        cursor = c.execute(
+            "INSERT INTO importacoes (nome, origem, arquivo, hash_arquivo, contas, transacoes, periodo_inicio, periodo_fim, "
+            "mascarada, situacao, importado_por, importado_em, backup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativa', ?, ?, ?)",
+            (registro["nome"], registro["origem"], registro.get("arquivo"), registro.get("hash"), len(contas), len(transacoes),
+             datas[0] if datas else None, datas[-1] if datas else None, 1 if registro.get("mascarada") else 0,
+             registro["importado_por"], agora().isoformat(), registro.get("backup")))
+        return cursor.lastrowid
+
+
+def _importacao(l):
+    quando = l["importado_em"]
+    return {**dict(l), "importado_em": (quando.isoformat() if isinstance(quando, datetime) else str(quando))[:19],
+            "periodo_inicio": _texto(l["periodo_inicio"]) if l["periodo_inicio"] else None,
+            "periodo_fim": _texto(l["periodo_fim"]) if l["periodo_fim"] else None, "mascarada": bool(l["mascarada"])}
+
+
+def base_ativa():
+    """Registro da base em uso (a última importação ativa) ou None (base de demonstração original)."""
+    with db.conectar() as c:
+        linha = c.execute("SELECT * FROM importacoes WHERE situacao = 'ativa' ORDER BY id DESC LIMIT 1").fetchone()
+    return _importacao(linha) if linha else None
+
+
+def historico_importacoes(limite=20):
+    with db.conectar() as c:
+        return [_importacao(l) for l in c.execute("SELECT * FROM importacoes ORDER BY id DESC LIMIT ?", (limite,)).fetchall()]
+
+
+def ler_mapeamento(assinatura_colunas):
+    with db.conectar() as c:
+        linha = c.execute("SELECT mapeamento FROM mapeamentos WHERE assinatura = ?", (assinatura_colunas,)).fetchone()
+    return json.loads(linha["mapeamento"]) if linha else None
+
+
+def salvar_mapeamento(assinatura_colunas, mapeamento, por):
+    texto, instante = json.dumps(mapeamento, ensure_ascii=False, sort_keys=True), agora().isoformat()
+    with db.conectar() as c:
+        c.execute("DELETE FROM mapeamentos WHERE assinatura = ?", (assinatura_colunas,))
+        c.execute("INSERT INTO mapeamentos (assinatura, mapeamento, atualizado_por, atualizado_em) VALUES (?, ?, ?, ?)",
+                  (assinatura_colunas, texto, por, instante))
 
 
 def linha_csv(t):

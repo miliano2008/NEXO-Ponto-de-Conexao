@@ -24,7 +24,9 @@ def _texto(valor, fmt):
     if isinstance(valor, float):
         texto = f"{valor:.2f}" if fmt == "brl" else f"{valor:.6f}".rstrip("0").rstrip(".")
         return texto.replace(".", ",")
-    return str(valor)
+    texto = str(valor)
+    # textos vindos de uma base importada não podem virar fórmula ao abrir o CSV no Excel
+    return "'" + texto if texto[:1] in ("=", "+", "-", "@") and not isinstance(valor, (int, float)) else texto
 
 
 def _csv(cabecalho, linhas):

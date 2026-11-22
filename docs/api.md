@@ -76,6 +76,12 @@ Só funciona com `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env`; sem eles
 | `GET /api/relatorio?tipo=analise&formato=...&<recorte>` | exportar | Relatório da análise atual (recorte + simulação do usuário). `formato`: `pdf`, `xlsx`, `csv` (zip), `docx` ou `pptx`. Auditoria `relatorio` |
 | `GET /api/relatorio?tipo=comparacao&a=&b=&formato=...` | exportar | Relatório da comparação; fontes como em `/api/comparar` (simulações e cenários exigem `simular`) |
 | `GET /api/exportar?...` | exportar | Baixa o JSON completo, com as matrizes, no mesmo recorte |
+| `GET /api/base` | consultar | Base em uso (nome, origem, contas, transações, período). Para quem tem `importar_base`: histórico das trocas e o que a troca apagaria |
+| `GET /api/importacao/modelo` | importar_base | Planilha modelo (.xlsx) com abas Transacoes, Contas e Instrucoes |
+| `POST /api/importacao/arquivo` | importar_base | `multipart/form-data` com `arquivo` (.xlsx/.csv, até 2 MB; acima: `413`). Lê as abas, sugere a aba e o mapeamento (ou usa o salvo) e devolve a primeira prévia. O arquivo fica guardado por 30 minutos para as etapas seguintes |
+| `POST /api/importacao/previa` | importar_base | `{aba_transacoes, mapa_transacoes: {campo: coluna}, aba_contas?, mapa_contas?, mascarar}` → resumo, prévia de 50 linhas, erros por linha e avisos |
+| `POST /api/importacao/confirmar` | importar_base | O mesmo corpo + `{nome, aceite: true, confirmacao: "SUBSTITUIR"}`. Backup automático e troca numa transação. Com erros: `400` e nada muda. Auditoria `base_importada` |
+| `POST /api/base/demonstracao` | importar_base | `{confirmacao: "SUBSTITUIR"}`: volta à base de demonstração (com backup). Auditoria `base_demonstracao` |
 | `GET /api/parametros-risco` | consultar | Limites das regras de risco: nome, unidade, regras que usam, valor em vigor, padrão, faixa e quem ajustou |
 | `POST /api/parametros-risco` | administrar_regras | `{valores: {chave: valor}}` (aceita vírgula decimal) ou `{padrao: true}`. Fora da faixa: `400`. A análise é recalculada com os novos limites. Auditoria `parametros_risco` |
 | `GET /api/preferencias` | consultar | Preferências do usuário logado e os valores padrão |
@@ -97,6 +103,7 @@ Só funciona com `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env`; sem eles
 | configurar | ✓ | ✓ | — | — |
 | investigar (mudar a situação da investigação) | ✓ | ✓ | — | — |
 | administrar_regras (regras por modalidade e limites das regras de risco) | ✓ | — | — | — |
+| importar_base (trocar a base de transações) | ✓ | — | — | — |
 | ver_auditoria | ✓ | — | ✓ | — |
 | gerenciar_usuarios | ✓ | — | — | — |
 

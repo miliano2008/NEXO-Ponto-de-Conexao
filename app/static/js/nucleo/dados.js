@@ -32,7 +32,8 @@ export async function carregar(){
   dados.transacoes.forEach(t => { t.dias = Math.round((ref - paraData(t.data))/86400000); });
   classificar();
   el("sysStatus").textContent = `Backend Python conectado · ${dados.simulacao.transacoes_simuladas} simulada(s)`;
-  el("baseLabel").textContent = `referência ${fmtData(dados.simulacao.data_referencia)} · ${dados.dashboard.total_contas} contas`;
+  const base = dados.base?.origem === "arquivo" ? `${dados.base.nome} · ` : "";   // base importada (Fase 6)
+  el("baseLabel").textContent = `${base}referência ${fmtData(dados.simulacao.data_referencia)} · ${dados.dashboard.total_contas} contas`;
   el("periodLabel").textContent = descreverRecorte();
   emitir("dados");
 }

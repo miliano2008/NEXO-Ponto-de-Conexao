@@ -49,6 +49,7 @@ PERMISSOES = {
     "configurar":         {"administrador", "analista"},
     "investigar":         {"administrador", "analista"},   # mudar a situação da investigação
     "administrar_regras": {"administrador"},                # limites e ações das regras por modalidade
+    "importar_base":      {"administrador"},                # trocar a base de transações (Fase 6)
     "ver_auditoria":      {"administrador", "auditor"},
     "gerenciar_usuarios": {"administrador"},
 }

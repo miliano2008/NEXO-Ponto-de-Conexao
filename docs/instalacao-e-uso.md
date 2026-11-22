@@ -90,7 +90,7 @@ Pela linha de comando, sempre a partir da raiz: `.venv\Scripts\python -m app`, `
 ## 6. Cargos
 | Cargo | O que pode |
 |---|---|
-| Administrador | Tudo, inclusive usuários, cargos, convites, os limites das regras por modalidade e os limites das regras de risco |
+| Administrador | Tudo, inclusive usuários, cargos, convites, os limites das regras por modalidade e de risco e a **importação de bases** |
 | Analista | Consultar, relatórios, exportar, simulador, configurações e registrar a investigação das contas |
 | Auditor | Consultar (inclusive o histórico das investigações), relatórios, exportar, auditoria |
 | Visualizador | Apenas consultar. É o padrão de quem se cadastra sem convite |
@@ -98,6 +98,15 @@ Pela linha de comando, sempre a partir da raiz: `.venv\Scripts\python -m app`, `
 Para dar um cargo a um colega, o administrador gera um **código de convite** em *Usuários e cargos* ou altera o cargo depois do cadastro.
 
 **Preferências** (botão na barra lateral, para todos os cargos): tema, tamanho do texto, fonte, contraste alto, menos animação, cores do grafo e formato preferido do relatório. Ficam salvas no cadastro e valem em qualquer computador.
+
+### Importar uma base (versão 1.0, só o administrador)
+1. Menu *Administração → Importar base*. Se quiser, baixe a **planilha modelo**.
+2. Envie o `.xlsx` ou o `.csv` (até 300 transações, 300 contas e 2 MB).
+3. Confira as colunas sugeridas e a prévia. Corrija no arquivo as linhas com erro e envie de novo.
+4. Dê um nome à base, marque o aceite, digite **SUBSTITUIR** e confirme. O NEXO faz um backup antes e troca a base para **todos**.
+5. Para voltar à base original do projeto: *Voltar à base de demonstração*.
+
+Dados pessoais reais só com autorização; nesse caso, marque **Mascarar códigos**.
 
 ### Relatórios (versão 0.9)
 - **Relatório da análise:** tela *Relatórios* → escolha PDF, Excel, Word, PowerPoint ou CSV. Usa o período, os filtros e a simulação que estiverem em uso.
