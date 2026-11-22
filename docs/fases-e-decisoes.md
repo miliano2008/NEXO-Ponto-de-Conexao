@@ -11,7 +11,7 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 | **3** | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | **Concluída e validada** (na `main`) |
 | **4** | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | **Concluída e validada** (na `main`) |
 | **5** | Relatórios e configurações: exportação em **PDF, Excel, CSV, Word e PowerPoint**, com gráficos de verdade, não capturas de tela; limites das regras de risco e preferências do usuário | **Concluída e validada** (na `main`) |
-| **6** | Importação de bases (**importação simples**, decisão do grupo): upload `.xlsx`/`.csv` de até **300 transações**, prévia com erros por linha, backup automático e troca da base para todos, com volta à base de demonstração | **Concluída. Aguarda validação** (branch `fase-6`) |
+| **6** | Importação de bases (**importação simples**, decisão do grupo): upload `.xlsx`/`.csv` de até **300 transações**, prévia com erros por linha, backup automático e troca da base para todos, com volta à base de demonstração | **Concluída e validada** (na `main`) |
 
 ## Decisões (resposta do grupo: "aceito as recomendações", com exceções)
 | # | Assunto | Decisão |
@@ -61,6 +61,8 @@ O grupo escolheu a **importação simples**: uma base por vez, sem multiempresa.
 | Exclusão (D8) | Troca apaga simulações, cenários, investigações e análises da base antiga; usuários, preferências, limites e auditoria ficam. "Voltar à base de demonstração" recoloca a base original |
 | LGPD | Aceite obrigatório (autorização e finalidade), **mascaramento** opcional dos códigos (a correspondência não é guardada), auditoria de cada troca e backups locais |
 | Rastreabilidade | Nome da base no cabeçalho, em Configurações e na identificação dos relatórios; histórico das trocas com quem, quando e o backup |
+
+**Validação do grupo (Fase 6):** foram testados a planilha modelo, o arquivo com erros (linhas apontadas e botão bloqueado), a importação do arquivo correto (base nova no cabeçalho, Dashboard, Rede, Painel de risco e relatório), o histórico com o backup e a volta à base de demonstração.
 
 **Gabarito:** importar a própria planilha `NEXO_Base_Transacoes.xlsx` gera **exatamente** a base dos CSVs (conferido em `testes/test_fase6.py`).
 
