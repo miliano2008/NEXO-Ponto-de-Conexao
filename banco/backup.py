@@ -37,10 +37,19 @@ def _literal(valor, conexao):
     return conexao.escape(str(valor))
 
 
+def _nome_livre(base, extensao):
+    """Nome de arquivo que ainda não existe: dois backups no mesmo segundo não se sobrescrevem."""
+    PASTA_BACKUPS.mkdir(parents=True, exist_ok=True)
+    destino, n = PASTA_BACKUPS / f"{base}{extensao}", 2
+    while destino.exists():
+        destino, n = PASTA_BACKUPS / f"{base}_{n}{extensao}", n + 1
+    return destino
+
+
 def backup_mysql():
     agora = datetime.now()
     PASTA_BACKUPS.mkdir(parents=True, exist_ok=True)
-    destino = PASTA_BACKUPS / f"nexo_{agora:%Y%m%d_%H%M%S}.sql"
+    destino = _nome_livre(f"nexo_{agora:%Y%m%d_%H%M%S}", ".sql")
     conexao = db.conectar_mysql()
     cfg = db.config_mysql()
     totais = {}
@@ -88,7 +97,7 @@ def backup_local():
             "  Como resolver: abra o arquivo no Bloco de Notas e preencha DB_HOST, DB_PORT e DB_PASSWORD com os dados "
             "do Aiven, ou rode scripts\\CONFIGURAR.bat. Confira com scripts\\DIAGNOSTICO.bat e rode o BACKUP.bat de novo.")
     PASTA_BACKUPS.mkdir(parents=True, exist_ok=True)
-    destino = PASTA_BACKUPS / f"nexo_{datetime.now():%Y%m%d_%H%M%S}.db"
+    destino = _nome_livre(f"nexo_{datetime.now():%Y%m%d_%H%M%S}", ".db")
     shutil.copy2(db.SQLITE, destino)
     return destino, {}
 

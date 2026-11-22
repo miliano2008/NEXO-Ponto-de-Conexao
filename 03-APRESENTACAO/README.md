@@ -18,3 +18,4 @@ Os slides e relatórios da apresentação final entram aqui. Desde a versão 0.9
 8. **Histórico e comparação**: "Ver execução" do cenário e o **exemplo da planilha** (período A × B), mostrando C025 virar ponte entre três comunidades. Baixar o relatório da comparação em PowerPoint.
 9. **Relatórios**: baixar o relatório completo em PDF (capa, gráficos, evidências, conclusões) e abrir o Excel para mostrar que os gráficos são editáveis. Validação matemática.
 10. **Configurações**: como administrador, mudar "Contrapartes distintas" de 4 para 3 e ver o Painel de risco recalcular; voltar ao padrão. Mostrar as Preferências (tema escuro, texto maior, contraste alto, paleta para daltonismo).
+11. **Importar base** (Fase 6): enviar a planilha modelo ou um CSV de exemplo, mostrar a sugestão das colunas, a prévia com o erro de uma linha e a troca da base; depois, *Voltar à base de demonstração*.

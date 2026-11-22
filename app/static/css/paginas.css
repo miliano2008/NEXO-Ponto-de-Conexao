@@ -170,3 +170,29 @@ tr.ajustado td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
   border:1px solid var(--line);border-radius:var(--radius)}
 .export-barra > span{font-size:13px;font-weight:600;color:var(--ink-2)}
 body.sem-exportar .botoes-export, body.sem-exportar .export-barra{display:none !important}
+
+/* ============ IMPORTAR BASE (Fase 6) ============ */
+.area-arquivo{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 16px;border:2px dashed var(--line);
+  border-radius:var(--radius);text-align:center;cursor:pointer;color:var(--ink-2);font-size:13.5px;transition:border-color .15s,background .15s}
+.area-arquivo:hover,.area-arquivo.sobre{border-color:var(--blue);background:var(--blue-soft)}
+.area-arquivo .ic{font-size:28px}
+.area-arquivo small{color:var(--ink-3);font-size:12px;max-width:420px}
+.imp-arquivo-info{margin-top:12px;font-size:13px}
+.imp-grupo{margin-bottom:16px}
+.imp-grupo h4{margin:0 0 8px;font-size:13px}
+.imp-grupo h4 small{font-weight:400;color:var(--ink-3)}
+.imp-grupo > label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2);max-width:340px;margin-bottom:10px}
+.imp-grupo select, #impAbaTx, #impAbaCt{font:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.obrig{color:var(--red);font-weight:700}
+label.check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink-2);line-height:1.45}
+label.check input{margin-top:3px;flex:0 0 auto}
+.imp-resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.imp-resumo > div{background:var(--blue-soft);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.imp-resumo b{font-size:14px;color:var(--ink)}
+.imp-resumo span{font-size:11.5px;color:var(--ink-3)}
+.imp-lista ul{margin:6px 0 0;padding-left:18px;font-size:12.5px;line-height:1.6}
+.imp-ok{border-left-color:var(--green)}
+tr.linha-erro td{background:var(--red-soft)}
+.imp-form{display:flex;flex-direction:column;gap:12px;max-width:620px;margin-top:14px}
+.imp-form > label:not(.check){display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-2)}
+.imp-form input:not([type=checkbox]){font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}

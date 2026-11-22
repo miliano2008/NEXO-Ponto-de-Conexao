@@ -154,18 +154,18 @@ def conectar():
 # Tipos das tabelas de dados conforme a aba Dicionario_Dados do Excel.
 ESQUEMA_DADOS_MYSQL = """
 CREATE TABLE IF NOT EXISTS contas (
-    id_conta VARCHAR(10) NOT NULL PRIMARY KEY,
-    tipo_titular VARCHAR(20) NOT NULL,
+    id_conta VARCHAR(40) NOT NULL PRIMARY KEY,
+    tipo_titular VARCHAR(40) NOT NULL,
     data_abertura DATE NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS transacoes (
-    id_transacao VARCHAR(10) NOT NULL PRIMARY KEY,
-    conta_origem VARCHAR(10) NOT NULL,
-    conta_destino VARCHAR(10) NOT NULL,
+    id_transacao VARCHAR(40) NOT NULL PRIMARY KEY,
+    conta_origem VARCHAR(40) NOT NULL,
+    conta_destino VARCHAR(40) NOT NULL,
     valor DECIMAL(12,2) NOT NULL,
     data DATE NOT NULL,
     hora TIME NOT NULL,
-    tipo_transacao VARCHAR(20) NOT NULL,
+    tipo_transacao VARCHAR(30) NOT NULL,
     CONSTRAINT fk_tx_origem FOREIGN KEY (conta_origem) REFERENCES contas(id_conta),
     CONSTRAINT fk_tx_destino FOREIGN KEY (conta_destino) REFERENCES contas(id_conta),
     CONSTRAINT ck_tx_valor CHECK (valor > 0),

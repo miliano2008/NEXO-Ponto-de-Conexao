@@ -43,7 +43,14 @@ app.config.update(SECRET_KEY=chave_secreta(), SESSION_COOKIE_HTTPONLY=True,
                   SESSION_COOKIE_SAMESITE="Lax", PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
                   # o navegador revalida os arquivos (resposta 304, sem baixar de novo se não mudaram):
                   # uma versão nova do NEXO aparece sem precisar de Ctrl+F5
-                  SEND_FILE_MAX_AGE_DEFAULT=0)
+                  SEND_FILE_MAX_AGE_DEFAULT=0,
+                  # importação de bases (Fase 6): arquivos de até 2 MB, mais a margem do envio
+                  MAX_CONTENT_LENGTH=3 * 1024 * 1024)
+
+
+@app.errorhandler(413)
+def arquivo_grande(_erro):
+    return jsonify({"erro": "Arquivo grande demais: o limite é 2 MB."}), 413
 trava = threading.Lock()
 
 try:
@@ -93,6 +100,7 @@ def resultados(usuario, recorte=0, com_matrizes=False):
     dados["transacoes"] = [{**t, "simulada": t["id"] in ids_simulados} for t in calculado["transacoes"]]
     dados["analise"] = {k: info[k] for k in ("id", "assinatura", "versao_motor", "duracao_ms", "origem")}
     dados["bancario"] = simulacao.dados_bancarios()   # instituição fictícia, tipo de conta e chave PIX
+    dados["base"] = analises.info_base()               # nome e origem da base em uso (Fase 6)
     dados["simulacao"] = {
         "periodo_dias": info["recorte"]["dias"], "data_referencia": info["data_referencia"],
         "recorte": info["recorte"], "datas_base": info["datas_base"],
@@ -797,6 +805,171 @@ def api_salvar_preferencias():
         return jsonify({"preferencias": preferencias.salvar(usuario_atual()["id"], d.get("preferencias") or {})})
     except ValueError as erro:
         return erro_auth(erro)
+
+
+# ---------------------------------------------------------------- importação de bases (Fase 6)
+
+_importando = {}            # usuário → arquivo lido, esperando a confirmação (some em 30 minutos)
+_trava_importacao = threading.Lock()
+VALIDADE_IMPORTACAO = 30 * 60
+NOME_DEMONSTRACAO = "Base de demonstração (40 contas, 160 transações)"
+
+
+def _arquivo_em_andamento(usuario):
+    with _trava_importacao:
+        for uid in [u for u, v in _importando.items() if time.time() - v["em"] > VALIDADE_IMPORTACAO]:
+            del _importando[uid]
+        item = _importando.get(usuario["id"])
+    if item is None:
+        raise ValueError("O arquivo enviado expirou ou não foi encontrado. Envie o arquivo de novo.")
+    return item["arquivo"]
+
+
+def _sem_dados_grandes(resultado):
+    return {k: v for k, v in resultado.items() if k not in ("contas", "transacoes")}
+
+
+def _preparar_do_corpo(usuario, d):
+    from nucleo import importacao
+    arquivo = _arquivo_em_andamento(usuario)
+    aba_contas = d.get("aba_contas")
+    return arquivo, importacao.preparar(arquivo, int(d.get("aba_transacoes", 0)), d.get("mapa_transacoes") or {},
+                                        None if aba_contas in (None, "", -1) else int(aba_contas),
+                                        d.get("mapa_contas") or {}, bool(d.get("mascarar")))
+
+
+@app.get("/api/base")
+@exige("consultar")
+def api_base():
+    """Base em uso; para quem importa, também o histórico e o que a troca apagaria."""
+    usuario = usuario_atual()
+    contas, transacoes, _ = analises.obter_base()
+    datas = sorted(t["data"] for t in transacoes)
+    resposta = {"base": {**analises.info_base(), "contas": len(contas), "transacoes": len(transacoes),
+                         "periodo": [datas[0], datas[-1]] if datas else None},
+                "pode_importar": auth.tem_permissao(usuario, "importar_base")}
+    if resposta["pode_importar"]:
+        resposta["historico"] = repositorio.historico_importacoes()
+        resposta["apagados_na_troca"] = repositorio.contar_derivados()
+    return jsonify(resposta)
+
+
+@app.get("/api/importacao/modelo")
+@exige("importar_base")
+def api_modelo_importacao():
+    from nucleo import importacao
+    return Response(importacao.modelo_xlsx(), mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": 'attachment; filename="modelo_base_nexo.xlsx"'})
+
+
+@app.post("/api/importacao/arquivo")
+@exige("importar_base")
+def api_importacao_arquivo():
+    """Recebe o arquivo, lê as abas e sugere o mapeamento (ou usa o salvo para o mesmo layout)."""
+    from nucleo import importacao
+    usuario, enviado = usuario_atual(), request.files.get("arquivo")
+    if enviado is None or not enviado.filename:
+        return erro_auth("Escolha um arquivo .xlsx ou .csv.")
+    try:
+        arquivo = importacao.ler_arquivo(enviado.filename, enviado.read())
+    except importacao.ErroArquivo as erro:
+        return erro_auth(erro)
+    sugestao = importacao.sugerir(arquivo)
+    salvo = repositorio.ler_mapeamento(importacao.assinatura_colunas(arquivo["abas"][sugestao["aba_transacoes"]]["cabecalho"]))
+    if salvo and all(0 <= int(i) < len(arquivo["abas"][sugestao["aba_transacoes"]]["cabecalho"])
+                     for i in salvo.get("mapa_transacoes", {}).values()):
+        sugestao["mapa_transacoes"] = salvo["mapa_transacoes"]
+    with _trava_importacao:
+        _importando[usuario["id"]] = {"arquivo": arquivo, "em": time.time()}
+    ativa = repositorio.base_ativa()
+    resultado = importacao.preparar(arquivo, sugestao["aba_transacoes"], sugestao["mapa_transacoes"],
+                                    sugestao["aba_contas"], sugestao["mapa_contas"])
+    return jsonify({"arquivo": {"nome": arquivo["nome"], "hash": arquivo["hash"][:12]},
+                    "abas": [{"nome": a["nome"], "cabecalho": a["cabecalho"], "linhas": len(a["linhas"])} for a in arquivo["abas"]],
+                    # listas (e não dicionários): o JSON do Flask ordena as chaves, e a tela quer a ordem natural
+                    "campos": {"transacoes": [[k, v[0], v[1]] for k, v in importacao.CAMPOS_TRANSACAO.items()],
+                               "contas": [[k, v[0], v[1]] for k, v in importacao.CAMPOS_CONTA.items()]},
+                    "sugestao": sugestao, "mapeamento_salvo": bool(salvo),
+                    "mesmo_arquivo_da_base": bool(ativa and ativa.get("hash_arquivo") == arquivo["hash"]),
+                    "resultado": _sem_dados_grandes(resultado)})
+
+
+@app.post("/api/importacao/previa")
+@exige("importar_base")
+def api_importacao_previa():
+    from nucleo import importacao
+    try:
+        _, resultado = _preparar_do_corpo(usuario_atual(), corpo())
+    except (ValueError, importacao.ErroArquivo) as erro:
+        return erro_auth(erro)
+    return jsonify({"resultado": _sem_dados_grandes(resultado)})
+
+
+def _trocar_base(usuario, contas, transacoes, registro):
+    """Backup automático → troca numa transação → caches limpos → auditoria. Sem backup, não troca."""
+    from banco import backup
+    try:
+        arquivo_backup, _ = backup.fazer_backup()
+    except Exception as erro:  # noqa: BLE001
+        raise RuntimeError(f"O backup automático falhou, então a base NÃO foi trocada: {erro}") from erro
+    registro = {**registro, "backup": str(arquivo_backup.name), "importado_por": usuario["nome"]}
+    importacao_id = repositorio.substituir_base(contas, transacoes, registro)
+    analises.limpar_cache()
+    return importacao_id, arquivo_backup.name
+
+
+@app.post("/api/importacao/confirmar")
+@exige("importar_base")
+def api_importacao_confirmar():
+    from nucleo import importacao
+    usuario, d = usuario_atual(), corpo()
+    if str(d.get("confirmacao", "")).strip().upper() != "SUBSTITUIR":
+        return erro_auth("Digite SUBSTITUIR para confirmar a troca da base.")
+    if not d.get("aceite"):
+        return erro_auth("Confirme que os dados podem ser usados neste trabalho (autorização e finalidade).")
+    nome = " ".join(str(d.get("nome") or "").split())[:120]
+    if len(nome) < 3:
+        return erro_auth("Dê um nome à base (mínimo de 3 caracteres), por exemplo o nome da empresa e o período.")
+    try:
+        arquivo, resultado = _preparar_do_corpo(usuario, d)
+    except (ValueError, importacao.ErroArquivo) as erro:
+        return erro_auth(erro)
+    if not resultado["pode_importar"]:
+        return jsonify({"erro": "O arquivo ainda tem erros. Corrija e envie de novo.", "resultado": _sem_dados_grandes(resultado)}), 400
+    try:
+        importacao_id, arquivo_backup = _trocar_base(usuario, resultado["contas"], resultado["transacoes"], {
+            "nome": nome, "origem": "arquivo", "arquivo": arquivo["nome"][:255], "hash": arquivo["hash"],
+            "mascarada": bool(d.get("mascarar"))})
+    except RuntimeError as erro:
+        return erro_auth(erro, 500)
+    aba = arquivo["abas"][int(d.get("aba_transacoes", 0))]
+    repositorio.salvar_mapeamento(importacao.assinatura_colunas(aba["cabecalho"]),
+                                  {"mapa_transacoes": d.get("mapa_transacoes") or {}}, usuario["nome"])
+    with _trava_importacao:
+        _importando.pop(usuario["id"], None)
+    auth.registrar("base_importada", None, (f"{usuario['nome']}: “{nome}” ({arquivo['nome']}, "
+                                             f"{len(resultado['transacoes'])} transações, {len(resultado['contas'])} contas"
+                                             f"{', mascarada' if d.get('mascarar') else ''}); backup {arquivo_backup}")[:255],
+                   request.remote_addr)
+    return jsonify({"ok": True, "importacao": importacao_id, "backup": arquivo_backup, "base": analises.info_base()})
+
+
+@app.post("/api/base/demonstracao")
+@exige("importar_base")
+def api_base_demonstracao():
+    """Volta à base de demonstração (40 contas e 160 transações dos CSVs do projeto)."""
+    usuario, d = usuario_atual(), corpo()
+    if str(d.get("confirmacao", "")).strip().upper() != "SUBSTITUIR":
+        return erro_auth("Digite SUBSTITUIR para confirmar a troca da base.")
+    contas, transacoes = repositorio.carregar_csv()
+    try:
+        _, arquivo_backup = _trocar_base(usuario, contas, transacoes, {"nome": NOME_DEMONSTRACAO, "origem": "demonstracao",
+                                                                      "arquivo": "contas.csv + transacoes.csv"})
+    except RuntimeError as erro:
+        return erro_auth(erro, 500)
+    auth.registrar("base_demonstracao", None, f"{usuario['nome']}: voltou à base de demonstração; backup {arquivo_backup}",
+                   request.remote_addr)
+    return jsonify({"ok": True, "backup": arquivo_backup, "base": analises.info_base()})
 
 
 # ---------------------------------------------------------------- histórico e comparação (Fase 4)

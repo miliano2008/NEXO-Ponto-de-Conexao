@@ -11,7 +11,7 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 | **3** | Rede de transações: navegação estilo mapa (Cytoscape.js, carregado só nessa tela), busca, vizinhança e destaques | **Concluída e validada** (na `main`) |
 | **4** | Simulador e histórico: histórico das simulações, comparação antes e depois, cenários salvos | **Concluída e validada** (na `main`) |
 | **5** | Relatórios e configurações: exportação em **PDF, Excel, CSV, Word e PowerPoint**, com gráficos de verdade, não capturas de tela; limites das regras de risco e preferências do usuário | **Concluída e validada** (na `main`) |
-| 6 | Importação de bases: upload `.xlsx`/`.csv` de até **300 transações**, uma base por empresa, com exclusão. Depende da decisão sobre multiempresa | Planejada |
+| **6** | Importação de bases (**importação simples**, decisão do grupo): upload `.xlsx`/`.csv` de até **300 transações**, prévia com erros por linha, backup automático e troca da base para todos, com volta à base de demonstração | **Concluída e validada** (na `main`) |
 
 ## Decisões (resposta do grupo: "aceito as recomendações", com exceções)
 | # | Assunto | Decisão |
@@ -22,7 +22,7 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 | D4 | Empresas por usuário | Uma *(adiada)* |
 | D5 | CNPJ da empresa | Obrigatório e validado *(adiada)* |
 | D6 | Limites do upload | 300 transações, 300 contas, 2 MB, `.xlsx` e `.csv` (Fase 6) |
-| D7 | Trocar a base | Botão "Substituir", que exclui e importa de uma vez, mediante digitar o nome da empresa e com registro na auditoria (Fase 6) |
+| D7 | Trocar a base | Botão "Substituir", que exclui e importa de uma vez, com registro na auditoria. Na importação simples, a confirmação é digitar **SUBSTITUIR** (não há empresas cadastradas), mais o nome da nova base e o aceite de uso dos dados |
 | D8 | O que a exclusão apaga | Tudo da base (transações, contas, análises, simulações), **menos os usuários** (Fase 6) |
 | D9 | Hospedagem | **Exceção: rodar local** nas primeiras fases. O assunto volta a ser discutido mais à frente. Cloud Run e Render foram as opções avaliadas |
 | D10 | GitHub | Agora: https://github.com/miliano2008/NEXO-Ponto-de-Conexao |
@@ -38,7 +38,7 @@ O NEXO evolui **uma fase por vez**. Cada fase é desenvolvida na própria branch
 ## Itens adiados
 | Item | Motivo | Quando |
 |---|---|---|
-| **0.3 Multiempresa:** tabelas `organizacoes` e `bases`, `base_id` em contas e transações, isolamento por empresa | O grupo vai discutir como implementar. A base atual foi mantida | A definir, antes da Fase 6 |
+| **0.3 Multiempresa:** tabelas `organizacoes` e `bases`, `base_id` em contas e transações, isolamento por empresa | O grupo escolheu a importação simples (uma base por vez) na Fase 6 | Só se o sistema for hospedado para várias empresas |
 | **0.9 Preparação para hospedagem:** servidor de produção e arquivo de publicação | D9: rodar local por enquanto | A definir |
 
 O que já ficou pronto para facilitar esses itens:
@@ -46,6 +46,27 @@ O que já ficou pronto para facilitar esses itens:
 - configuração por variáveis de ambiente (`.env`), exigida pelas hospedagens;
 - simulações guardadas no banco, porque hospedagens reiniciam a máquina;
 - migrações numeradas com backup, que tornam segura a troca de chaves do multiempresa.
+
+## Fase 6: o que foi entregue (importação simples)
+O grupo escolheu a **importação simples**: uma base por vez, sem multiempresa. Importar substitui a base para todos.
+
+| Item planejado | Entrega |
+|---|---|
+| Upload com validação, mapeamento de colunas, prévia, confirmar ou cancelar | Tela *Importar base* em 4 etapas (enviar, conferir colunas, prévia, substituir). `.xlsx` (aba de transações e, opcional, de contas; "Leia-me" e outras abas ignoradas) e `.csv` (`;` `,` tab `|`, UTF-8 ou Windows-1252). Cancelar = simplesmente não confirmar: nada é gravado antes |
+| Mapeamento de colunas | Sugestão automática por nome (sinônimos como "Pagador", "Favorecido", "Valor (R$)", "Meio") e ajuste manual. **Mapeamento salvo** por layout de arquivo e reaproveitado |
+| Prévia com erros | Primeiras 50 linhas já interpretadas; erro de cada linha (valor, data inexistente, hora, origem = destino, código repetido, código longo) e avisos (sem hora, sem modalidade, sem aba de contas) |
+| Gravação tudo ou nada | Uma única transação; antes, **backup automático** (sem backup, não troca) |
+| Duplicidade e integridade | Códigos repetidos viram erro na prévia; contas das transações que faltam na aba de contas também; o hash do arquivo avisa quando é o mesmo arquivo da base em uso |
+| Limites (D6) | 300 transações, 300 contas, 2 MB |
+| Exclusão (D8) | Troca apaga simulações, cenários, investigações e análises da base antiga; usuários, preferências, limites e auditoria ficam. "Voltar à base de demonstração" recoloca a base original |
+| LGPD | Aceite obrigatório (autorização e finalidade), **mascaramento** opcional dos códigos (a correspondência não é guardada), auditoria de cada troca e backups locais |
+| Rastreabilidade | Nome da base no cabeçalho, em Configurações e na identificação dos relatórios; histórico das trocas com quem, quando e o backup |
+
+**Validação do grupo (Fase 6):** foram testados a planilha modelo, o arquivo com erros (linhas apontadas e botão bloqueado), a importação do arquivo correto (base nova no cabeçalho, Dashboard, Rede, Painel de risco e relatório), o histórico com o backup e a volta à base de demonstração.
+
+**Gabarito:** importar a própria planilha `NEXO_Base_Transacoes.xlsx` gera **exatamente** a base dos CSVs (conferido em `testes/test_fase6.py`).
+
+**Fora do escopo da importação simples:** várias empresas ao mesmo tempo, cargos por empresa e hospedagem. O plano do multiempresa continua descrito abaixo, em "Itens adiados".
 
 ## Fase 5: o que foi entregue
 | Item planejado | Entrega |

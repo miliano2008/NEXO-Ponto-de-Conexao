@@ -47,6 +47,7 @@
       <div class="nav-label" id="navAdmin">Administração</div>
       <button data-page="usuarios">👥 Usuários e cargos</button>
       <button data-page="auditoria">🛡️ Auditoria de acessos</button>
+      <button data-page="importacao">📥 Importar base</button>
     </nav>
     <div class="side-foot">
       <div class="side-user">
@@ -402,6 +403,53 @@
         </div>
         <div class="card mt"><div class="card-head"><div><h3>Permissões por cargo</h3><p>Aplicadas no servidor (API) e na interface</p></div></div>
           <div class="table-wrap" id="matrizPerm"></div></div>
+      </section>
+
+      <!-- ---------- IMPORTAR BASE (Fase 6) ---------- -->
+      <section class="page" id="page-importacao">
+        <div class="note" style="margin-bottom:16px"><strong>Importação simples:</strong> o NEXO trabalha com <b>uma base por vez</b>.
+          Importar um arquivo <b>substitui</b> a base atual para todos os usuários. Antes da troca, o NEXO faz um backup automático.</div>
+        <div class="grid g2">
+          <div class="card"><div class="card-head"><div><h3>Base em uso</h3><p id="impBaseSub">—</p></div></div>
+            <div class="card-body"><dl class="kv" id="impBase" style="font-size:13px"></dl>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+                <button class="btn ghost sm" id="impModelo">⬇️ Baixar planilha modelo</button>
+                <button class="btn ghost sm" id="impDemo">↩️ Voltar à base de demonstração</button>
+              </div></div></div>
+          <div class="card"><div class="card-head"><div><h3>1. Enviar arquivo</h3><p>.xlsx ou .csv · até 300 transações, 300 contas e 2 MB</p></div></div>
+            <div class="card-body">
+              <label class="area-arquivo" id="impArea" for="impArquivo">
+                <input type="file" id="impArquivo" accept=".xlsx,.csv" hidden>
+                <span class="ic">📄</span><b>Clique para escolher</b> ou arraste o arquivo para cá
+                <small>Abas como "Leia-me" são ignoradas. Os nomes das colunas podem ser outros: você confere na etapa 2.</small>
+              </label>
+              <div id="impArquivoInfo" class="imp-arquivo-info" hidden></div>
+            </div></div>
+        </div>
+        <div id="impEtapas" hidden>
+          <div class="card mt"><div class="card-head"><div><h3>2. Conferir as colunas</h3><p id="impMapaSub">O NEXO sugeriu a correspondência; ajuste se precisar</p></div></div>
+            <div class="card-body" id="impMapa"></div></div>
+          <div class="card mt"><div class="card-head"><div><h3>3. Prévia</h3><p id="impPreviaSub"></p></div></div>
+            <div class="card-body" id="impResumo"></div>
+            <div class="table-wrap"><table><thead><tr><th class="num">Linha</th><th>Código</th><th>Origem</th><th>Destino</th>
+              <th class="num">Valor</th><th>Data</th><th>Hora</th><th>Modalidade</th><th>Situação</th></tr></thead>
+              <tbody id="impPrevia"></tbody></table></div></div>
+          <div class="card mt" id="impConfirmar"><div class="card-head"><div><h3>4. Substituir a base</h3><p>Confira o que muda antes de confirmar</p></div></div>
+            <div class="card-body">
+              <div class="note warn" id="impApagados"></div>
+              <form id="impForm" class="imp-form" novalidate>
+                <label>Nome da base<input id="impNome" maxlength="120" placeholder="Ex.: Empresa X — outubro de 2026"></label>
+                <label class="check"><input type="checkbox" id="impAceite"> Confirmo que estes dados podem ser usados neste trabalho
+                  (autorização de quem os forneceu e finalidade acadêmica) e que, se forem dados pessoais reais, marquei “Mascarar códigos”.</label>
+                <label>Para confirmar, digite <b>SUBSTITUIR</b><input id="impConfirmacao" autocomplete="off"></label>
+                <div class="msg-erro-mini" id="impErro" hidden></div>
+                <button class="btn" type="submit" id="impEnviar" disabled>Substituir a base</button>
+              </form>
+            </div></div>
+        </div>
+        <div class="card mt"><div class="card-head"><div><h3>Histórico de bases</h3><p>Cada troca guarda quem fez, quando e o backup feito antes</p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Quando</th><th>Base</th><th>Origem</th><th class="num">Contas</th><th class="num">Transações</th>
+            <th>Período</th><th>Por</th><th>Backup</th><th>Situação</th></tr></thead><tbody id="impHistorico"></tbody></table></div></div>
       </section>
 
       <!-- ---------- AUDITORIA ---------- -->

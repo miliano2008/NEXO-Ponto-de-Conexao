@@ -15,8 +15,9 @@ function render(){
   const d = estado.dados;
   el("pesosInfo").innerHTML = Object.entries(d.simulacao.pesos).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("");
   el("sobre").innerHTML = `
-    <dt>Versão</dt><dd>0.9 — Fase 5: relatórios, exportações e configurações</dd>
-    <dt>Origem dos dados</dt><dd>${d.simulacao.mysql ? "Tabelas contas/transacoes no MySQL" : "CSVs exportados do Excel"} (${d.dashboard.total_contas} contas, ${d.simulacao.total_base_original} transações)</dd>
+    <dt>Versão</dt><dd>1.0 — Fase 6: importação de bases</dd>
+    <dt>Base em uso</dt><dd>${esc(d.base?.nome || "Base de demonstração")} (${d.dashboard.total_contas} contas, ${d.simulacao.total_base_original} transações)</dd>
+    <dt>Origem dos dados</dt><dd>${d.simulacao.mysql ? "Tabelas contas/transacoes no MySQL" : d.base?.origem === "arquivo" ? "Base importada (SQLite local)" : "CSVs de demonstração"}</dd>
     <dt>Cálculo</dt><dd>nucleo/analise.py — NetworkX + NumPy</dd>
     <dt>Servidor</dt><dd>Flask (app/servidor.py)</dd>
     <dt>Banco de dados</dt><dd>${esc(d.simulacao.fonte_dados)}${d.simulacao.mysql?" · conexão SSL":" (modo local)"}</dd>

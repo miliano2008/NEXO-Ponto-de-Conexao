@@ -66,6 +66,18 @@ def migrar():
     passo(3, "Exportando contas e transações dos CSVs...")
     contas, transacoes = repositorio.carregar_csv()  # mesma validação usada pelo sistema
     with conexao.cursor() as c:
+        c.execute("SELECT nome FROM importacoes WHERE situacao = 'ativa' AND origem = 'arquivo' ORDER BY id DESC LIMIT 1")
+        importada = c.fetchone()
+        if importada and RECRIAR:
+            c.execute("UPDATE importacoes SET situacao = 'substituida' WHERE situacao = 'ativa'")
+    if importada and not RECRIAR:
+        # misturar as 160 transações de demonstração com uma base importada estragaria as duas
+        print(f"      A base em uso foi IMPORTADA (“{importada['nome']}”): os CSVs de demonstração não foram enviados.")
+        print("      Para voltar à base de demonstração: tela Importar base → Voltar à base de demonstração.")
+        conexao.close()
+        print("\nMigração das tabelas concluída; a base importada foi mantida.")
+        return
+    with conexao.cursor() as c:
         c.executemany(
             "INSERT INTO contas (id_conta, tipo_titular, data_abertura) VALUES (%s, %s, %s) "
             "ON DUPLICATE KEY UPDATE tipo_titular = VALUES(tipo_titular), data_abertura = VALUES(data_abertura)",

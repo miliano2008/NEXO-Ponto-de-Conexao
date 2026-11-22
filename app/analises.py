@@ -21,7 +21,7 @@ RECARGA_SEGUNDOS = 60
 MAX_EM_MEMORIA = 32
 
 _trava = threading.Lock()
-_base = {"contas": None, "transacoes": None, "assinatura": None, "lida_em": 0.0}
+_base = {"contas": None, "transacoes": None, "assinatura": None, "lida_em": 0.0, "info": None}
 _cache = OrderedDict()  # assinatura → (resultado, info)
 _parametros = {"valores": None, "lidos_em": 0.0}
 
@@ -60,9 +60,26 @@ def obter_base(forcar=False):
                 # banco fora do ar por um momento: segue com a última base lida
                 _base["lida_em"] = time.monotonic()
             else:
-                _base.update(contas=contas, transacoes=transacoes, lida_em=time.monotonic(),
+                _base.update(contas=contas, transacoes=transacoes, lida_em=time.monotonic(), info=_ler_info(),
                              assinatura=repositorio.assinatura(contas, [repositorio.linha_csv(t) for t in transacoes]))
         return _base["contas"], _base["transacoes"], _base["assinatura"]
+
+
+def _ler_info():
+    """Nome e origem da base em uso (Fase 6): a importação ativa ou a base de demonstração."""
+    try:
+        ativa = repositorio.base_ativa()
+    except Exception:  # noqa: BLE001 — tabela ainda não migrada
+        ativa = None
+    if ativa is None:
+        return {"nome": "Base de demonstração", "origem": "demonstracao", "importado_por": None, "importado_em": None}
+    return {k: ativa[k] for k in ("id", "nome", "origem", "arquivo", "importado_por", "importado_em", "mascarada")}
+
+
+def info_base():
+    """Nome e origem da base em uso (lida junto com a base, sem consulta extra a cada pedido)."""
+    obter_base()
+    return dict(_base["info"] or {})
 
 
 def normalizar_recorte(recorte=None):
@@ -175,4 +192,4 @@ def limpar_cache():
     with _trava:
         _cache.clear()
         _parametros.update(valores=None, lidos_em=0.0)
-        _base.update(contas=None, transacoes=None, assinatura=None, lida_em=0.0)
+        _base.update(contas=None, transacoes=None, assinatura=None, lida_em=0.0, info=None)

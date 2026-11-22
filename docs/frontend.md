@@ -27,7 +27,7 @@ js/
 │   └── roteador.js    navegação por #endereço e carregamento sob demanda das telas
 └── paginas/           uma tela por arquivo
     dashboard · risco · transacoes · rede (+ rede-animacao) · contas · conta · simulador (+ simulador-regras) · historico · relatorios
-    arquitetura · config · usuarios · auditoria
+    arquitetura · config · usuarios · auditoria · importacao (Fase 6)
 ```
 
 ## Preferências e acessibilidade (Fase 5)

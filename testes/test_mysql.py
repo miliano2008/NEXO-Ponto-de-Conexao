@@ -86,10 +86,38 @@ try:
     assert repositorio.apagar_parametros_risco() == 1
     r = c.get("/api/relatorio?tipo=analise&formato=xlsx")
     assert r.status_code == 200 and r.data[:2] == b"PK"
+    # Fase 6 no MySQL: importação com códigos longos (até 40 caracteres), troca atômica e volta à demonstração
+    import io
+    import tempfile
+    from pathlib import Path
+
+    from banco import backup
+    backup.PASTA_BACKUPS = Path(tempfile.mkdtemp())                                # backup do teste fora da pasta do grupo
+    auth.alterar_usuario(uid, cargo="administrador", por="teste")
+    longas = ["AG0001-CC00012345-6", "AG0002-CC00098765-4", "AG0003-CC00055555-1"]
+    texto = "origem;destino;valor;data;hora;tipo\n" + "\n".join(
+        f"{longas[i % 3]};{longas[(i + 1) % 3]};{100 + i},25;{1 + i:02d}/10/2026;10:00;PIX" for i in range(9))
+    r = c.post("/api/importacao/arquivo", headers=H, content_type="multipart/form-data",
+               data={"arquivo": (io.BytesIO(texto.encode()), "longas.csv")})
+    assert r.status_code == 200 and r.get_json()["resultado"]["pode_importar"], r.get_json()
+    s = r.get_json()["sugestao"]
+    r = c.post("/api/importacao/confirmar", headers=H, json={"aba_transacoes": s["aba_transacoes"], "mapa_transacoes": s["mapa_transacoes"],
+                                                              "nome": "Teste MySQL", "aceite": True, "confirmacao": "SUBSTITUIR"})
+    assert r.status_code == 200, r.get_json()
+    assert repositorio.carregar_dados()[0][0]["id_conta"] in longas
+    assert c.get("/api/resultados").get_json()["dashboard"]["total_transacoes"] == 9
+    # rodar o MIGRAR_MYSQL de novo não mistura a demonstração com a base importada
+    r = subprocess.run([sys.executable, "-m", "banco.migrar_mysql"], capture_output=True, encoding="utf-8", errors="replace",
+                       env={**os.environ, "PYTHONIOENCODING": "utf-8"}, cwd=RAIZ)
+    assert r.returncode == 0 and "IMPORTADA" in r.stdout, r.stdout + r.stderr
+    assert len(repositorio.carregar_dados()[1]) == 9
+    assert c.post("/api/base/demonstracao", headers=H, json={"confirmacao": "SUBSTITUIR"}).status_code == 200
+    assert repositorio.carregar_dados() == repositorio.carregar_csv()
+    assert len(list(backup.PASTA_BACKUPS.glob("*.sql"))) == 2
     eventos = {e["evento"] for e in auth.listar_auditoria()}
     assert {"cadastro", "email_confirmado", "login_email_pendente", "login_falhou", "recuperacao_solicitada",
             "senha_redefinida", "convite_criado", "login"} <= eventos
-    print("TESTES OK: MySQL — migração, dados idênticos ao CSV, login, cadastro com confirmação, recuperação, convites, cargos, preferências, limites de risco, relatório e auditoria.")
+    print("TESTES OK: MySQL — migração, dados idênticos ao CSV, login, cadastro com confirmação, recuperação, convites, cargos, preferências, limites de risco, relatório, importação de base e auditoria.")
 finally:
     conexao = db.conectar_mysql(com_banco=False)
     with conexao.cursor() as cur:

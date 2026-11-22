@@ -10,7 +10,7 @@ import {el, iniciais} from "./utilidades.js";
 export const pode = permissao => !!estado.usuario?.permissoes.includes(permissao);
 
 export const PERMISSAO_PAGINA = {simulador:"simular", relatorios:"relatorios", config:"configurar",
-                                 usuarios:"gerenciar_usuarios", auditoria:"ver_auditoria"};
+                                 usuarios:"gerenciar_usuarios", auditoria:"ver_auditoria", importacao:"importar_base"};
 
 export async function carregarUsuario(){
   const r = await api("/auth/eu");
@@ -24,6 +24,6 @@ export async function carregarUsuario(){
     const perm = PERMISSAO_PAGINA[b.dataset.page];
     b.hidden = perm ? !pode(perm) : false;
   });
-  el("navAdmin").hidden = !pode("gerenciar_usuarios") && !pode("ver_auditoria");
+  el("navAdmin").hidden = !pode("gerenciar_usuarios") && !pode("ver_auditoria") && !pode("importar_base");
   ["simular","exportar","configurar"].forEach(p => document.body.classList.toggle("sem-"+p, !pode(p)));
 }
